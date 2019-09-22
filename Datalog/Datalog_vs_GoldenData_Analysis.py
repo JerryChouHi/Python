@@ -6,12 +6,17 @@
 
 import pandas, os
 import numpy as np
-import csv
 import datetime, math
 from sys import argv
 
+from openpyxl import Workbook
+from openpyxl.styles import PatternFill, Border, Side
+
 row_offset = 5
 col_offset = 4
+
+golden_data_color = '00FFFF'  # 水绿色
+
 
 def parse_golden_data_file(file):
     read_file = pandas.read_csv(file)
@@ -42,35 +47,74 @@ def parse_file(file, golden_data):
         row_data = []
         for col_num in range(read_file.shape[1] - 2):
             value = read_file.iloc[row_num, col_num]
-            if row_num >= chipno_line_num + row_offset and col_num >= col_offset:
+            if chipno_line_num + 2 <= row_num <= chipno_line_num + 3:
+                row_data.append((value, '008000'))  # 纯绿
+            elif row_num >= chipno_line_num + row_offset and col_num >= col_offset:
+                high_limit_data = read_file.iloc[chipno_line_num + 2, col_num]
+                if high_limit_data == ' ' or high_limit_data == 'N':
+                    high_limit = ''
+                else:
+                    high_limit = float(high_limit_data)
+                low_limit_data = read_file.iloc[chipno_line_num + 3, col_num]
+                if low_limit_data == ' ' or low_limit_data == 'N':
+                    low_limit = ''
+                else:
+                    low_limit = float(low_limit_data)
                 try:
                     value_float = float(value)
+                    if golden_data[0][col_num] <= value_float <= golden_data[1][col_num]:
+                        row_data.append((value, 'FFFFFF'))  # 白色
+                    elif high_limit != '' and (low_limit <= value_float < golden_data[0][col_num] or golden_data[1][
+                        col_num] < value_float <= high_limit):
+                        row_data.append((value, 'FFFF00'))  # 纯黄
+                    else:
+                        row_data.append((value, 'FF0000'))  # 纯红
                 except Exception as e:
                     print(e)
-                if golden_data[0][col_num] <= value_float <= golden_data[1][col_num]:
-                    row_data.append('')
-                else:
-                    row_data.append(value)
             else:
                 if isinstance(value, float) and math.isnan(value):
                     value = ''
-                row_data.append(value)
+                row_data.append((value, 'FFFFFF'))
         result.append(row_data)
     return result
 
 
-def analysis_data(file, golden_data, data):
+def analysis_data(file, data, golden_data):
     file_name = file.split('.')[0]
     date = datetime.datetime.now().strftime("%Y%m%d%H%M")
-    test_file_name = file_name + ' vs GoldenData_' + date + '.csv'
+    test_file_name = file_name + ' vs GoldenData_' + date + '.xlsx'
 
-    with open(test_file_name, 'w', encoding='utf-8', newline='') as f:
-        writer = csv.writer(f)
-        for index, line in enumerate(data):
-            if index == 14:
-                writer.writerow(golden_data[1])
-                writer.writerow(golden_data[0])
-            writer.writerow(line)
+    wb = Workbook()  # 创建文件对象
+
+    ws = wb.active  # 获取第一个sheet
+    ws.freeze_panes = 'E18'
+
+    border = Border(left=Side(border_style='thin', color='000000'),
+
+                    right=Side(border_style='thin', color='000000'),
+
+                    top=Side(border_style='thin', color='000000'),
+
+                    bottom=Side(border_style='thin', color='000000'))
+    irow = 1
+    for i in range(len(data)):
+        if i == 14:
+            for m in range(len(golden_data[0])):
+                ws.cell(row=irow, column=m + 1).value = golden_data[0][m]
+                ws.cell(row=irow, column=m + 1).fill = PatternFill(fill_type='solid', fgColor=golden_data_color)
+                ws.cell(row=irow, column=m + 1).border = border
+            irow += 1
+            for n in range(len(golden_data[1])):
+                ws.cell(row=irow, column=n + 1).value = golden_data[1][n]
+                ws.cell(row=irow, column=n + 1).fill = PatternFill(fill_type='solid', fgColor=golden_data_color)
+                ws.cell(row=irow, column=n + 1).border = border
+            irow += 1
+        for j in range(len(data[i])):
+            ws.cell(row=irow, column=j + 1).value = data[i][j][0]
+            ws.cell(row=irow, column=j + 1).fill = PatternFill(fill_type='solid', fgColor=data[i][j][1])
+            ws.cell(row=irow, column=j + 1).border = border
+        irow += 1
+    wb.save(test_file_name)
 
 
 def mkdir(dir):
@@ -135,7 +179,7 @@ def main():
 
         analysis_file = os.path.join(analysis_folder, file)
         # analysis data
-        analysis_data(analysis_file, golden_data, data)
+        analysis_data(analysis_file, data, golden_data)
 
 
 if __name__ == '__main__':
