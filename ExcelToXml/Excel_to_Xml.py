@@ -6,10 +6,10 @@
 
 from sys import argv, exit
 from os import path, makedirs, getcwd
-
-import math
+from xml.dom.minidom import parse
+from math import isnan
 from pandas import read_excel
-import shutil
+from shutil import copy
 
 
 def mkdir(dir):
@@ -38,10 +38,10 @@ def write_signals_file(data, file):
     file.write("</Blocks>")
 
 
-def write_socketmap_file(data, file):
+def write_socketmap_file(data, file, socketmap_name):
     file.write("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n")
     file.write("<Blocks>\n")
-    file.write("	<SocketMap name=\"SocketMap_F28\">\n")
+    file.write("	<SocketMap name=\"" + socketmap_name + "\">\n")
     file.write("		<Site count=\"" + str(len(data[0]) - 1) + "\">\n")
     file.write("			<Thread>Single</Thread>\n")
     file.write("		</Site>\n")
@@ -96,7 +96,7 @@ def write_bindefinition_file(data, file):
     file.write("		<BinGroup name=\"HardBins\" type=\"HardBin\">\n")
     for i in range(len(data[1])):
         file.write("			<Bin name=\"" + str(data[1][i][1]) + "\">\n")
-        file.write("				<ID>" + str(data[1][i][0]) + "</ID>\n")
+        file.write("				<ID>" + str(int(data[1][i][0])) + "</ID>\n")
         file.write("				<Desc>" + str(data[1][i][3]) + "</Desc>\n")
         file.write("				<Inherit>" + str(data[1][i][2]) + "</Inherit>\n")
         file.write("			</Bin>\n")
@@ -104,7 +104,7 @@ def write_bindefinition_file(data, file):
     file.write("		<BinGroup name=\"SoftBins\" type=\"SoftBin\">\n")
     for i in range(len(data[0])):
         file.write("			<Bin name=\"" + str(data[0][i][1]) + "\">\n")
-        file.write("				<ID>" + str(data[0][i][0]) + "</ID>\n")
+        file.write("				<ID>" + str(int(data[0][i][0])) + "</ID>\n")
         file.write("				<Desc>" + str(data[0][i][2]) + "</Desc>\n")
         file.write("				<Inherit>" + str(data[1][data[0][i][3] - 1][1]) + "</Inherit>\n")
         file.write("			</Bin>\n")
@@ -132,7 +132,7 @@ def write_limit_file(data, file):
     file.write("</Blocks>")
 
 
-def write_block_file(data, file):
+def write_block_file(data, file, socketmap_name):
     file.write("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n")
     file.write("<Blocks>\n")
     file.write("	<DCMeasures>\n")
@@ -182,7 +182,7 @@ def write_block_file(data, file):
     file.write("			<ExecAPI>test_template\init\SocketMapValidate</ExecAPI>\n")
     file.write("			<Param name=\"SocketMap\">\n")
     file.write("				<Type>SocketMap</Type>\n")
-    file.write("				<Value>SocketMap_F28</Value>\n")
+    file.write("				<Value>" + socketmap_name + "</Value>\n")
     file.write("			</Param>\n")
     file.write("		</Test>\n")
     file.write("		<Test name=\"LoadAllPats\" testNum=\"500\">\n")
@@ -239,31 +239,31 @@ def write_levels_file(data, file):
     file.write("<Blocks>\n")
     for i in range(len(data)):
         file.write("	<Levels name=\"" + data[i][0] + "\">\n")
-        for j in range(1,len(data[i])):
+        for j in range(1, len(data[i])):
             file.write("		<SigRef name=\"" + data[i][j][0] + "\">\n")
-            if data[i][j][1]!='':
+            if data[i][j][1] != '':
                 file.write("			<VPS>" + str(data[i][j][1]) + "</VPS>\n")
-            if data[i][j][2]!='':
+            if data[i][j][2] != '':
                 file.write("			<IClamp>" + str(data[i][j][2]) + "</IClamp>\n")
-            if data[i][j][3]!='':
+            if data[i][j][3] != '':
                 file.write("			<IRange>" + str(int(data[i][j][3])) + "</IRange>\n")
-            if data[i][j][4]!='':
+            if data[i][j][4] != '':
                 file.write("			<Delay>" + data[i][j][4] + "</Delay>\n")
-            if data[i][j][5]!='':
+            if data[i][j][5] != '':
                 file.write("			<VIL>" + str(data[i][j][5]) + "</VIL>\n")
-            if data[i][j][6]!='':
+            if data[i][j][6] != '':
                 file.write("			<VIH>" + str(data[i][j][6]) + "</VIH>\n")
-            if data[i][j][7]!='':
+            if data[i][j][7] != '':
                 file.write("			<VTERM>" + str(data[i][j][7]) + "</VTERM>\n")
-            if data[i][j][8]!='':
+            if data[i][j][8] != '':
                 file.write("			<VTERM_EN>" + str(int(data[i][j][8])) + "</VTERM_EN>\n")
-            if data[i][j][9]!='':
+            if data[i][j][9] != '':
                 file.write("			<VOL>" + str(data[i][j][9]) + "</VOL>\n")
-            if data[i][j][10]!='':
+            if data[i][j][10] != '':
                 file.write("			<VOH>" + str(data[i][j][10]) + "</VOH>\n")
-            if data[i][j][11]!='':
+            if data[i][j][11] != '':
                 file.write("			<VCH>" + str(data[i][j][11]) + "</VCH>\n")
-            if data[i][j][12]!='':
+            if data[i][j][12] != '':
                 file.write("			<VCL>" + str(data[i][j][12]) + "</VCL>\n")
             file.write("		</SigRef>\n")
         file.write("	</Levels>\n")
@@ -282,7 +282,7 @@ def write_project_file(file):
     file.write("		</Signals>\n")
     file.write("		<SocketMap>\n")
     file.write("			<FilePath>XML\SocketMap.xml</FilePath>\n")
-    file.write("			<Ref>SocketMap_F28</Ref>\n")
+    file.write("			<Ref>SocketMap</Ref>\n")
     file.write("		</SocketMap>\n")
     file.write("		<SignalGroups>\n")
     file.write("			<FilePath>XML\SignalGroups.xml</FilePath>\n")
@@ -338,22 +338,11 @@ def write_project_file(file):
     file.write("		</Shmoo>\n")
     file.write("	</Project>\n")
     file.write("	<Datalog>\n")
-    file.write("		<UserName>TJF</UserName>\n")
-    file.write("		<DevName>F28</DevName>\n")
-    file.write("		<LotId>lotid_012313</LotId>\n")
-    file.write("		<JobName>F28</JobName>\n")
-    file.write("		<HandlerId>HandlerId_01</HandlerId>\n")
-    file.write("		<TestTemp>60</TestTemp>\n")
-    file.write("		<LoadBoardId>LB_01</LoadBoardId>\n")
-    file.write("		<DibId>DIB_01</DibId>\n")
-    file.write("		<TestMode>FT1</TestMode>\n")
-    file.write("		<OutputDir>D:\TJF\\testlog</OutputDir>\n")
-    file.write("		<LogName>test</LogName>\n")
-    file.write("		<SummName>sum</SummName>\n")
-    file.write("		<STDFEnable>true</STDFEnable>\n")
-    file.write("		<CSVEnable>true</CSVEnable>\n")
-    file.write("		<LogPrintEnable>true</LogPrintEnable>\n")
-    file.write("		<ImageSaveEnable>true</ImageSaveEnable>\n")
+    file.write("		<SeparateLog>\n")
+    file.write("			<Enable>true</Enable>\n")
+    file.write("			<Manual>Manual_%s</Manual>\n")
+    file.write("			<Lot>Lot_%s</Lot>\n")
+    file.write("		</SeparateLog>\n")
     file.write("	</Datalog>\n")
     file.write("</Blocks>")
 
@@ -488,7 +477,7 @@ def write_runresultmap_file(file):
     file.write("</Blocks>")
 
 
-def write_flows_file(file):
+def write_flows_file(file, unknown_swbin_id):
     file.write("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n")
     file.write("<Blocks>\n")
     file.write("	<Flow name=\"INSTALL_FLOW\">\n")
@@ -519,7 +508,8 @@ def write_flows_file(file):
     file.write("		<FlowItem name=\"START\">\n")
     file.write("			<Type>Entrance</Type>\n")
     file.write("			<Goto result=\"0\">\n")
-    file.write("				<SoftBinRef binRef=\"Default\" group=\"SoftBins\">9999</SoftBinRef>\n")
+    file.write("				<SoftBinRef binRef=\"Default\" group=\"SoftBins\">" + str(
+        unknown_swbin_id) + "</SoftBinRef>\n")
     file.write("				<FlowItemRef>END</FlowItemRef>\n")
     file.write("				<PassFail>Pass</PassFail>\n")
     file.write("			</Goto>\n")
@@ -575,7 +565,8 @@ def generate_project(excel_dir, project_directory):
                 ]
     for dir in dir_list:
         mkdir(dir)
-    project_path = path.join(project_directory, 'Project.xml')
+    source_project_path = path.join(path.dirname(excel_dir), 'Project.xml')
+    target_project_path = path.join(project_directory, 'Project.xml')
     bindefinition_path = path.join(project_directory, 'XML\BinDefinition.xml')
     signal_path = path.join(project_directory, 'XML\Signals.xml')
     socketmap_path = path.join(project_directory, 'XML\SocketMap.xml')
@@ -592,14 +583,8 @@ def generate_project(excel_dir, project_directory):
     testerconfig_path = path.join(project_directory, 'XML\TesterConfig.xml')
     testprogram_path = path.join(project_directory, 'XML\TestProgram.xml')
     runresultmap_path = path.join(project_directory, 'XML\RunResultMap.xml')
-
     source_flows_path = path.join(path.dirname(excel_dir), 'Flows.xml')
     target_flows_path = path.join(project_directory, 'XML\Flows.xml')
-    if path.exists(source_flows_path):
-        shutil.copy(source_flows_path, target_flows_path)
-    else:
-        with open(target_flows_path, 'w') as flows_file:
-            write_flows_file(flows_file)
 
     # 数据提取与组装
     pinmap_df = read_excel(excel_dir, sheet_name='PinMap')
@@ -638,6 +623,8 @@ def generate_project(excel_dir, project_directory):
 
     bindefinition_df = read_excel(excel_dir, sheet_name='BinMap')
     swbin_df = bindefinition_df.iloc[:, :4]
+    unknown_row = swbin_df[swbin_df.iloc[:, 1].isin(['Unknown'])]
+    unknown_swbin_id = unknown_row.iloc[0, 0]
     hwbin_df = bindefinition_df.iloc[:, 5:9].dropna(axis=0)
     bindefinition_data = []
     swbin_data = []
@@ -669,7 +656,7 @@ def generate_project(excel_dir, project_directory):
         temp_list = []
         for j in range(limits_df.shape[1]):
             data = limits_df.iloc[i, j]
-            if isinstance(data, float) and math.isnan(data):
+            if isinstance(data, float) and isnan(data):
                 data = ''
             temp_list.append(data)
         limits_data.append(temp_list)
@@ -726,23 +713,32 @@ def generate_project(excel_dir, project_directory):
     for i in range(levels_df.shape[0]):
         temp_list2 = []
         if levels_notnull_df.iloc[i, 0]:
-            if i>0:
+            if i > 0:
                 levels_data.append(temp_list1)
                 temp_list1 = []
             temp_list1.append(levels_df.iloc[i, 0])
         for j in range(1, levels_df.shape[1]):
             data = levels_df.iloc[i, j]
-            if isinstance(data, float) and math.isnan(data):
+            if isinstance(data, float) and isnan(data):
                 data = ''
             temp_list2.append(data)
         temp_list1.append(temp_list2)
     levels_data.append(temp_list1)
 
-
+    if path.exists(source_project_path):
+        copy(source_project_path, target_project_path)
+        DOMTree = parse(source_project_path)
+        collection = DOMTree.documentElement
+        socketmap_name = collection.getElementsByTagName("Project")[0].getElementsByTagName("SocketMap")[0].getElementsByTagName(
+            "Ref")[0].childNodes[0].data
+    else:
+        with open(target_project_path, 'w') as project_file:
+            write_project_file(project_file)
+        socketmap_name = 'SocketMap'
     with open(signal_path, 'w') as signal_file:
         write_signals_file(signals_data, signal_file)
     with open(socketmap_path, 'w') as socketmap_file:
-        write_socketmap_file(socketmap_data, socketmap_file)
+        write_socketmap_file(socketmap_data, socketmap_file, socketmap_name)
     with open(signalgroups_path, 'w') as signalgroups_file:
         write_signalgroups_file(signalgroups_data, signalgroups_file)
     with open(bindefinition_path, 'w') as bindefinition_file:
@@ -750,13 +746,11 @@ def generate_project(excel_dir, project_directory):
     with open(limit_path, 'w') as limit_file:
         write_limit_file(limits_data, limit_file)
     with open(testblock_path, 'w') as testblock_file:
-        write_block_file(block_data, testblock_file)
+        write_block_file(block_data, testblock_file, socketmap_name)
     with open(uservars_path, 'w') as uservars_file:
         write_uservars_file(uservars_data, uservars_file)
     with open(levels_path, 'w') as levels_file:
         write_levels_file(levels_data, levels_file)
-    with open(project_path, 'w') as project_file:
-        write_project_file(project_file)
     with open(testerconfig_path, 'w') as testerconfig_file:
         write_config_file(testerconfig_file)
     with open(testprogram_path, 'w') as testprogram_file:
@@ -773,6 +767,11 @@ def generate_project(excel_dir, project_directory):
         write_empty_file(timingmap_file)
     with open(patternburst_path, 'w') as patternburst_file:
         write_empty_file(patternburst_file)
+    if path.exists(source_flows_path):
+        copy(source_flows_path, target_flows_path)
+    else:
+        with open(target_flows_path, 'w') as flows_file:
+            write_flows_file(flows_file, unknown_swbin_id)
 
 
 def main():
