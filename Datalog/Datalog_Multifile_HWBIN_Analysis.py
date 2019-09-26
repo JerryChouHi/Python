@@ -2,7 +2,7 @@
 # @Time     : 2019/9/17
 # @Author   : Jerry Chou
 # @File     :
-# @Function : 多文件SWBIN分析
+# @Function : 多文件HWBIN分析
 
 import pandas, os
 import datetime
@@ -75,46 +75,57 @@ def analysis_data(analysis_folder, data):
     test_file_name = analysis_folder + '/Analysis_by' + data[0][2] + '_' + date + '.xls'
     workbook = xlwt.Workbook(style_compression=2)
     worksheet = workbook.add_sheet('Summary')
-    worksheet.write(0, 0, data[0][2])
-
-    sw_bin_list = [1, 2, 5, 6, 7, 9, 12, 13, 14, 15, 23, 24, 25, 26, 27, 29, 30, 31, 32, 33, 34, 35, 36, 40, 41, 42, 43,
-                   44, 45, 53, 54, 55, 96, 97, 98, 99]
-
-    # 确定栏位宽度
+    hw_bin_list = [1, 2, 3, 4, 5, 6]
+    iRow = 0
+    worksheet.write(iRow, 0, 'File')
+    for i in range(len(hw_bin_list)):
+        worksheet.write(iRow, 1 + i, 'HWBin' + str(hw_bin_list[i]))
+    worksheet.write(iRow, 7, '测试数量')
+    worksheet.write(iRow, 8, '良率')
+    iRow += 1
+    summary_data = []
     col_width = []
-    col_num = 0
-    col_width.append(len_byte(data[0][2]))
-    col_num += 1
-    for m in range(len(data)):
-        col_width.append(len_byte(data[m][0] + '_COUNT'))
-        col_num += 1
-
-    # 设置栏位宽度，栏位宽度小于10时采用默认宽度
-    for l in range(len(col_width)):
-        if col_width[l] > 10:
-            worksheet.col(l).width = 256 * (col_width[l] + 1)
-
     for i in range(len(data)):
-        worksheet.write(0, 1 + i, data[i][0] + '_COUNT')
-    for i in range(len(sw_bin_list)):
-        worksheet.write(i + 1, 0, sw_bin_list[i])
-        for j in range(len(data)):
-            if sw_bin_list[i] in data[j][1]:
-                bin_count = len(data[j][1][sw_bin_list[i]])
+        temp_list = []
+        temp_list.append(data[i][0])
+        if i==0:
+            col_width.append(len_byte(data[i][0]))
+        else:
+            if col_width[0] < len_byte(str(data[i][0])):
+                col_width[0] = len_byte(data[i][0])
+        test_count = 0
+        pass_count = len(data[i][1][1])
+        for j in range(len(hw_bin_list)):
+            if hw_bin_list[j] in data[i][1]:
+                bin_count = len(data[i][1][hw_bin_list[j]])
             else:
                 bin_count = 0
-            if j == 0:
-                worksheet.write(i + 1, j + 1, bin_count)
-            else:
-                diff_count = bin_count - temp_count
-                if diff_count > 0:
-                    worksheet.write(i + 1, j + 1, str(bin_count) + '(+' + str(diff_count) + ')', get_style(2))
-                elif diff_count == 0:
-                    worksheet.write(i + 1, j + 1, str(bin_count) + '(-)')
-                else:
-                    worksheet.write(i + 1, j + 1, str(bin_count) + '(' + str(diff_count) + ')', get_style(5))
-            temp_count = bin_count
+            test_count += bin_count
+            temp_list.append(bin_count)
+        temp_list.append(test_count)
+        pass_percent = '{:.2%}'.format(pass_count / test_count)
+        temp_list.append(pass_percent)
+        summary_data.append(temp_list)
 
+    # 设置栏位宽度，栏位宽度小于10时采用默认宽度
+    for i in range(len(col_width)):
+        if col_width[i] > 10:
+            worksheet.col(i).width = 256 * (col_width[i] + 1)
+
+
+    for i in range(len(summary_data)):
+        for j in range(len(summary_data[i])):
+            worksheet.write(iRow, j, summary_data[i][j])
+        iRow += 1
+    worksheet.write(iRow, 0, 'Summary',get_style(5))
+    summary_bin1_count = 0
+    for i in range(len(summary_data)):
+        summary_bin1_count += summary_data[i][1]
+    worksheet.write(iRow, 1, summary_bin1_count)
+    for i in range(2, len(summary_data[-1])-2):
+        worksheet.write(iRow, i, summary_data[-1][i])
+    worksheet.write(iRow, 7, summary_data[0][7])
+    worksheet.write(iRow, 8, '{:.2%}'.format(summary_bin1_count / summary_data[0][7]),get_style(5))
     workbook.save(test_file_name)
 
 
@@ -164,7 +175,7 @@ def main():
         analysis_folder = argv[argv.index('-a') + 1]
 
     if argv.count('-b') == 0:
-        group_by_id = 2  # 默认根据SWBIN分组
+        group_by_id = 3  # 默认根据HWBIN分组
     else:
         group_by_id = int(argv[argv.index('-b') + 1])
 

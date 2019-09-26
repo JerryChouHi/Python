@@ -38,18 +38,46 @@ def parse_golden_data_file(file):
         three_sigma_low_end_list.append(three_sigma_low_end)
     return three_sigma_low_end_list, three_sigma_high_end_list
 
+def get_nan_row(df):
+    """
+    获得有空值的行的列表
+    :param df: 
+    :return: 
+    """
+    exist_nan_row = df[df.isnull().T.any()]
+    exist_nan_row_list = list(exist_nan_row.index.values)
+    return exist_nan_row_list
 
 def parse_file(file, golden_data):
     read_file = pandas.read_csv(file)
     chipno_line_num = read_file[read_file.iloc[:, 0].isin(['ChipNo'])].index[0]
+    try:
+        read_file = pandas.read_csv(file, na_values=' ')
+    except Exception as e:
+        print(e)
+    chipno_row_num = read_file[read_file.iloc[:, 0].isin(['ChipNo'])].index[0]
+    chipnum_df = read_file.iloc[chipno_row_num + row_offset:, 0]
+    for chipnum in chipnum_df:
+        try:
+            int(chipnum)
+        except:
+            FirstRegister = chipnum
+            break
+    firstregister_row_num = read_file[read_file.iloc[:, 0].isin([FirstRegister])].index[0]
     result = []
+
+    whole_data_df = read_file.iloc[chipno_row_num + row_offset:firstregister_row_num, 0:read_file.shape[1] - 2]
+    exist_nan_row_list = get_nan_row(whole_data_df)
+
+    data_row_list = range(chipno_row_num + row_offset, firstregister_row_num)
+    ok_row_list = list(set(data_row_list) - set(exist_nan_row_list))
     for row_num in range(read_file.shape[0]):
         row_data = []
         for col_num in range(read_file.shape[1] - 2):
             value = read_file.iloc[row_num, col_num]
             if chipno_line_num + 2 <= row_num <= chipno_line_num + 3:
                 row_data.append((value, '008000'))  # 纯绿
-            elif row_num >= chipno_line_num + row_offset and col_num >= col_offset:
+            elif row_num in ok_row_list and col_num >= col_offset:
                 high_limit_data = read_file.iloc[chipno_line_num + 2, col_num]
                 if high_limit_data == ' ' or high_limit_data == 'N':
                     high_limit = ''
@@ -71,6 +99,8 @@ def parse_file(file, golden_data):
                         row_data.append((value, 'FF0000'))  # 纯红
                 except Exception as e:
                     print(e)
+            elif chipno_row_num + row_offset<=row_num<firstregister_row_num and row_num not in ok_row_list:
+                row_data.append((value,'A020F0')) # purple
             else:
                 if isinstance(value, float) and math.isnan(value):
                     value = ''

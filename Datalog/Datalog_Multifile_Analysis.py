@@ -24,29 +24,61 @@ def find_item(list, value):
     '''
     return [i for i, v in enumerate(list) if v == value]
 
+def get_nan_row(df):
+    """
+    获得有空值的行的列表
+    :param df: 
+    :return: 
+    """
+    exist_nan_row = df[df.isnull().T.any()]
+    exist_nan_row_list = list(exist_nan_row.index.values)
+    return exist_nan_row_list
 
 def parse_file(file, group_by_id):
     try:
-        read_file = pandas.read_csv(file)
+        read_file = pandas.read_csv(file, na_values=' ')
     except Exception as e:
         print(e)
     chipno_row_num = read_file[read_file.iloc[:, 0].isin(['ChipNo'])].index[0]
+    group_name = read_file.iloc[chipno_row_num, group_by_id]
+    chipnum_df = read_file.iloc[chipno_row_num + row_offset:, 0]
+    for chipnum in chipnum_df:
+        try:
+            int(chipnum)
+        except:
+            FirstRegister = chipnum
+            break
+    firstregister_row_num = read_file[read_file.iloc[:, 0].isin([FirstRegister])].index[0]
     result = []
-    group_list = read_file.iloc[chipno_row_num + row_offset:, group_by_id]
-    group_int_list = [int(i) for i in group_list]
-    format_group_list = list(set(group_int_list))
-    format_group_list.sort()
 
-    group_index = {}
-    for i in format_group_list:
-        group_index[i] = find_item(group_int_list, i)
+    whole_data_df = read_file.iloc[chipno_row_num + row_offset:firstregister_row_num, 0:read_file.shape[1] - 2]
+    exist_nan_row_list = get_nan_row(whole_data_df)
+
+    data_row_list = range(chipno_row_num + row_offset, firstregister_row_num)
+    ok_row_list = list(set(data_row_list) - set(exist_nan_row_list))
+
+    ok_group_index = {}
+    ok_group_list = read_file.iloc[ok_row_list, group_by_id]
+    ok_group_int_list = [int(i) for i in ok_group_list]
+    format_ok_group_list = list(set(ok_group_int_list))
+    format_ok_group_list.sort()
+    for i in format_ok_group_list:
+        ok_group_index[i] = find_item(ok_group_int_list, i)
     # 遍历所有测试项
     for col_num in range(col_offset, read_file.shape[1] - 2):
+        test_name = read_file.iloc[chipno_row_num, col_num]
+        unit = read_file.iloc[chipno_row_num + 1, col_num]
+        if isinstance(unit, float) and math.isnan(unit):
+            unit = ''
+        hi_limit = read_file.iloc[chipno_row_num + 2, col_num]
+        lo_limit = read_file.iloc[chipno_row_num + 3, col_num]
         # 取得数据
-        data = read_file.iloc[chipno_row_num:, col_num]
+        data = read_file.iloc[ok_row_list, col_num]
+        temp = [test_name, unit, hi_limit, lo_limit]
+        temp.append(cal_data(data, ok_group_index))
         # 计算数据
-        result.append(cal_data(data, group_index))
-    return result, format_group_list, group_index
+        result.append(temp)
+    return result, format_ok_group_list, ok_group_index, group_name
 
 
 def calc(data):
@@ -64,23 +96,16 @@ def calc(data):
 
 
 def cal_data(data, group_index):
-    test_name = data.iloc[0]
-    unit = data.iloc[1]
-    if isinstance(unit, float) and math.isnan(unit):
-        unit = ''
-    hi_limit = data.iloc[2]
-    lo_limit = data.iloc[3]
-
     # 获取测试值，并转成float类型
     try:
-        data_val = data[row_offset:].astype("float")
+        data_val = data.astype("float")
         calc_data = []
         for i in group_index:
             calc_data.append(calc(data_val.iloc[group_index[i]]))
     except Exception as e:
         print(e)
 
-    return test_name, unit, hi_limit, lo_limit, calc_data
+    return calc_data
 
 
 def get_style(colour_id):
@@ -103,12 +128,12 @@ def len_byte(value):
     return int(length)
 
 
-def analysis_data(analysis_file, group_name, data):
+def analysis_data(analysis_file, data):
     # 生成csv文件名拼接
     file_name = analysis_file.split('.')[0]
     date = datetime.datetime.now().strftime("%Y%m%d%H%M")
 
-    test_file_name = file_name + '_Analysis_by' + group_name + '_' + date + '.xls'
+    test_file_name = file_name + '_Analysis_by' + data[3] + '_' + date + '.xls'
 
     workbook = xlwt.Workbook(style_compression=2)
 
@@ -118,7 +143,7 @@ def analysis_data(analysis_file, group_name, data):
     StdDivMeanPercent_style = ['[-50%,-5%),(5%,50%]', '[-500%,-50%),(50%,500%]', '(-∞,-500%),(500%,+∞)']
 
     for i in range(len(data[1])):
-        worksheet = workbook.add_sheet(group_name + str(data[1][i]))
+        worksheet = workbook.add_sheet(data[3] + str(data[1][i]))
 
         # 确定栏位宽度
         col_width = []
@@ -183,7 +208,7 @@ def analysis_data(analysis_file, group_name, data):
         worksheet.write(iRowIndex, 9, std_style[2], get_style(2))
         worksheet.write(iRowIndex, 10, StdDivMeanPercent_style[2], get_style(2))
         iRowIndex += 1
-        line_loop_times = ['Loop times', len(data[2][data[1][i]])]
+        line_loop_times = ['Test times', len(data[2][data[1][i]])]
         for index in range(len(line_loop_times)):
             worksheet.write(iRowIndex, index, line_loop_times[index])
         iRowIndex += 1
@@ -273,13 +298,6 @@ def main():
     else:
         group_by_id = int(argv[argv.index('-b') + 1])
 
-    if group_by_id == 0:
-        group_name = 'ChipNo'
-    elif group_by_id == 1:
-        group_name = 'Site'
-    elif group_by_id == 2:
-        group_name = 'SWBIN'
-
     mkdir(analysis_folder)
 
     for file in file_list:
@@ -289,7 +307,7 @@ def main():
 
         analysis_file = os.path.join(analysis_folder, file)
         # analysis data
-        analysis_data(analysis_file, group_name, data)
+        analysis_data(analysis_file, data)
 
 
 if __name__ == '__main__':
