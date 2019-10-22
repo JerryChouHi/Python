@@ -36,7 +36,8 @@ def parse_golden_data_file(file):
         three_sigma_high_end = mean_value + 3 * std_value
         three_sigma_high_end_list.append(three_sigma_high_end)
         three_sigma_low_end_list.append(three_sigma_low_end)
-    return three_sigma_low_end_list, three_sigma_high_end_list
+    return three_sigma_high_end_list, three_sigma_low_end_list
+
 
 def get_nan_row(df):
     """
@@ -48,6 +49,7 @@ def get_nan_row(df):
     exist_nan_row_list = list(exist_nan_row.index.values)
     return exist_nan_row_list
 
+
 def parse_file(file, golden_data):
     read_file = pandas.read_csv(file)
     chipno_line_num = read_file[read_file.iloc[:, 0].isin(['ChipNo'])].index[0]
@@ -57,13 +59,14 @@ def parse_file(file, golden_data):
         print(e)
     chipno_row_num = read_file[read_file.iloc[:, 0].isin(['ChipNo'])].index[0]
     chipnum_df = read_file.iloc[chipno_row_num + row_offset:, 0]
+    firstregister_row_num = read_file.shape[0]
     for chipnum in chipnum_df:
         try:
             int(chipnum)
         except:
             FirstRegister = chipnum
+            firstregister_row_num = read_file[read_file.iloc[:, 0].isin([FirstRegister])].index[0]
             break
-    firstregister_row_num = read_file[read_file.iloc[:, 0].isin([FirstRegister])].index[0]
     result = []
 
     whole_data_df = read_file.iloc[chipno_row_num + row_offset:firstregister_row_num, 0:read_file.shape[1] - 2]
@@ -71,6 +74,13 @@ def parse_file(file, golden_data):
 
     data_row_list = range(chipno_row_num + row_offset, firstregister_row_num)
     ok_row_list = list(set(data_row_list) - set(exist_nan_row_list))
+    col_data = []
+    for i in range(len(read_file.columns) - 2):
+        col_name = read_file.columns[i]
+        if col_name.startswith('Unnamed'):
+            col_name = ''
+        col_data.append((col_name, 'FFFFFF'))
+    result.append(col_data)
     for row_num in range(read_file.shape[0]):
         row_data = []
         for col_num in range(read_file.shape[1] - 2):
@@ -90,17 +100,17 @@ def parse_file(file, golden_data):
                     low_limit = float(low_limit_data)
                 try:
                     value_float = float(value)
-                    if golden_data[0][col_num] <= value_float <= golden_data[1][col_num]:
+                    if golden_data[1][col_num] <= value_float <= golden_data[0][col_num]:
                         row_data.append((value, 'FFFFFF'))  # 白色
-                    elif high_limit != '' and (low_limit <= value_float < golden_data[0][col_num] or golden_data[1][
+                    elif high_limit != '' and (low_limit <= value_float < golden_data[1][col_num] or golden_data[0][
                         col_num] < value_float <= high_limit):
                         row_data.append((value, 'FFFF00'))  # 纯黄
                     else:
                         row_data.append((value, 'FF0000'))  # 纯红
                 except Exception as e:
                     print(e)
-            elif chipno_row_num + row_offset<=row_num<firstregister_row_num and row_num not in ok_row_list:
-                row_data.append((value,'A020F0')) # purple
+            elif chipno_row_num + row_offset <= row_num < firstregister_row_num and row_num not in ok_row_list:
+                row_data.append((value, 'A020F0'))  # purple
             else:
                 if isinstance(value, float) and math.isnan(value):
                     value = ''
@@ -117,7 +127,7 @@ def analysis_data(file, data, golden_data):
     wb = Workbook()  # 创建文件对象
 
     ws = wb.active  # 获取第一个sheet
-    ws.freeze_panes = 'E18'
+    ws.freeze_panes = 'E19'
 
     border = Border(left=Side(border_style='thin', color='000000'),
 

@@ -39,14 +39,14 @@ def parse_file(file, result_file):
             continue
         break
     chipnum_df = read_file.iloc[pwdn_total_row_num + row_offset:, 0]
+    firstregister_row_num = read_file.shape[0]
     for chipnum in chipnum_df:
         try:
             int(chipnum)
         except:
             FirstRegister = chipnum
+            firstregister_row_num = read_file[read_file.iloc[:, 0].isin([FirstRegister])].index[0]
             break
-    firstregister_row_num = read_file[read_file.iloc[:, 0].isin([FirstRegister])].index[0]
-
     dc_df = read_file.iloc[pwdn_total_row_num + row_offset:firstregister_row_num, 0:pwdn_total_col_num + 1]
     image_df = read_file.iloc[pwdn_total_row_num + row_offset:firstregister_row_num,
                pwdn_total_col_num + 1:read_file.shape[1] - 2]
