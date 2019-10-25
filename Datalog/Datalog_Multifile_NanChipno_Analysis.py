@@ -32,23 +32,22 @@ def parse_file(file, result_file):
         except:
             firstregister_row_num = i
             break
-    dc_nan_row = []
-    image_nan_row = []
+    dc_nan_chipno = []
+    image_nan_chipno = []
     for i in range(pwdn_total_row_num + row_offset, firstregister_row_num):
         for j in range(pwdn_total_col_num + 1):
             if data[i][j].isspace():
-                dc_nan_row.append(i + 1)
+                dc_nan_chipno.append(data[i][0])
                 break
     for i in range(pwdn_total_row_num + row_offset, firstregister_row_num):
         for j in range(pwdn_total_col_num + 1, col_count - 4):
             if data[i][j].isspace():
-                image_nan_row.append(i + 1)
+                image_nan_chipno.append(data[i][0])
                 break
     with open(result_file, 'a') as f:
-        f.write(file + " 存在空值的行：\n")
-        f.write("(1) DC 共 " + str(len(dc_nan_row)) + " 行，它们是:" + str(dc_nan_row) + "\n")
-        f.write("(2) IMAGE 共 " + str(len(image_nan_row)) + " 行，它们是:" + str(image_nan_row) + '\n')
-
+        f.write(file + " 存在空值的chipno：\n")
+        f.write("(1) DC 共 " + str(len(dc_nan_chipno)) + " 个，它们是:" + str(dc_nan_chipno) + "\n")
+        f.write("(2) IMAGE 共 " + str(len(image_nan_chipno)) + " 个，它们是:" + str(image_nan_chipno) + '\n')
 
 def mkdir(dir):
     dir = dir.strip()

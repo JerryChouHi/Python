@@ -3,9 +3,8 @@
 # @Author   : Jerry Chou
 # @File     :
 # @Function :
-
-import pandas, os
-import numpy as np
+import csv
+import os
 import datetime, math
 from sys import argv
 
@@ -16,106 +15,397 @@ row_offset = 5
 col_offset = 4
 
 golden_data_color = '00FFFF'  # 水绿色
+iic_test = 'iic_test'
 
 
-def parse_golden_data_file(file):
-    read_file = pandas.read_csv(file)
-    chipno_line_num = read_file[read_file.iloc[:, 0].isin(['ChipNo'])].index[0]
-    three_sigma_low_end_list = ['3SigmaLowEnd', '', '', '']
-    three_sigma_high_end_list = ['3SigmaHighEnd', '', '', '']
-    for col_num in range(col_offset, read_file.shape[1] - 2):
-        data = read_file.iloc[chipno_line_num + row_offset:, col_num].astype("float")
-        std_value = np.std(data)
-        mean_value = np.mean(data)
-        # 平均值：
-        # 对于高斯分布的数据来说，68.27%的数据集集中在一个标准差的范围内，95.45%在两个标准差的范围内，
-        # 99.73%在三个标准差的范围内，因此根据这个，和平均值相差3倍标准差的点被看作异常点，
-        # 但平均数和标准差太容易受异常点干扰，其有限样本击穿点是0%
-        # 平均值上下三倍标准差之间属于正常点
-        three_sigma_low_end = mean_value - 3 * std_value
-        three_sigma_high_end = mean_value + 3 * std_value
-        three_sigma_high_end_list.append(three_sigma_high_end)
-        three_sigma_low_end_list.append(three_sigma_low_end)
-    return three_sigma_high_end_list, three_sigma_low_end_list
-
-
-def get_nan_row(df):
-    """
-    获得有空值的行的列表
-    :param df: 
-    :return: 
-    """
-    exist_nan_row = df[df.isnull().T.any()]
-    exist_nan_row_list = list(exist_nan_row.index.values)
-    return exist_nan_row_list
+def get_golden_data():
+    golden_data_list = [('PCLK_O/S', -0.38, -0.5),
+                        ('HSYNC_O/S', -0.38, -0.5),
+                        ('VSYNC_O/S', -0.38, -0.5),
+                        ('D9_O/S', -0.38, -0.5),
+                        ('D8_O/S', -0.38, -0.5),
+                        ('D7_O/S', -0.38, -0.5),
+                        ('D6_O/S', -0.38, -0.5),
+                        ('D5_O/S', -0.38, -0.5),
+                        ('D4_O/S', -0.38, -0.5),
+                        ('D3_O/S', -0.38, -0.5),
+                        ('D2_O/S', -0.38, -0.5),
+                        ('D1_O/S', -0.38, -0.5),
+                        ('D0_O/S', -0.38, -0.5),
+                        ('SCL_O/S', -0.38, -0.5),
+                        ('SDA_O/S', -0.38, -0.5),
+                        ('RSTB_O/S', -0.38, -0.5),
+                        ('PWDN_O/S', -0.38, -0.5),
+                        ('DVDD_O/S', -0.32, -0.34),
+                        ('VRamp_O/S', -0.4, -0.5),
+                        ('VH_O/S', -0.4, -0.5),
+                        ('VN1_O/S', 0.5, 0.4),
+                        ('EXCLK_O/S', -0.4, -0.5),
+                        ('PCLK_Leakage/iiL', 0.005, -0.02),
+                        ('HSYNC_Leakage/iiL', 0.005, -0.02),
+                        ('VSYNC_Leakage/iiL', 0.005, -0.02),
+                        ('D9_Leakage/iiL', 0.005, -0.02),
+                        ('D8_Leakage/iiL', 0.005, -0.02),
+                        ('D7_Leakage/iiL', 0.005, -0.02),
+                        ('D6_Leakage/iiL', 0.005, -0.02),
+                        ('D5_Leakage/iiL', 0.005, -0.02),
+                        ('D4_Leakage/iiL', 0.005, -0.02),
+                        ('D3_Leakage/iiL', 0.005, -0.02),
+                        ('D2_Leakage/iiL', 0.005, -0.02),
+                        ('D1_Leakage/iiL', 0.02, -0.02),
+                        ('D0_Leakage/iiL', 0.02, -0.02),
+                        ('SCL_Leakage/iiL', 0.02, -0.02),
+                        ('SDA_Leakage/iiL', 0.02, -0.02),
+                        ('RSTB_Leakage/iiL', -0.15, -0.35),
+                        ('PWDN_Leakage/iiL', 0.1, -0.1),
+                        ('EXCLK_Leakage/iiL', 0.02, -0.02),
+                        ('PCLK_Leakage/iiH', 0.02, -0.02),
+                        ('HSYNC_Leakage/iiH', 0.02, -0.02),
+                        ('VSYNC_Leakage/iiH', 0.02, -0.02),
+                        ('D9_Leakage/iiH', 0.005, -0.02),
+                        ('D8_Leakage/iiH', 0.005, -0.02),
+                        ('D7_Leakage/iiH', 0.005, -0.02),
+                        ('D6_Leakage/iiH', 0.005, -0.02),
+                        ('D5_Leakage/iiH', 0.005, -0.02),
+                        ('D4_Leakage/iiH', 0.005, -0.02),
+                        ('D3_Leakage/iiH', 0.005, -0.02),
+                        ('D2_Leakage/iiH', 0.005, -0.02),
+                        ('D1_Leakage/iiH', 32, 27),
+                        ('D0_Leakage/iiH', 32, 27),
+                        ('SCL_Leakage/iiH', 0.005, -0.02),
+                        ('SDA_Leakage/iiH', 0.005, -0.02),
+                        ('RSTB_Leakage/iiH', 0.06, -0.02),
+                        ('PWDN_Leakage/iiH', 1.5, 0.5),
+                        ('EXCLK_Leakage/iiH', 0.005, -0.02),
+                        ('iic_test', 1, 1),
+                        ('DVDD_voltage', 1.65, 1.45, 9),
+                        ('VH_voltage', 4.4, 4.1, 9),
+                        ('VN1_voltage', -1.3, -1.6, 9),
+                        ('Active_AVDD', 27, 23, 12),
+                        ('Active_DOVDD', 70, 50, 12),
+                        ('PWDN_AVDD', 10, 0, 8),
+                        ('PWDN_DOVDD', 50, 0, 8),
+                        ('PWDN_Total', 60, 10, 8),
+                        ('BLC_R', 100, 90),
+                        ('BLC_Gr', 100, 90),
+                        ('BLC_Gb', 100, 90),
+                        ('BLC_B', 100, 90),
+                        ('PLCK_Freq', 86.5, 86.3, 9),
+                        ('BK_DeadRowExBPix_R', 0, 0, 15),
+                        ('BK_DeadRowExBPix_Gr', 0, 0, 15),
+                        ('BK_DeadRowExBPix_Gb', 0, 0, 15),
+                        ('BK_DeadRowExBPix_B', 0, 0, 15),
+                        ('BK_DeadColExBPix_R', 0, 0, 14),
+                        ('BK_DeadColExBPix_Gr', 0, 0, 14),
+                        ('BK_DeadColExBPix_Gb', 0, 0, 14),
+                        ('BK_DeadColExBPix_B', 0, 0, 14),
+                        ('BK_Mean_R', 18, 14, 13),
+                        ('BK_Mean_Gr', 18, 14, 13),
+                        ('BK_Mean_Gb', 18, 14, 13),
+                        ('BK_Mean_B', 18, 14, 13),
+                        ('BK_StdDEV_R', 4, 2, 13),
+                        ('BK_StdDEV_Gr', 4, 2, 13),
+                        ('BK_StdDEV_Gb', 4, 2, 13),
+                        ('BK_StdDEV_B', 4, 2, 13),
+                        ('LT_DRow_R', 0, 0, 25),
+                        ('LT_DRow_Gr', 0, 0, 25),
+                        ('LT_DRow_Gb', 0, 0, 25),
+                        ('LT_DRow_B', 0, 0, 25),
+                        ('LT_DCol_R', 0, 0, 24),
+                        ('LT_DCol_Gr', 0, 0, 24),
+                        ('LT_DCol_Gb', 0, 0, 24),
+                        ('LT_DCol_B', 0, 0, 24),
+                        ('LT_DRow_Color', 0, 0, 25),
+                        ('LT_DCol_Color', 0, 0, 24),
+                        ('LT_Mean_R', 500, 400, 23),
+                        ('LT_Mean_Gr', 700, 600, 23),
+                        ('LT_Mean_Gb', 700, 600, 23),
+                        ('LT_Mean_B', 500, 420, 23),
+                        ('LT_StdDEV_R', 7, 4, 23),
+                        ('LT_StdDEV_Gr', 7, 4, 23),
+                        ('LT_StdDEV_Gb', 7, 4, 23),
+                        ('LT_StdDEV_B', 7, 4, 23),
+                        ('LT_RI_R', 95, 85, 23),
+                        ('LT_RI_Gr', 95, 85, 23),
+                        ('LT_RI_Gb', 95, 85, 23),
+                        ('LT_RI_B', 95, 85, 23),
+                        ('LT_Ratio_GrR', 1.6, 1.4, 23),
+                        ('LT_Ratio_GbR', 1.6, 1.4, 23),
+                        ('LT_Ratio_GrB', 1.6, 1.4, 23),
+                        ('LT_Ratio_GbB', 1.6, 1.4, 23),
+                        ('LT_Ratio_GbGr', 1.1, 1, 23),
+                        ('LT_LostBit', 0, 0, 23),
+                        ('LT_LostBitSNR_SumDIFF_R', 2, 0, 23),
+                        ('LT_LostBitSNR_SumDIFF_Gr', 2, 0, 23),
+                        ('LT_LostBitSNR_SumDIFF_Gb', 2, 0, 23),
+                        ('LT_LostBitSNR_SumDIFF_B', 2, 0, 23),
+                        ('LB_LT_Mean_R', 680, 580),
+                        ('LB_LT_Mean_Gr', 980, 840),
+                        ('LB_LT_Mean_Gb', 980, 840),
+                        ('LB_LT_Mean_B', 680, 580),
+                        ('LB_LT_LostBit', 1, 0, 23),
+                        ('LB_LT_LostBitSNR_SumDIFF_R', 3, 0, 23),
+                        ('LB_LT_LostBitSNR_SumDIFF_Gr', 3, 0, 23),
+                        ('LB_LT_LostBitSNR_SumDIFF_Gb', 3, 0, 23),
+                        ('LB_LT_LostBitSNR_SumDIFF_B', 3, 0, 23),
+                        ('FW_LT_DRow_R', 0, 0, 36),
+                        ('FW_LT_DRow_Gr', 0, 0, 36),
+                        ('FW_LT_DRow_Gb', 0, 0, 36),
+                        ('FW_LT_DRow_B', 0, 0, 36),
+                        ('FW_LT_DCol_R', 0, 0, 36),
+                        ('FW_LT_DCol_Gr', 0, 0, 36),
+                        ('FW_LT_DCol_Gb', 0, 0, 36),
+                        ('FW_LT_DCol_B', 0, 0, 36),
+                        ('FW_LT_DRow_Color', 0, 0, 36),
+                        ('FW_LT_DCol_Color', 0, 0, 36),
+                        ('FW_LT_Mean_R', 1023, 1023, 36),
+                        ('FW_LT_Mean_Gr', 1023, 1023, 36),
+                        ('FW_LT_Mean_Gb', 1023, 1023, 36),
+                        ('FW_LT_Mean_B', 1023, 1023, 36),
+                        ('FW_LT_StdDEV_R', 0, 0, 36),
+                        ('FW_LT_StdDEV_Gr', 0, 0, 36),
+                        ('FW_LT_StdDEV_Gb', 0, 0, 36),
+                        ('FW_LT_StdDEV_B', 0, 0, 36),
+                        ('FW_LT_RI_R', 100, 100),
+                        ('FW_LT_RI_Gr', 100, 100),
+                        ('FW_LT_RI_Gb', 100, 100),
+                        ('FW_LT_RI_B', 100, 100),
+                        ('FW_LT_Ratio_GrR', 1, 1),
+                        ('FW_LT_Ratio_GbR', 1, 1),
+                        ('FW_LT_Ratio_GrB', 1, 1),
+                        ('FW_LT_Ratio_GbB', 1, 1),
+                        ('FW_LT_Ratio_GbGr', 1, 1),
+                        ('LT_CornerLine', 0, 0, 26),
+                        ('LT_ScratchLine', 0, 0, 26),
+                        ('LT_Blemish', 0, 0, 31),
+                        ('LT_LineStripe', 0, 0, 27),
+                        ('LT_Particle', 0, 0, 32),
+                        ('BK_Cluster2', 0, 0, 30),
+                        ('LT_Cluster2', 0, 0, 30),
+                        ('BK_Cluster1', 0, 0, 29),
+                        ('LT_Cluster1', 0, 0, 29),
+                        ('WP_Count', 0, 0, 35),
+                        ('BK_Cluster3GrGb', 0, 0, 39),
+                        ('LT_Cluster3GrGb', 0, 0, 40),
+                        ('BK_Cluster3SubtractGrGb', 1, 0, 33),
+                        ('LT_Cluster3SubtractGrGb', 1, 0, 34),
+                        ('LB_BK_DeadRowExBPix_R', 0, 0, 45),
+                        ('LB_BK_DeadRowExBPix_Gr', 0, 0, 45),
+                        ('LB_BK_DeadRowExBPix_Gb', 0, 0, 45),
+                        ('LB_BK_DeadRowExBPix_B', 0, 0, 45),
+                        ('LB_BK_DeadColExBPix_R', 0, 0, 44),
+                        ('LB_BK_DeadColExBPix_Gr', 0, 0, 44),
+                        ('LB_BK_DeadColExBPix_Gb', 0, 0, 44),
+                        ('LB_BK_DeadColExBPix_B', 0, 0, 44),
+                        ('SR_LT_DRow_R', 0, 0, 55),
+                        ('SR_LT_DRow_Gr', 0, 0, 55),
+                        ('SR_LT_DRow_Gb', 0, 0, 55),
+                        ('SR_LT_DRow_B', 0, 0, 55),
+                        ('SR_LT_DCol_R', 0, 0, 54),
+                        ('SR_LT_DCol_Gr', 0, 0, 54),
+                        ('SR_LT_DCol_Gb', 0, 0, 54),
+                        ('SR_LT_DCol_B', 0, 0, 54),
+                        ('SR_LT_DRow_Color', 0, 0, 55),
+                        ('SR_LT_DCol_Color', 0, 0, 54),
+                        ('SR_LT_Mean_R', 480, 400, 53),
+                        ('SR_LT_Mean_Gr', 700, 600, 53),
+                        ('SR_LT_Mean_Gb', 700, 600, 53),
+                        ('SR_LT_Mean_B', 480, 400, 53),
+                        ('SR_LT_StdDEV_R', 8, 4, 53),
+                        ('SR_LT_StdDEV_Gr', 8, 4, 53),
+                        ('SR_LT_StdDEV_Gb', 8, 4, 53),
+                        ('SR_LT_StdDEV_B', 8, 4, 53),
+                        ('SR_LT_RI_R', 100, 90, 53),
+                        ('SR_LT_RI_Gr', 100, 90, 53),
+                        ('SR_LT_RI_Gb', 100, 90, 53),
+                        ('SR_LT_RI_B', 100, 90, 53),
+                        ('SR_LT_Ratio_GrR', 1.6, 1.4, 53),
+                        ('SR_LT_Ratio_GbR', 1.6, 1.4, 53),
+                        ('SR_LT_Ratio_GrB', 1.6, 1.4, 53),
+                        ('SR_LT_Ratio_GbB', 1.6, 1.4, 53),
+                        ('SR_LT_Ratio_GbGr', 1.1, 1, 53),
+                        ('SR_LT_LostBit', 1, 0, 53),
+                        ('SR_BK_DeadRowExBPix_R', 0, 0, 42),
+                        ('SR_BK_DeadRowExBPix_Gr', 0, 0, 42),
+                        ('SR_BK_DeadRowExBPix_Gb', 0, 0, 42),
+                        ('SR_BK_DeadRowExBPix_B', 0, 0, 42),
+                        ('SR_BK_DeadColExBPix_R', 0, 0, 41),
+                        ('SR_BK_DeadColExBPix_Gr', 0, 0, 41),
+                        ('SR_BK_DeadColExBPix_Gb', 0, 0, 41),
+                        ('SR_BK_DeadColExBPix_B', 0, 0, 41),
+                        ('SR_BK_Mean_R', 70, 60, 43),
+                        ('SR_BK_Mean_Gr', 70, 60, 43),
+                        ('SR_BK_Mean_Gb', 70, 60, 43),
+                        ('SR_BK_Mean_B', 70, 60, 43),
+                        ('SR_BK_StdDEV_R', 2, 0, 43),
+                        ('SR_BK_StdDEV_Gr', 2, 0, 43),
+                        ('SR_BK_StdDEV_Gb', 2, 0, 43),
+                        ('SR_BK_StdDEV_B', 2, 0, 43),
+                        ('Diffuser2_LT_WeakLineRow_R', 0, 0, 72),
+                        ('Diffuser2_LT_WeakLineRow_Gr', 0, 0, 72),
+                        ('Diffuser2_LT_WeakLineRow_Gb', 0, 0, 72),
+                        ('Diffuser2_LT_WeakLineRow_B', 0, 0, 72),
+                        ('Diffuser2_LT_WeakLineCol_R', 0, 0, 71),
+                        ('Diffuser2_LT_WeakLineCol_Gr', 0, 0, 71),
+                        ('Diffuser2_LT_WeakLineCol_Gb', 0, 0, 71),
+                        ('Diffuser2_LT_WeakLineCol_B', 0, 0, 71),
+                        ('BK_Z1_BT_DP_R', 4, 0),
+                        ('BK_Z1_BT_DP_Gr', 4, 0),
+                        ('BK_Z1_BT_DP_Gb', 4, 0),
+                        ('BK_Z1_BT_DP_B', 4, 0),
+                        ('BK_Z2_BT_DP_R', 4, 0),
+                        ('BK_Z2_BT_DP_Gr', 4, 0),
+                        ('BK_Z2_BT_DP_Gb', 4, 0),
+                        ('BK_Z2_BT_DP_B', 4, 0),
+                        ('BK_Z1_BT_WP_R', 4, 0),
+                        ('BK_Z1_BT_WP_Gr', 4, 0),
+                        ('BK_Z1_BT_WP_Gb', 4, 0),
+                        ('BK_Z1_BT_WP_B', 4, 0),
+                        ('BK_Z2_BT_WP_R', 4, 0),
+                        ('BK_Z2_BT_WP_Gr', 4, 0),
+                        ('BK_Z2_BT_WP_Gb', 4, 0),
+                        ('BK_Z2_BT_WP_B', 4, 0),
+                        ('LT_Z1_BT_DP_R', 0, 0),
+                        ('LT_Z1_BT_DP_Gr', 0, 0),
+                        ('LT_Z1_BT_DP_Gb', 0, 0),
+                        ('LT_Z1_BT_DP_B', 0, 0),
+                        ('LT_Z2_BT_DP_R', 0, 0),
+                        ('LT_Z2_BT_DP_Gr', 0, 0),
+                        ('LT_Z2_BT_DP_Gb', 0, 0),
+                        ('LT_Z2_BT_DP_B', 0, 0),
+                        ('LT_Z1_BT_WP_R', 0, 0),
+                        ('LT_Z1_BT_WP_Gr', 0, 0),
+                        ('LT_Z1_BT_WP_Gb', 0, 0),
+                        ('LT_Z1_BT_WP_B', 0, 0),
+                        ('LT_Z2_BT_WP_R', 0, 0),
+                        ('LT_Z2_BT_WP_Gr', 0, 0),
+                        ('LT_Z2_BT_WP_Gb', 0, 0),
+                        ('LT_Z2_BT_WP_B', 0, 0),
+                        ('LT_Z1_DK_WP_R', 0, 0),
+                        ('LT_Z1_DK_WP_Gr', 0, 0),
+                        ('LT_Z1_DK_WP_Gb', 0, 0),
+                        ('LT_Z1_DK_WP_B', 0, 0),
+                        ('LT_Z2_DK_WP_R', 0, 0),
+                        ('LT_Z2_DK_WP_Gr', 0, 0),
+                        ('LT_Z2_DK_WP_Gb', 0, 0),
+                        ('LT_Z2_DK_WP_B', 0, 0),
+                        ('LT_Z1_DK_DP_R', 0, 0),
+                        ('LT_Z1_DK_DP_Gr', 0, 0),
+                        ('LT_Z1_DK_DP_Gb', 0, 0),
+                        ('LT_Z1_DK_DP_B', 0, 0),
+                        ('LT_Z2_DK_DP_R', 0, 0),
+                        ('LT_Z2_DK_DP_Gr', 0, 0),
+                        ('LT_Z2_DK_DP_Gb', 0, 0),
+                        ('LT_Z2_DK_DP_B', 0, 0),
+                        ('BK_Z1_BT_DP', 9, 0),
+                        ('BK_Z2_BT_DP', 9, 0),
+                        ('BK_Z1_BT_WP', 9, 0),
+                        ('BK_Z2_BT_WP', 9, 0),
+                        ('LT_Z1_BT_DP', 0, 0),
+                        ('LT_Z2_BT_DP', 0, 0),
+                        ('LT_Z1_BT_WP', 0, 0),
+                        ('LT_Z2_BT_WP', 0, 0),
+                        ('LT_Z1_DK_DP', 0, 0),
+                        ('LT_Z2_DK_DP', 0, 0),
+                        ('LT_Z1_DK_WP', 0, 0),
+                        ('LT_Z2_DK_WP', 0, 0),
+                        ('Binning', -1, -1, 2)
+                        ]
+    golden_high_list = ['GoldenHigh', '', '', '']
+    golden_low_list = ['GoldenLow', '', '', '']
+    for i in range(len(golden_data_list)):
+        golden_high_list.append(golden_data_list[i][1])
+        golden_low_list.append(golden_data_list[i][2])
+    return golden_high_list, golden_low_list
 
 
 def parse_file(file, golden_data):
-    read_file = pandas.read_csv(file)
-    chipno_line_num = read_file[read_file.iloc[:, 0].isin(['ChipNo'])].index[0]
-    try:
-        read_file = pandas.read_csv(file, na_values=' ')
-    except Exception as e:
-        print(e)
-    chipno_row_num = read_file[read_file.iloc[:, 0].isin(['ChipNo'])].index[0]
-    chipnum_df = read_file.iloc[chipno_row_num + row_offset:, 0]
-    firstregister_row_num = read_file.shape[0]
-    for chipnum in chipnum_df:
+    data = []
+    with open(file) as f:
+        csv_reader = csv.reader(f)
+        for row in csv_reader:
+            data.append(row)
+    max_len = len(data[0])
+    for i in range(1, len(data)):
+        max_len = max(max_len, len(data[i]))
+    for i in range(0, len(data)):
+        add_count = max_len - len(data[i])
+        for j in range(add_count):
+            data[i].append('')
+
+    for i in range(len(data)):
         try:
-            int(chipnum)
-        except:
-            FirstRegister = chipnum
-            firstregister_row_num = read_file[read_file.iloc[:, 0].isin([FirstRegister])].index[0]
+            data[i].index('ChipNo')
+            chipno_row_num = i
             break
+        except:
+            pass
+    col_count = len(data[chipno_row_num])
+    row_count = len(data)
+    for i in range(chipno_row_num + row_offset, len(data)):
+        try:
+            int(data[i][0])
+        except:
+            firstregister_row_num = i
+            break
+    exist_nan_row_list = []
+    for i in range(chipno_row_num + row_offset, firstregister_row_num):
+        for j in range(col_count - 1):
+            if data[i][j].isspace():
+                exist_nan_row_list.append(i)
+                break
+
+    for i in range(len(data)):
+        try:
+            iic_test_col_num = data[i].index(iic_test)
+            break
+        except:
+            pass
+
     result = []
 
-    whole_data_df = read_file.iloc[chipno_row_num + row_offset:firstregister_row_num, 0:read_file.shape[1] - 2]
-    exist_nan_row_list = get_nan_row(whole_data_df)
-
-    data_row_list = range(chipno_row_num + row_offset, firstregister_row_num)
-    ok_row_list = list(set(data_row_list) - set(exist_nan_row_list))
-    col_data = []
-    for i in range(len(read_file.columns) - 2):
-        col_name = read_file.columns[i]
-        if col_name.startswith('Unnamed'):
-            col_name = ''
-        col_data.append((col_name, 'FFFFFF'))
-    result.append(col_data)
-    for row_num in range(read_file.shape[0]):
+    for row_num in range(row_count):
         row_data = []
-        for col_num in range(read_file.shape[1] - 2):
-            value = read_file.iloc[row_num, col_num]
-            if chipno_line_num + 2 <= row_num <= chipno_line_num + 3:
+        for col_num in range(col_count - 4):
+            value = data[row_num][col_num]
+            if chipno_row_num + 2 <= row_num <= chipno_row_num + 3:
                 row_data.append((value, '008000'))  # 纯绿
-            elif row_num in ok_row_list and col_num >= col_offset:
-                high_limit_data = read_file.iloc[chipno_line_num + 2, col_num]
-                if high_limit_data == ' ' or high_limit_data == 'N':
-                    high_limit = ''
-                else:
-                    high_limit = float(high_limit_data)
-                low_limit_data = read_file.iloc[chipno_line_num + 3, col_num]
-                if low_limit_data == ' ' or low_limit_data == 'N':
-                    low_limit = ''
-                else:
-                    low_limit = float(low_limit_data)
-                try:
-                    value_float = float(value)
-                    if golden_data[1][col_num] <= value_float <= golden_data[0][col_num]:
-                        row_data.append((value, 'FFFFFF'))  # 白色
-                    elif high_limit != '' and (low_limit <= value_float < golden_data[1][col_num] or golden_data[0][
-                        col_num] < value_float <= high_limit):
-                        row_data.append((value, 'FFFF00'))  # 纯黄
-                    else:
-                        row_data.append((value, 'FF0000'))  # 纯红
-                except Exception as e:
-                    print(e)
-            elif chipno_row_num + row_offset <= row_num < firstregister_row_num and row_num not in ok_row_list:
+            elif col_num == 0 and row_num in exist_nan_row_list:
                 row_data.append((value, 'A020F0'))  # purple
+            elif col_num >= col_offset and chipno_row_num + row_offset <= row_num < firstregister_row_num:
+                try:
+                    value_convert = float(value)
+                    high_limit_data = data[chipno_row_num + 2][col_num]
+                    try:
+                        high_limit = float(high_limit_data)
+                    except:
+                        high_limit = high_limit_data
+                    low_limit_data = data[chipno_row_num + 3][col_num]
+                    try:
+                        low_limit = float(low_limit_data)
+                    except:
+                        low_limit = low_limit_data
+                    if value_convert == int(value_convert):
+                        value_convert = int(value_convert)
+                    if golden_data[1][col_num] <= value_convert <= golden_data[0][col_num]:
+                        row_data.append((value_convert, 'FFFFFF'))  # 白色
+                    elif high_limit == 'N' or (high_limit != 'N' and (
+                                        low_limit <= value_convert < golden_data[1][col_num] or golden_data[0][
+                                col_num] < value_convert <= high_limit)):
+                        row_data.append((value_convert, 'FFFF00'))  # 纯黄
+                    else:
+                        row_data.append((value_convert, 'FF0000'))  # 纯红
+                except:
+                    if value.isspace():
+                        row_data.append((value, 'A020F0'))  # purple
+                    elif col_num == iic_test_col_num and value != '1':
+                        row_data.append((value, 'FFFF00'))  # 纯黄
             else:
                 if isinstance(value, float) and math.isnan(value):
                     value = ''
                 row_data.append((value, 'FFFFFF'))
         result.append(row_data)
+        print("解析文件：第 " + str(row_num + 1) + " 行")
     return result
 
 
@@ -153,8 +443,11 @@ def analysis_data(file, data, golden_data):
             ws.cell(row=irow, column=j + 1).value = data[i][j][0]
             ws.cell(row=irow, column=j + 1).fill = PatternFill(fill_type='solid', fgColor=data[i][j][1])
             ws.cell(row=irow, column=j + 1).border = border
+        print("组装Excel数据：第 " + str(i + 1) + " 行")
         irow += 1
+    print("保存数据开始-----------------")
     wb.save(test_file_name)
+    print("保存数据结束-----------------")
 
 
 def mkdir(dir):
@@ -163,10 +456,8 @@ def mkdir(dir):
     isExists = os.path.exists(dir)
     if not isExists:
         os.makedirs(dir)
-        # print(path + '创建成功')
         return True
     else:
-        # print(path + '目录已存在')
         return False
 
 
@@ -196,28 +487,24 @@ def main():
         sourcefile_folder = os.path.dirname(single_file)
         file_list = [os.path.basename(single_file)]
 
-    # Golden data file path
-    if argv.count('-g') == 0:
-        print("Error：Golden data file path为必填项，格式：“-g D:\cBin1 16ea.csv”。")
-        exit()
-    else:
-        golden_data_file = argv[argv.index('-g') + 1]
-
     # Analysis folder path
     if argv.count('-a') == 0:
         analysis_folder = sourcefile_folder + '\Analysis'
     else:
         analysis_folder = argv[argv.index('-a') + 1]
 
-    golden_data = parse_golden_data_file(golden_data_file)
+    # golden_data = parse_golden_data_file(golden_data_file)
+    golden_data = get_golden_data()
     mkdir(analysis_folder)
 
     for file in file_list:
         original_file = os.path.join(sourcefile_folder, file)
+        print(original_file)
         # parse file
         data = parse_file(original_file, golden_data)
 
         analysis_file = os.path.join(analysis_folder, file)
+        print(analysis_file)
         # analysis data
         analysis_data(analysis_file, data, golden_data)
 
