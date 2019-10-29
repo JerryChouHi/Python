@@ -309,7 +309,7 @@ def get_golden_data():
                         ('LT_Z2_DK_DP', 0, 0),
                         ('LT_Z1_DK_WP', 0, 0),
                         ('LT_Z2_DK_WP', 0, 0),
-                        ('Binning', -1, -1, 2)
+                        ('Binning', 0, 0, 2)
                         ]
     golden_high_list = ['GoldenHigh', '', '', '']
     golden_low_list = ['GoldenLow', '', '', '']
@@ -342,6 +342,7 @@ def parse_file(file, golden_data):
             pass
     col_count = len(data[chipno_row_num])
     row_count = len(data)
+    firstregister_row_num = len(data) - 1
     for i in range(chipno_row_num + row_offset, len(data)):
         try:
             int(data[i][0])

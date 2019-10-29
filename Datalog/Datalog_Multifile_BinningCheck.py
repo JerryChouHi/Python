@@ -93,7 +93,7 @@ def parse_file(file, result_file):
             pass
 
     col_count = len(data[chipno_row_num])
-
+    firstregister_row_num = len(data) - 1
     for i in range(chipno_row_num + row_offset, len(data)):
         try:
             int(data[i][0])
@@ -145,11 +145,11 @@ def parse_file(file, result_file):
                             elif data[chipno_row_num + 4][col_num] != 'N':
                                 row_softbin_list.append(int(data[chipno_row_num + 4][col_num]))
                         else:
-                            row_softbin_list.append(2)
+                            row_softbin_list.append(1)
                     except:
                         pass
                 except:
-                    if col_num == iic_test_col_num and data[row_num][col_num]!='1':
+                    if col_num == iic_test_col_num and data[row_num][col_num] != '1':
                         row_softbin_list.append(7)
             row_softbin = row_softbin_list[0]
             for softbin in row_softbin_list:

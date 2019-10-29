@@ -26,6 +26,7 @@ def parse_file(file, result_file):
         except:
             pass
     col_count = len(data[pwdn_total_row_num])
+    firstregister_row_num = len(data)-1
     for i in range(pwdn_total_row_num + row_offset, len(data)):
         try:
             int(data[i][0])
