@@ -325,13 +325,18 @@ def parse_file(file, golden_data):
         csv_reader = csv.reader(f)
         for row in csv_reader:
             data.append(row)
-    max_len = len(data[0])
-    for i in range(1, len(data)):
-        max_len = max(max_len, len(data[i]))
+
+    for i in range(len(data)):
+        try:
+            binning_col_num = data[i].index('Binning')
+            break
+        except:
+            pass
     for i in range(0, len(data)):
-        add_count = max_len - len(data[i])
-        for j in range(add_count):
-            data[i].append('')
+        add_count = binning_col_num + 1 - len(data[i])
+        if add_count > 0:
+            for j in range(add_count):
+                data[i].append('')
 
     for i in range(len(data)):
         try:
@@ -340,9 +345,9 @@ def parse_file(file, golden_data):
             break
         except:
             pass
-    col_count = len(data[chipno_row_num])
+    col_count = binning_col_num + 1
     row_count = len(data)
-    firstregister_row_num = len(data) - 1
+    firstregister_row_num = len(data)
     for i in range(chipno_row_num + row_offset, len(data)):
         try:
             int(data[i][0])
@@ -351,8 +356,8 @@ def parse_file(file, golden_data):
             break
     exist_nan_row_list = []
     for i in range(chipno_row_num + row_offset, firstregister_row_num):
-        for j in range(col_count - 1):
-            if data[i][j].isspace():
+        for j in range(col_count):
+            if len(data[i][j].strip()) == 0:
                 exist_nan_row_list.append(i)
                 break
 
@@ -367,7 +372,7 @@ def parse_file(file, golden_data):
 
     for row_num in range(row_count):
         row_data = []
-        for col_num in range(col_count - 4):
+        for col_num in range(col_count):
             value = data[row_num][col_num]
             if chipno_row_num + 2 <= row_num <= chipno_row_num + 3:
                 row_data.append((value, '008000'))  # 纯绿

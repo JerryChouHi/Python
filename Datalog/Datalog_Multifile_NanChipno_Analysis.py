@@ -12,6 +12,7 @@ row_offset = 5
 col_offset = 4
 last_dc_testitem = 'PWDN_Total'
 
+
 def parse_file(file, result_file):
     data = []
     with open(file) as f:
@@ -25,8 +26,14 @@ def parse_file(file, result_file):
             break
         except:
             pass
-    col_count = len(data[pwdn_total_row_num])
-    firstregister_row_num = len(data)-1
+    for i in range(len(data)):
+        try:
+            binning_col_num = data[i].index('Binning')
+            break
+        except:
+            pass
+    col_count = binning_col_num + 1
+    firstregister_row_num = len(data) - 1
     for i in range(pwdn_total_row_num + row_offset, len(data)):
         try:
             int(data[i][0])
@@ -37,18 +44,19 @@ def parse_file(file, result_file):
     image_nan_chipno = []
     for i in range(pwdn_total_row_num + row_offset, firstregister_row_num):
         for j in range(pwdn_total_col_num + 1):
-            if data[i][j].isspace():
+            if len(data[i][j].strip()) == 0:
                 dc_nan_chipno.append(data[i][0])
                 break
     for i in range(pwdn_total_row_num + row_offset, firstregister_row_num):
-        for j in range(pwdn_total_col_num + 1, col_count - 4):
-            if data[i][j].isspace():
+        for j in range(pwdn_total_col_num + 1, col_count):
+            if len(data[i][j].strip()) == 0:
                 image_nan_chipno.append(data[i][0])
                 break
     with open(result_file, 'a') as f:
         f.write(file + " 存在空值的chipno：\n")
         f.write("(1) DC 共 " + str(len(dc_nan_chipno)) + " 个，它们是:" + str(dc_nan_chipno) + "\n")
         f.write("(2) IMAGE 共 " + str(len(image_nan_chipno)) + " 个，它们是:" + str(image_nan_chipno) + '\n')
+
 
 def mkdir(dir):
     dir = dir.strip()
