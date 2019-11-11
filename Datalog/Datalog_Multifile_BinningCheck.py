@@ -347,11 +347,13 @@ def parse_file(file, result_file):
                 bin_definition[row_softbin_index][2]) + " ,CSV中为 " + data[row_num][3] + "\n")
         print("解析文件：第 " + str(row_num + 1) + " 行")
 
-    if len(error_message) > 0:
-        with open(result_file, 'a') as f:
+    with open(result_file, 'a') as f:
+        if len(error_message) > 0:
             f.write(file_name + " 分Bin可能存在问题的ChipNo：\n")
             for item in error_message:
                 f.write(item)
+        else:
+            f.write(file_name + '：分Bin没有问题。\n')
 
 
 def mkdir(dir):

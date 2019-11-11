@@ -53,8 +53,9 @@ def parse_file(file, result_file):
                 image_nan_chipno.append(data[i][0])
                 break
     file_name = os.path.basename(file)
-    if len(dc_nan_chipno) > 0 or len(image_nan_chipno) > 0:
-        with open(result_file, 'a') as f:
+
+    with open(result_file, 'a') as f:
+        if len(dc_nan_chipno) > 0 or len(image_nan_chipno) > 0:
             f.write(file_name + " 存在空值的chipno：\n")
             if len(dc_nan_chipno) == 0:
                 f.write("(1) DC ：无空值\n")
@@ -64,6 +65,8 @@ def parse_file(file, result_file):
                 f.write("(2) IMAGE ：无空值\n")
             else:
                 f.write("(2) IMAGE 共 " + str(len(image_nan_chipno)) + " 个，它们是:" + str(image_nan_chipno) + '\n')
+        else:
+            f.write(file_name + "：没有空值。\n")
 
 
 def mkdir(dir):
