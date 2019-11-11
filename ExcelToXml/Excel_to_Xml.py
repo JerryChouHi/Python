@@ -117,17 +117,17 @@ def write_limit_file(data, file):
     file.write("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n")
     file.write("<Blocks>\n")
     for i in range(len(data)):
-        file.write("	<Limit name=\"" + data[i][1] + "\">\n")
-        file.write("		<TestNum>" + str(data[i][0]) + "</TestNum>\n")
-        file.write("		<LoLimit>" + str(data[i][3]) + "</LoLimit>\n")
-        file.write("		<HiLimit>" + str(data[i][2]) + "</HiLimit>\n")
+        file.write("	<Limit name=\"" + data[i][0] + "\">\n")
+        file.write("		<TestNum>" + str(i) + "</TestNum>\n")
+        file.write("		<LoLimit>" + str(data[i][2]) + "</LoLimit>\n")
+        file.write("		<HiLimit>" + str(data[i][1]) + "</HiLimit>\n")
+        if data[i][3] != '':
+            file.write("		<Unit>" + data[i][3] + "</Unit>\n")
         if data[i][4] != '':
-            file.write("		<Unit>" + data[i][4] + "</Unit>\n")
-        if data[i][5] != '':
             file.write(
-                "		<SoftBinRef binRef=\"Default\" group=\"SoftBins\">" + str(data[i][5]) + "</SoftBinRef>\n")
-        if data[i][6] != '':
-            file.write("		<Description>" + str(data[i][6]) + "</Description>\n")
+                "		<SoftBinRef binRef=\"Default\" group=\"SoftBins\">" + str(data[i][4]) + "</SoftBinRef>\n")
+        if data[i][5] != '':
+            file.write("		<Description>" + str(data[i][5]) + "</Description>\n")
         file.write("	</Limit>\n")
     file.write("</Blocks>")
 
@@ -168,43 +168,10 @@ def write_block_file(data, file, socketmap_name):
     file.write("		<TestCondition name=\"General\">\n")
     file.write("			<LevelRef>General</LevelRef>\n")
     file.write("		</TestCondition>\n")
-    file.write("		<TestCondition name=\"SocketMapCheck\"/>\n")
-    file.write("		<TestCondition name=\"LoadAllPats\"/>\n")
-    file.write("		<TestCondition name=\"InstrumentInit\"/>\n")
-    file.write("		<TestCondition name=\"TestProgramCheck\"/>\n")
-    file.write("		<TestCondition name=\"TurboModeInit\"/>\n")
     for i in range(len(data[1])):
         file.write("		<TestCondition name=\"" + data[1][i][0] + "\"/>\n")
     file.write("	</TestConditions>\n")
     file.write("	<Tests>\n")
-    file.write("		<Test name=\"SocketMapCheck\" testNum=\"500\">\n")
-    file.write("			<TestCondition>SocketMapCheck</TestCondition>\n")
-    file.write("			<ExecAPI>test_template\init\SocketMapValidate</ExecAPI>\n")
-    file.write("			<Param name=\"SocketMap\">\n")
-    file.write("				<Type>SocketMap</Type>\n")
-    file.write("				<Value>" + socketmap_name + "</Value>\n")
-    file.write("			</Param>\n")
-    file.write("		</Test>\n")
-    file.write("		<Test name=\"LoadAllPats\" testNum=\"500\">\n")
-    file.write("			<TestCondition>LoadAllPats</TestCondition>\n")
-    file.write("			<ExecAPI>test_template\Init\PatternLoader</ExecAPI>\n")
-    file.write("		</Test>\n")
-    file.write("		<Test name=\"InstrumentInit\" testNum=\"500\">\n")
-    file.write("			<TestCondition>InstrumentInit</TestCondition>\n")
-    file.write("			<ExecAPI>test_template\Init\InstrumentInit</ExecAPI>\n")
-    file.write("			<Param name=\"LoadCalibration\">\n")
-    file.write("				<Type>Value_Single</Type>\n")
-    file.write("				<Value>0</Value>\n")
-    file.write("			</Param>\n")
-    file.write("		</Test>\n")
-    file.write("		<Test name=\"TestProgramCheck\" testNum=\"500\">\n")
-    file.write("			<TestCondition>TestProgramCheck</TestCondition>\n")
-    file.write("			<ExecAPI>test_templates\init\TestProgramValidate</ExecAPI>\n")
-    file.write("		</Test>\n")
-    file.write("		<Test name=\"TurboModeInit\" testNum=\"500\">\n")
-    file.write("			<TestCondition>TurboModeInit</TestCondition>\n")
-    file.write("			<ExecAPI>test_template\Init\TurboModeInit</ExecAPI>\n")
-    file.write("		</Test>\n")
     for i in range(len(data[1])):
         file.write("		<Test name=\"" + data[1][i][0] + "\" testNum=\"" + str(data[1][i][1]) + "\">\n")
         file.write("			<TestCondition>" + data[1][i][0] + "</TestCondition>\n")
@@ -623,7 +590,7 @@ def generate_project(excel_dir, project_directory):
 
     bindefinition_df = read_excel(excel_dir, sheet_name='BinMap')
     swbin_df = bindefinition_df.iloc[:, :4]
-    unknown_row = swbin_df[swbin_df.iloc[:, 1].isin(['Unknown'])]
+    unknown_row = swbin_df[swbin_df.iloc[:, 1].isin(['Unknown', 'Unknow'])]
     unknown_swbin_id = unknown_row.iloc[0, 0]
     hwbin_df = bindefinition_df.iloc[:, 5:9].dropna(axis=0)
     bindefinition_data = []
@@ -642,16 +609,18 @@ def generate_project(excel_dir, project_directory):
     bindefinition_data.append(swbin_data)
     bindefinition_data.append(hwbin_data)
 
-    speclimits_df = read_excel(excel_dir, sheet_name='SpecLimits')
-    limit_df = speclimits_df.iloc[:139, 2:6].dropna()
-    limits_df = read_excel(excel_dir, sheet_name='Limits')
     limits_data = []
-    for i in range(limit_df.shape[0]):
-        temp_list = [i + 1]
-        for j in range(limit_df.shape[1]):
-            temp_list.append(limit_df.iloc[i, j])
-        temp_list += ['', '']
-        limits_data.append(temp_list)
+    limit_df = pinmap_df.iloc[:35, 5:]
+    limit_isnull_df = limit_df.isnull()
+    for i in range(3, limit_df.shape[1]):
+        if limit_df.columns.values[i].find('Unnamed')<0:
+            for j in range(limit_df.shape[0]):
+                if not limit_isnull_df.iloc[j, i]:
+                    limit_name = limit_df.iloc[j, 0] + '_' + limit_df.columns.values[i]
+                    limits_data.append(
+                        [limit_name, limit_df.iloc[j, i], limit_df.iloc[j, i + 1], limit_df.iloc[j, i + 2], '', ''])
+
+    limits_df = read_excel(excel_dir, sheet_name='Limits')
     for i in range(limits_df.shape[0]):
         temp_list = []
         for j in range(limits_df.shape[1]):
@@ -729,8 +698,9 @@ def generate_project(excel_dir, project_directory):
         copy(source_project_path, target_project_path)
         DOMTree = parse(source_project_path)
         collection = DOMTree.documentElement
-        socketmap_name = collection.getElementsByTagName("Project")[0].getElementsByTagName("SocketMap")[0].getElementsByTagName(
-            "Ref")[0].childNodes[0].data
+        socketmap_name = \
+            collection.getElementsByTagName("Project")[0].getElementsByTagName("SocketMap")[0].getElementsByTagName(
+                "Ref")[0].childNodes[0].data
     else:
         with open(target_project_path, 'w') as project_file:
             write_project_file(project_file)
