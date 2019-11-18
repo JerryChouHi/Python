@@ -106,7 +106,9 @@ def write_bindefinition_file(data, file):
         file.write("			<Bin name=\"" + str(data[0][i][1]) + "\">\n")
         file.write("				<ID>" + str(int(data[0][i][0])) + "</ID>\n")
         file.write("				<Desc>" + str(data[0][i][2]) + "</Desc>\n")
-        file.write("				<Inherit>" + str(data[1][data[0][i][3] - 1][1]) + "</Inherit>\n")
+        for j in range(len(data[1])):
+            if data[1][j][0]==data[0][i][3]:
+                file.write("				<Inherit>" + str(data[1][j][1]) + "</Inherit>\n")
         file.write("			</Bin>\n")
     file.write("		</BinGroup>\n")
     file.write("	</BinDefs>\n")
@@ -132,7 +134,7 @@ def write_limit_file(data, file):
     file.write("</Blocks>")
 
 
-def write_block_file(data, file, socketmap_name):
+def write_block_file(data, file):
     file.write("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n")
     file.write("<Blocks>\n")
     file.write("	<DCMeasures>\n")
@@ -237,7 +239,7 @@ def write_levels_file(data, file):
     file.write("</Blocks>")
 
 
-def write_project_file(file):
+def write_project_file(data, file):
     file.write("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n")
     file.write("<Blocks>\n")
     file.write("	<Project>\n")
@@ -249,7 +251,7 @@ def write_project_file(file):
     file.write("		</Signals>\n")
     file.write("		<SocketMap>\n")
     file.write("			<FilePath>XML\SocketMap.xml</FilePath>\n")
-    file.write("			<Ref>SocketMap</Ref>\n")
+    file.write("			<Ref>" + data[0] + "</Ref>\n")
     file.write("		</SocketMap>\n")
     file.write("		<SignalGroups>\n")
     file.write("			<FilePath>XML\SignalGroups.xml</FilePath>\n")
@@ -305,12 +307,20 @@ def write_project_file(file):
     file.write("		</Shmoo>\n")
     file.write("	</Project>\n")
     file.write("	<Datalog>\n")
+    if len(data[1])>0:
+        for i in range(len(data[1])):
+            file.write("		<" + data[1][i][0] + ">" + data[1][i][1] + "</" + data[1][i][0] + ">\n")
     file.write("		<SeparateLog>\n")
     file.write("			<Enable>true</Enable>\n")
     file.write("			<Manual>Manual_%s</Manual>\n")
     file.write("			<Lot>Lot_%s</Lot>\n")
     file.write("		</SeparateLog>\n")
     file.write("	</Datalog>\n")
+    if len(data[2])>0:
+        file.write("	<ProjectSetup>\n")
+        for i in range(len(data[2])):
+            file.write("		<" + data[2][i][0] + ">" + data[2][i][1] + "</" + data[2][i][0] + ">\n")
+        file.write("	</ProjectSetup>\n")
     file.write("</Blocks>")
 
 
@@ -554,6 +564,31 @@ def generate_project(excel_dir, project_directory):
     target_flows_path = path.join(project_directory, 'XML\Flows.xml')
 
     # 数据提取与组装
+    project_df = read_excel(excel_dir, sheet_name='Project')
+    project_data = []
+    project_data.append(project_df.columns.values[2])
+    datalog_row = -1
+    projectsetup_row = -1
+    for i in range(project_df.shape[0]):
+        if project_df.iloc[i, 0] == 'Datalog':
+            datalog_row = i
+        if project_df.iloc[i, 0] == 'ProjectSetup':
+            projectsetup_row = i
+    if datalog_row != -1:
+        temp_list = []
+        if projectsetup_row == -1:
+            for i in range(datalog_row, project_df.shape[0]):
+                temp_list.append((project_df.iloc[i][1], project_df.iloc[i][2]))
+        else:
+            for i in range(datalog_row, projectsetup_row):
+                temp_list.append((project_df.iloc[i][1], project_df.iloc[i][2]))
+        project_data.append(temp_list)
+    if projectsetup_row != -1:
+        temp_list = []
+        for i in range(projectsetup_row, project_df.shape[0]):
+            temp_list.append((project_df.iloc[i][1], project_df.iloc[i][2]))
+        project_data.append(temp_list)
+
     pinmap_df = read_excel(excel_dir, sheet_name='PinMap')
     signal_df = pinmap_df.iloc[:35, [5, 6]]
 
@@ -613,7 +648,7 @@ def generate_project(excel_dir, project_directory):
     limit_df = pinmap_df.iloc[:35, 5:]
     limit_isnull_df = limit_df.isnull()
     for i in range(3, limit_df.shape[1]):
-        if limit_df.columns.values[i].find('Unnamed')<0:
+        if limit_df.columns.values[i].find('Unnamed') < 0:
             for j in range(limit_df.shape[0]):
                 if not limit_isnull_df.iloc[j, i]:
                     limit_name = limit_df.iloc[j, 0] + '_' + limit_df.columns.values[i]
@@ -686,12 +721,13 @@ def generate_project(excel_dir, project_directory):
                 levels_data.append(temp_list1)
                 temp_list1 = []
             temp_list1.append(levels_df.iloc[i, 0])
-        for j in range(1, levels_df.shape[1]):
-            data = levels_df.iloc[i, j]
-            if isinstance(data, float) and isnan(data):
-                data = ''
-            temp_list2.append(data)
-        temp_list1.append(temp_list2)
+        if levels_notnull_df.iloc[i, 1]:
+            for j in range(1, levels_df.shape[1]):
+                data = levels_df.iloc[i, j]
+                if isinstance(data, float) and isnan(data):
+                    data = ''
+                temp_list2.append(data)
+            temp_list1.append(temp_list2)
     levels_data.append(temp_list1)
 
     if path.exists(source_project_path):
@@ -703,8 +739,8 @@ def generate_project(excel_dir, project_directory):
                 "Ref")[0].childNodes[0].data
     else:
         with open(target_project_path, 'w') as project_file:
-            write_project_file(project_file)
-        socketmap_name = 'SocketMap'
+            write_project_file(project_data, project_file)
+        socketmap_name = project_data[0]
     with open(signal_path, 'w') as signal_file:
         write_signals_file(signals_data, signal_file)
     with open(socketmap_path, 'w') as socketmap_file:
@@ -716,7 +752,7 @@ def generate_project(excel_dir, project_directory):
     with open(limit_path, 'w') as limit_file:
         write_limit_file(limits_data, limit_file)
     with open(testblock_path, 'w') as testblock_file:
-        write_block_file(block_data, testblock_file, socketmap_name)
+        write_block_file(block_data, testblock_file)
     with open(uservars_path, 'w') as uservars_file:
         write_uservars_file(uservars_data, uservars_file)
     with open(levels_path, 'w') as levels_file:
