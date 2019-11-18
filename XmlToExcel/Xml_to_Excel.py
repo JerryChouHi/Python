@@ -5,12 +5,13 @@
 # @Function :
 
 from sys import argv
-import os
-import xml.dom.minidom
+from os import listdir, path
 from openpyxl import Workbook
 from openpyxl.styles import PatternFill, Border, Side, Font, Alignment
 from openpyxl.styles.colors import RED, YELLOW, GREEN, BLACK
-from openpyxl.utils import get_column_letter
+from openpyxl.utils import get_column_letter, quote_sheetname
+from openpyxl.worksheet.datavalidation import DataValidation
+from xml.dom.minidom import parse
 
 alignment = Alignment(horizontal='center', vertical='center')
 thin = Side(border_style='thin', color=BLACK)
@@ -54,17 +55,17 @@ def get_tree(element):
 
 def get_file(folder):
     result = []
-    get_dir = os.listdir(folder)
+    get_dir = listdir(folder)
     for dir in get_dir:
-        sub_dir = os.path.join(folder, dir)
-        if not os.path.isdir(sub_dir):
+        sub_dir = path.join(folder, dir)
+        if not path.isdir(sub_dir):
             result.append(dir)
     return result
 
 
 def read_project(project_folder):
-    socketmap_path = os.path.join(project_folder, "Project.xml")
-    dom = xml.dom.minidom.parse(socketmap_path)
+    socketmap_path = path.join(project_folder, "Project.xml")
+    dom = parse(socketmap_path)
     root = dom.documentElement
     socketmap = root.getElementsByTagName('SocketMap')
     datalog = root.getElementsByTagName('Datalog')
@@ -80,8 +81,8 @@ def read_project(project_folder):
 
 
 def read_socketmap(project_folder):
-    socketmap_path = os.path.join(project_folder, "XML\\SocketMap.xml")
-    dom = xml.dom.minidom.parse(socketmap_path)
+    socketmap_path = path.join(project_folder, "XML\\SocketMap.xml")
+    dom = parse(socketmap_path)
     root = dom.documentElement
     itemlist = root.getElementsByTagName('SignalRef')
     socketmap_data = []
@@ -91,8 +92,8 @@ def read_socketmap(project_folder):
 
 
 def read_signals(project_folder):
-    signals_path = os.path.join(project_folder, "XML\\Signals.xml")
-    dom = xml.dom.minidom.parse(signals_path)
+    signals_path = path.join(project_folder, "XML\\Signals.xml")
+    dom = parse(signals_path)
     root = dom.documentElement
     itemlist = root.getElementsByTagName('Signal')
     signals_data = []
@@ -102,8 +103,8 @@ def read_signals(project_folder):
 
 
 def read_limit(project_folder):
-    limit_path = os.path.join(project_folder, "XML\\Limit.xml")
-    dom = xml.dom.minidom.parse(limit_path)
+    limit_path = path.join(project_folder, "XML\\Limit.xml")
+    dom = parse(limit_path)
     root = dom.documentElement
     itemlist = root.getElementsByTagName('Limit')
     limit_data = []
@@ -113,8 +114,8 @@ def read_limit(project_folder):
 
 
 def read_signalgroups(project_folder):
-    signalgroups_path = os.path.join(project_folder, "XML\\SignalGroups.xml")
-    dom = xml.dom.minidom.parse(signalgroups_path)
+    signalgroups_path = path.join(project_folder, "XML\\SignalGroups.xml")
+    dom = parse(signalgroups_path)
     root = dom.documentElement
     itemlist = root.getElementsByTagName('Signalgroup')
     signalgroups_data = []
@@ -124,8 +125,8 @@ def read_signalgroups(project_folder):
 
 
 def read_bindefinition(project_folder):
-    bindefinition_path = os.path.join(project_folder, "XML\\BinDefinition.xml")
-    dom = xml.dom.minidom.parse(bindefinition_path)
+    bindefinition_path = path.join(project_folder, "XML\\BinDefinition.xml")
+    dom = parse(bindefinition_path)
     root = dom.documentElement
     itemlist = root.getElementsByTagName('BinGroup')
     bindefinition_data = []
@@ -138,8 +139,8 @@ def read_bindefinition(project_folder):
 
 
 def read_dcmeasure(project_folder):
-    testblock_path = os.path.join(project_folder, "XML\\TestBlock.xml")
-    dom = xml.dom.minidom.parse(testblock_path)
+    testblock_path = path.join(project_folder, "XML\\TestBlock.xml")
+    dom = parse(testblock_path)
     root = dom.documentElement
     itemlist = root.getElementsByTagName('DCMeasure')
     dcmeasure_data = []
@@ -149,8 +150,8 @@ def read_dcmeasure(project_folder):
 
 
 def read_tests(project_folder):
-    testblock_path = os.path.join(project_folder, "XML\\TestBlock.xml")
-    dom = xml.dom.minidom.parse(testblock_path)
+    testblock_path = path.join(project_folder, "XML\\TestBlock.xml")
+    dom = parse(testblock_path)
     root = dom.documentElement
     itemlist = root.getElementsByTagName('Test')
     tests_data = []
@@ -160,8 +161,8 @@ def read_tests(project_folder):
 
 
 def read_uservars(project_folder):
-    uservars_path = os.path.join(project_folder, "XML\\UserVars.xml")
-    dom = xml.dom.minidom.parse(uservars_path)
+    uservars_path = path.join(project_folder, "XML\\UserVars.xml")
+    dom = parse(uservars_path)
     root = dom.documentElement
     itemlist = root.getElementsByTagName('Variable')
     uservars_data = []
@@ -171,8 +172,8 @@ def read_uservars(project_folder):
 
 
 def read_levels(project_folder):
-    levels_path = os.path.join(project_folder, "XML\\Levels.xml")
-    dom = xml.dom.minidom.parse(levels_path)
+    levels_path = path.join(project_folder, "XML\\Levels.xml")
+    dom = parse(levels_path)
     root = dom.documentElement
     itemlist = root.getElementsByTagName('Levels')
     levels_data = []
@@ -206,7 +207,31 @@ def write_excel(project_data, socketmap_data, signals_data, limit_data, signalgr
 
     wb = Workbook()  # 创建文件对象
 
+    dv_SignalType = DataValidation(type='list', formula1='"In,Out,InOut,Supply,Pseudo,System"', allow_blank=True)
+    dv_Unit = DataValidation(type='list', formula1='"A,mA,uA,V,mV"', allow_blank=True)
+    dv_HWBinPassFail = DataValidation(type='list', formula1='"Pass,Fail"', allow_blank=True)
+    dv_MeasureModeType = DataValidation(type='list', formula1='"FVMI,FIMV,FVMV,FIMI"', allow_blank=True)
+    dv_MeasureMethodType = DataValidation(type='list', formula1='"Parallel,Serial"', allow_blank=True)
+    dv_VariableType = DataValidation(type='list',
+                                     formula1='"Voltage,Current,Time,Frequency,Resistance,Capacitance,SingleValue"',
+                                     allow_blank=True)
+    dv_PatternExecModeType = DataValidation(type='list', formula1='"Burst,Individual"', allow_blank=True)
+    dv_TestParamType = DataValidation(type='list',
+                                      formula1='"SocketMap,PatternBurst,DCMeasure,Value_String,Value_Voltage,Value_Current,Value_Time,Value_Frequency,Value_Resistance,Value_Capacitance,Value_Single"',
+                                      allow_blank=True)
+
+    sigref_str = ''
+    for i in range(len(signals_data)):
+        if signals_data[i][1][0][1] in ('Supply,InOut'):
+            sigref_str += (signals_data[i][0][1] + ',')
+    for i in range(len(signalgroups_data)):
+        if signalgroups_data[i][1][0][1] in ('Supply,InOut'):
+            sigref_str += (signalgroups_data[i][0][1] + ',')
+    sigref_str = sigref_str[:-1]
+    dv_sigref = DataValidation(type='list', formula1='"' + sigref_str + '"', allow_blank=True)
+
     sheet_project = wb.create_sheet('Project')
+    sheet_project.add_data_validation(dv_SignalType)
     sheet_project.freeze_panes = 'B1'
     irow = 1
     sheet_project.cell(row=irow, column=1).value = 'SocketMap'
@@ -240,6 +265,12 @@ def write_excel(project_data, socketmap_data, signals_data, limit_data, signalgr
                     cell.font = Font(color=BLACK, bold=True)
 
     sheet_pinmap = wb.create_sheet('PinMap')
+    sheet_pinmap.add_data_validation(dv_SignalType)
+    dv_SignalType.add('G2:G1048576')
+    sheet_pinmap.add_data_validation(dv_Unit)
+    dv_Unit.add('K2:K1048576')
+    dv_Unit.add('N2:N1048576')
+    dv_Unit.add('Q2:Q1048576')
     sheet_pinmap.freeze_panes = 'B2'
     loadboard = [
         ['J21', 'J22', 'Seg 4_1/Site0', 'Seg 4_1/Site1'],
@@ -418,6 +449,8 @@ def write_excel(project_data, socketmap_data, signals_data, limit_data, signalgr
                         cell.fill = PatternFill(fill_type='solid', fgColor='66CD00')  # 浅绿
 
     sheet_pingroup = wb.create_sheet('PinGroup')
+    sheet_pingroup.add_data_validation(dv_SignalType)
+    dv_SignalType.add('B2:B1048576')
     sheet_pingroup.freeze_panes = 'A2'
     irow = 1
     sheet_pingroup.cell(row=irow, column=1).value = 'PinGroup'
@@ -438,6 +471,8 @@ def write_excel(project_data, socketmap_data, signals_data, limit_data, signalgr
                 cell.font = Font(color=RED, bold=True)
 
     sheet_binmap = wb.create_sheet('BinMap')
+    sheet_binmap.add_data_validation(dv_HWBinPassFail)
+    dv_HWBinPassFail.add('H2:H1048576')
     sheet_binmap.freeze_panes = 'A2'
     irow = 1
     sheet_binmap.cell(row=irow, column=1).value = 'SWBinID'
@@ -462,6 +497,7 @@ def write_excel(project_data, socketmap_data, signals_data, limit_data, signalgr
                 else:
                     sheet_binmap.cell(row=irow, column=4).fill = PatternFill(fill_type='solid', fgColor=RED)
         irow += 1
+    dv_SWBinId = DataValidation(type='list', formula1="{0}!$A$2:$A${1}".format(quote_sheetname('BinMap'), irow))
     irow = 2
     for i in range(2, len(bindefinition_data[0])):
         sheet_binmap.cell(row=irow, column=6).value = bindefinition_data[0][i][1][0][1]
@@ -473,6 +509,9 @@ def write_excel(project_data, socketmap_data, signals_data, limit_data, signalgr
             sheet_binmap.cell(row=irow, column=8).fill = PatternFill(fill_type='solid', fgColor=RED)
         sheet_binmap.cell(row=irow, column=9).value = bindefinition_data[0][i][1][1][1]
         irow += 1
+    dv_HWBinId = DataValidation(type='list', formula1="{0}!$F$2:$F${1}".format(quote_sheetname('BinMap'), irow))
+    sheet_binmap.add_data_validation(dv_HWBinId)
+    dv_HWBinId.add('D2:D1048576')
     for row in sheet_binmap.rows:
         for cell in row:
             cell.border = border
@@ -485,6 +524,10 @@ def write_excel(project_data, socketmap_data, signals_data, limit_data, signalgr
                     cell.font = Font(color=RED, bold=True)
 
     sheet_limits = wb.create_sheet('Limits')
+    sheet_limits.add_data_validation(dv_Unit)
+    dv_Unit.add('D2:D1048576')
+    sheet_limits.add_data_validation(dv_SWBinId)
+    dv_SWBinId.add('E2:E1048576')
     sheet_limits.freeze_panes = 'A2'
     irow = 1
     sheet_limits.cell(row=irow, column=1).value = 'Name'
@@ -518,6 +561,12 @@ def write_excel(project_data, socketmap_data, signals_data, limit_data, signalgr
                     cell.font = Font(color=BLACK, bold=True)
 
     sheet_dcmeasure = wb.create_sheet('DCMeasure')
+    sheet_dcmeasure.add_data_validation(dv_sigref)
+    dv_sigref.add('B2:B1048576')
+    sheet_dcmeasure.add_data_validation(dv_MeasureModeType)
+    dv_MeasureModeType.add('D2:D1048576')
+    sheet_dcmeasure.add_data_validation(dv_MeasureMethodType)
+    dv_MeasureMethodType.add('E2:E1048576')
     sheet_dcmeasure.freeze_panes = 'A2'
     irow = 1
     sheet_dcmeasure.cell(row=irow, column=1).value = 'DCMeasure'
@@ -592,6 +641,8 @@ def write_excel(project_data, socketmap_data, signals_data, limit_data, signalgr
                     cell.font = Font(color=BLACK, bold=True)
 
     sheet_uservars = wb.create_sheet('UserVars')
+    sheet_uservars.add_data_validation(dv_VariableType)
+    dv_VariableType.add('B2:B1048576')
     sheet_uservars.freeze_panes = 'A2'
     irow = 1
     sheet_uservars.cell(row=irow, column=1).value = 'UserVars'
@@ -612,6 +663,8 @@ def write_excel(project_data, socketmap_data, signals_data, limit_data, signalgr
                 cell.font = Font(color=RED, bold=True)
 
     sheet_level = wb.create_sheet('Level')
+    sheet_level.add_data_validation(dv_sigref)
+    dv_sigref.add('B2:B1048576')
     sheet_level.freeze_panes = 'A2'
     irow = 1
     level_title = ['LevelName', 'SigRef', 'VPS', 'IClamp', 'IRange', 'Delay', 'VIL', 'VIH', 'VTERM', 'VTERM_EN', 'VOL',
@@ -640,30 +693,6 @@ def write_excel(project_data, socketmap_data, signals_data, limit_data, signalgr
                     cell.font = Font(color='00CCCC', bold=True)  # 蓝色
                 else:
                     cell.font = Font(color='666633', bold=True)  # 褐色
-
-    sheet_enum = wb.create_sheet('字段枚举')
-    sheet_enum.freeze_panes = 'A2'
-    irow = 1
-    enum = [
-        ('SignalType', 'In', 'Out', 'InOut', 'Supply', 'Pseudo', 'System'),
-        ('HWBin Pass/Fail', 'Pass', 'Fail'),
-        ('MeasureModeType', 'FVMI', 'FIMV', 'FVMV', 'FIMI'),
-        ('MeasureMethodType', 'Parallel', 'Serial'),
-        ('VariableType', 'Voltage', 'Current', 'Time', 'Frequency', 'Resistance', 'Capacitance', 'SingleValue'),
-        ('PatternExecModeType', 'Burst', 'Individual'),
-        ('TestParamType', 'SocketMap', 'PatternBurst', 'DCMeasure', 'Value_String', 'Value_Voltage', 'Value_Current',
-         'Value_Time', 'Value_Frequency', 'Value_Resistance', 'Value_Capacitance', 'Value_Single')
-    ]
-    for i in range(len(enum)):
-        for j in range(len(enum[i])):
-            sheet_enum.cell(row=(irow + j), column=(1 + i)).value = enum[i][j]
-    for row in sheet_enum.rows:
-        for cell in row:
-            cell.border = border
-            if cell.row == 1:
-                cell.fill = PatternFill(fill_type='solid', fgColor=YELLOW)
-                cell.font = Font(bold=True)
-                cell.alignment = alignment
 
     for sheet_name in wb.sheetnames:
         if sheet_name == 'Sheet':
