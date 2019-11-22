@@ -4,25 +4,16 @@
 # @File     : Excel_to_Xml.py
 # @Function :
 
-from sys import argv, exit
-from os import path, makedirs, getcwd
+from sys import argv, exit, path
+from os import getcwd
+from os.path import abspath, join
 from xml.dom.minidom import parse
 from math import isnan
 from pandas import read_excel
 from shutil import copy
 
-
-def mkdir(dir):
-    dir = dir.strip()
-    dir = dir.rstrip("\\")
-    isExists = path.exists(dir)
-    if not isExists:
-        makedirs(dir)
-        # print(path + '创建成功')
-        return True
-    else:
-        # print(path + '目录已存在')
-        return False
+path.append(abspath(join(getcwd(), '..')))
+import Common
 
 
 def write_signals_file(data, file):
@@ -107,7 +98,7 @@ def write_bindefinition_file(data, file):
         file.write("				<ID>" + str(int(data[0][i][0])) + "</ID>\n")
         file.write("				<Desc>" + str(data[0][i][2]) + "</Desc>\n")
         for j in range(len(data[1])):
-            if data[1][j][0]==data[0][i][3]:
+            if data[1][j][0] == data[0][i][3]:
                 file.write("				<Inherit>" + str(data[1][j][1]) + "</Inherit>\n")
         file.write("			</Bin>\n")
     file.write("		</BinGroup>\n")
@@ -120,7 +111,7 @@ def write_limit_file(data, file):
     file.write("<Blocks>\n")
     for i in range(len(data)):
         file.write("	<Limit name=\"" + data[i][0] + "\">\n")
-        file.write("		<TestNum>" + str(i) + "</TestNum>\n")
+        file.write("		<TestNum>" + str(i + 1) + "</TestNum>\n")
         file.write("		<LoLimit>" + str(data[i][2]) + "</LoLimit>\n")
         file.write("		<HiLimit>" + str(data[i][1]) + "</HiLimit>\n")
         if data[i][3] != '':
@@ -307,7 +298,7 @@ def write_project_file(data, file):
     file.write("		</Shmoo>\n")
     file.write("	</Project>\n")
     file.write("	<Datalog>\n")
-    if len(data[1])>0:
+    if len(data[1]) > 0:
         for i in range(len(data[1])):
             file.write("		<" + data[1][i][0] + ">" + data[1][i][1] + "</" + data[1][i][0] + ">\n")
     file.write("		<SeparateLog>\n")
@@ -316,7 +307,7 @@ def write_project_file(data, file):
     file.write("			<Lot>Lot_%s</Lot>\n")
     file.write("		</SeparateLog>\n")
     file.write("	</Datalog>\n")
-    if len(data[2])>0:
+    if len(data[2]) > 0:
         file.write("	<ProjectSetup>\n")
         for i in range(len(data[2])):
             file.write("		<" + data[2][i][0] + ">" + data[2][i][1] + "</" + data[2][i][0] + ">\n")
@@ -530,38 +521,38 @@ def write_empty_file(file):
 
 def generate_project(excel_dir, project_directory):
     dir_list = [project_directory,
-                path.join(project_directory, 'XML'),
-                path.join(project_directory, 'UserExtension'),
-                path.join(project_directory, 'Pattern'),
-                path.join(project_directory, 'UserExtension\\x86'),
-                path.join(project_directory, 'UserExtension\\x64'),
-                path.join(project_directory, 'UserExtension\\x86\debug'),
-                path.join(project_directory, 'UserExtension\\x86\\release'),
-                path.join(project_directory, 'UserExtension\\x64\debug'),
-                path.join(project_directory, 'UserExtension\\x64\\release')
+                join(project_directory, 'XML'),
+                join(project_directory, 'UserExtension'),
+                join(project_directory, 'Pattern'),
+                join(project_directory, 'UserExtension\\x86'),
+                join(project_directory, 'UserExtension\\x64'),
+                join(project_directory, 'UserExtension\\x86\debug'),
+                join(project_directory, 'UserExtension\\x86\\release'),
+                join(project_directory, 'UserExtension\\x64\debug'),
+                join(project_directory, 'UserExtension\\x64\\release')
                 ]
     for dir in dir_list:
-        mkdir(dir)
-    source_project_path = path.join(path.dirname(excel_dir), 'Project.xml')
-    target_project_path = path.join(project_directory, 'Project.xml')
-    bindefinition_path = path.join(project_directory, 'XML\BinDefinition.xml')
-    signal_path = path.join(project_directory, 'XML\Signals.xml')
-    socketmap_path = path.join(project_directory, 'XML\SocketMap.xml')
-    signalgroups_path = path.join(project_directory, 'XML\SignalGroups.xml')
-    testblock_path = path.join(project_directory, 'XML\TestBlock.xml')
-    limit_path = path.join(project_directory, 'XML\Limit.xml')
-    uservars_path = path.join(project_directory, 'XML\\UserVars.xml')
-    levels_path = path.join(project_directory, 'XML\Levels.xml')
-    specset_path = path.join(project_directory, 'XML\SpecSet.xml')
-    timing_path = path.join(project_directory, 'XML\Timing.xml')
-    timingmap_path = path.join(project_directory, 'XML\TimingMap.xml')
-    patternburst_path = path.join(project_directory, 'XML\PatternBurst.xml')
-    shmoo_path = path.join(project_directory, 'XML\Shmoo.xml')
-    testerconfig_path = path.join(project_directory, 'XML\TesterConfig.xml')
-    testprogram_path = path.join(project_directory, 'XML\TestProgram.xml')
-    runresultmap_path = path.join(project_directory, 'XML\RunResultMap.xml')
-    source_flows_path = path.join(path.dirname(excel_dir), 'Flows.xml')
-    target_flows_path = path.join(project_directory, 'XML\Flows.xml')
+        Common.mkdir(dir)
+    source_project_path = join(path.dirname(excel_dir), 'Project.xml')
+    target_project_path = join(project_directory, 'Project.xml')
+    bindefinition_path = join(project_directory, 'XML\BinDefinition.xml')
+    signal_path = join(project_directory, 'XML\Signals.xml')
+    socketmap_path = join(project_directory, 'XML\SocketMap.xml')
+    signalgroups_path = join(project_directory, 'XML\SignalGroups.xml')
+    testblock_path = join(project_directory, 'XML\TestBlock.xml')
+    limit_path = join(project_directory, 'XML\Limit.xml')
+    uservars_path = join(project_directory, 'XML\\UserVars.xml')
+    levels_path = join(project_directory, 'XML\Levels.xml')
+    specset_path = join(project_directory, 'XML\SpecSet.xml')
+    timing_path = join(project_directory, 'XML\Timing.xml')
+    timingmap_path = join(project_directory, 'XML\TimingMap.xml')
+    patternburst_path = join(project_directory, 'XML\PatternBurst.xml')
+    shmoo_path = join(project_directory, 'XML\Shmoo.xml')
+    testerconfig_path = join(project_directory, 'XML\TesterConfig.xml')
+    testprogram_path = join(project_directory, 'XML\TestProgram.xml')
+    runresultmap_path = join(project_directory, 'XML\RunResultMap.xml')
+    source_flows_path = join(path.dirname(excel_dir), 'Flows.xml')
+    target_flows_path = join(project_directory, 'XML\Flows.xml')
 
     # 数据提取与组装
     project_df = read_excel(excel_dir, sheet_name='Project')
@@ -803,4 +794,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-    exit()
