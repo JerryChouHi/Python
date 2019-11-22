@@ -3,10 +3,15 @@
 # @Author   : Jerry Chou
 # @File     :
 # @Function : 1、多文件分析  2、校验SoftBin对应HardBin是否正确
-import csv
-import datetime
-import os
-from sys import argv
+
+from csv import reader
+from datetime import datetime
+from os.path import join, basename, dirname, abspath
+from os import getcwd
+from sys import argv, path
+
+path.append(abspath(join(getcwd(), '..')))
+import Common
 
 row_offset = 5
 col_offset = 4
@@ -253,32 +258,36 @@ bin_definition = [('PCLK_O/S', 5, 5),
                   ]
 
 
-def parse_file(file, result_file):
+def parse_file(file):
+    """
+    解析文件
+    :param file: 文件
+    :return: 分bin有问题的数据
+    """
     data = []
     with open(file) as f:
-        csv_reader = csv.reader(f)
+        csv_reader = reader(f)
         for row in csv_reader:
             data.append(row)
 
-    for i in range(len(data)):
-        try:
-            binning_col_num = data[i].index('Binning')
-            binning_row_num = i
-            break
-        except:
-            pass
+    search_binning = Common.search_string(data, 'Binning')
+    if not search_binning:
+        exit()
+    else:
+        binning_row_num = search_binning[0]
+        binning_col_num = search_binning[1]
+
     col_count = binning_col_num + 1
-    firstregister_row_num = len(data) - 1
+    first_register_row_num = len(data) - 1
     for i in range(binning_row_num + row_offset, len(data)):
         try:
             int(data[i][0])
         except:
-            firstregister_row_num = i
+            first_register_row_num = i
             break
 
-    file_name = os.path.basename(file)
     error_message = []
-    for row_num in range(binning_row_num + row_offset, firstregister_row_num):
+    for row_num in range(binning_row_num + row_offset, first_register_row_num):
         row_softbin_index = len(bin_definition) - 1
         for col_num in range(col_offset, col_count):
             high_limit_data = data[binning_row_num + 2][col_num]
@@ -340,41 +349,32 @@ def parse_file(file, result_file):
                             if row_softbin_index > i:
                                 row_softbin_index = i
         if bin_definition[row_softbin_index][1] != int(data[row_num][2]):
-            error_message.append("ChipNo " + data[row_num][0] + " 的SB_BIN错误：根据优先级计算出来的swbin为 " + str(
+            error_message.append("              ChipNo " + data[row_num][0] + " 的SB_BIN错误：根据优先级计算出来的swbin为 " + str(
                 bin_definition[row_softbin_index][1]) + " ,CSV中为 " + data[row_num][2] + "\n")
         if bin_definition[row_softbin_index][2] != int(data[row_num][3]):
-            error_message.append("ChipNo " + data[row_num][0] + " 的hW_BIN错误：根据优先级计算出来的hwbin为 " + str(
+            error_message.append("              ChipNo " + data[row_num][0] + " 的hW_BIN错误：根据优先级计算出来的hwbin为 " + str(
                 bin_definition[row_softbin_index][2]) + " ,CSV中为 " + data[row_num][3] + "\n")
-        print("解析文件：第 " + str(row_num + 1) + " 行")
+        if row_num % 100 == 0 or row_num == first_register_row_num - 1:
+            print("解析文件：第 " + str(row_num + 1) + " 行")
+    return error_message
 
+
+def save_data(file, result_file, error_message):
+    """
+    保存数据
+    :param file: 解析的文件路径
+    :param result_file: 写结果文件
+    :param error_message: 分bin有问题的数据
+    :return: 
+    """
+    file_name = basename(file)
     with open(result_file, 'a') as f:
+        f.write("            " + file_name + "：\n")
         if len(error_message) > 0:
-            f.write(file_name + " 分Bin可能存在问题的ChipNo：\n")
             for item in error_message:
                 f.write(item)
         else:
-            f.write(file_name + '：分Bin没有问题。\n')
-
-
-def mkdir(dir):
-    dir = dir.strip()
-    dir = dir.rstrip("\\")
-    isExists = os.path.exists(dir)
-    if not isExists:
-        os.makedirs(dir)
-        return True
-    else:
-        return False
-
-
-def get_file(folder):
-    result = []
-    get_dir = os.listdir(folder)
-    for dir in get_dir:
-        sub_dir = os.path.join(folder, dir)
-        if not os.path.isdir(sub_dir):
-            result.append(dir)
-    return result
+            f.write('              分Bin没有问题。\n')
 
 
 def main():
@@ -386,12 +386,14 @@ def main():
 
     if argv.count('-s') != 0:
         sourcefile_folder = argv[argv.index('-s') + 1]
-        file_list = get_file(sourcefile_folder)
+        file_list = Common.get_filelist(sourcefile_folder, '.csv')
+        if not file_list:
+            exit()
 
     if argv.count('-f') != 0:
         single_file = argv[argv.index('-f') + 1]
-        sourcefile_folder = os.path.dirname(single_file)
-        file_list = [os.path.basename(single_file)]
+        sourcefile_folder = dirname(single_file)
+        file_list = [single_file]
 
     # Analysis folder path
     if argv.count('-a') == 0:
@@ -399,14 +401,16 @@ def main():
     else:
         analysis_folder = argv[argv.index('-a') + 1]
 
-    mkdir(analysis_folder)
-    date = datetime.datetime.now().strftime("%Y%m%d%H%M")
-    result_file = os.path.join(analysis_folder, 'BinningCheck' + date + '.txt')
+    Common.mkdir(analysis_folder)
+    date = datetime.now().strftime("%Y%m%d%H%M")
+    result_file = join(analysis_folder, 'BinningCheck' + date + '.txt')
 
     for file in file_list:
-        original_file = os.path.join(sourcefile_folder, file)
+        print(file)
         # parse file
-        parse_file(original_file, result_file)
+        error_message = parse_file(file)
+        # save data
+        save_data(file, result_file, error_message)
 
 
 if __name__ == '__main__':

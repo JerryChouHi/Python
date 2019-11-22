@@ -4,88 +4,120 @@
 # @File     :
 # @Function : 1、多文件分析  2、根据需要的分组方式自动识别文件中分组
 
-import pandas, os, math
-import numpy as np
-import datetime
-from sys import argv
+from csv import reader
+from os.path import dirname, join, abspath, basename
+from os import getcwd
+from math import isnan
+from numpy import std, mean
+from datetime import datetime
+from sys import argv, path
+from openpyxl import Workbook
+from openpyxl.styles import PatternFill, Border, Side, Alignment
+from openpyxl.styles.colors import BLACK,YELLOW,DARKYELLOW,RED,GREEN
 
-import xlwt
+path.append(abspath(join(getcwd(), '..')))
+import Common
+
+alignment = Alignment(horizontal='center', vertical='center')
+thin = Side(border_style='thin', color=BLACK)
+border = Border(top=thin, left=thin, right=thin, bottom=thin)
 
 row_offset = 5
 col_offset = 4
 
 
-def find_item(list, value):
-    '''
-    找到value在list中所有的index
-    :param list: 
-    :param value: 
-    :return: 
-    '''
-    return [i for i, v in enumerate(list) if v == value]
-
-def get_nan_row(df):
-    """
-    获得有空值的行的列表
-    :param df: 
-    :return: 
-    """
-    exist_nan_row = df[df.isnull().T.any()]
-    exist_nan_row_list = list(exist_nan_row.index.values)
-    return exist_nan_row_list
-
 def parse_file(file, group_by_id):
-    try:
-        read_file = pandas.read_csv(file, na_values=' ')
-    except Exception as e:
-        print(e)
-    chipno_row_num = read_file[read_file.iloc[:, 0].isin(['ChipNo'])].index[0]
-    group_name = read_file.iloc[chipno_row_num, group_by_id]
-    chipnum_df = read_file.iloc[chipno_row_num + row_offset:, 0]
-    for chipnum in chipnum_df:
+    """
+    解析文件
+    :param file: 文件
+    :param group_by_id: 分组id
+    :return: 
+    """
+    data = []
+    with open(file) as f:
+        csv_reader = reader(f)
+        for row in csv_reader:
+            data.append(row)
+
+    search_binning = Common.search_string(data, 'Binning')
+    if not search_binning:
+        exit()
+    else:
+        binning_row_num = search_binning[0]
+        binning_col_num = search_binning[1]
+
+    col_count = binning_col_num + 1
+
+    group_name = data[binning_row_num][group_by_id]
+
+    first_register_row_num = len(data) - 1
+    for i in range(binning_row_num + row_offset, len(data)):
         try:
-            int(chipnum)
+            int(data[i][0])
         except:
-            FirstRegister = chipnum
+            first_register_row_num = i
             break
-    firstregister_row_num = read_file[read_file.iloc[:, 0].isin([FirstRegister])].index[0]
+
+    for i in range(0, len(data)):
+        add_count = col_count - len(data[i])
+        if add_count > 0:
+            for j in range(add_count):
+                data[i].append('')
+
     result = []
 
-    whole_data_df = read_file.iloc[chipno_row_num + row_offset:firstregister_row_num, 0:read_file.shape[1] - 2]
-    exist_nan_row_list = get_nan_row(whole_data_df)
+    exist_nan_row_list = []
 
-    data_row_list = range(chipno_row_num + row_offset, firstregister_row_num)
+    for i in range(binning_row_num + row_offset, first_register_row_num):
+        for j in range(col_count):
+            if len(data[i][j].strip()) == 0:
+                exist_nan_row_list.append(i)
+                break
+
+    data_row_list = []
+    for i in range(binning_row_num + row_offset, first_register_row_num):
+        data_row_list.append(i)
+
     ok_row_list = list(set(data_row_list) - set(exist_nan_row_list))
 
     ok_group_index = {}
-    ok_group_list = read_file.iloc[ok_row_list, group_by_id]
+    ok_group_list = []
+    for row in ok_row_list:
+        ok_group_list.append(data[row][group_by_id])
     ok_group_int_list = [int(i) for i in ok_group_list]
     format_ok_group_list = list(set(ok_group_int_list))
     format_ok_group_list.sort()
     for i in format_ok_group_list:
-        ok_group_index[i] = find_item(ok_group_int_list, i)
+        ok_group_index[i] = Common.find_item(ok_group_int_list, i)
     # 遍历所有测试项
-    for col_num in range(col_offset, read_file.shape[1] - 2):
-        test_name = read_file.iloc[chipno_row_num, col_num]
-        unit = read_file.iloc[chipno_row_num + 1, col_num]
-        if isinstance(unit, float) and math.isnan(unit):
+    for col_num in range(col_offset, col_count):
+        test_name = data[binning_row_num][col_num]
+        unit = data[binning_row_num + 1][col_num]
+        if isinstance(unit, float) and isnan(unit):
             unit = ''
-        hi_limit = read_file.iloc[chipno_row_num + 2, col_num]
-        lo_limit = read_file.iloc[chipno_row_num + 3, col_num]
+        hi_limit = data[binning_row_num + 2][col_num]
+        lo_limit = data[binning_row_num + 3][col_num]
         # 取得数据
-        data = read_file.iloc[ok_row_list, col_num]
+        test_item_data = []
+        for row in ok_row_list:
+            test_item_data.append(data[row][col_num])
         temp = [test_name, unit, hi_limit, lo_limit]
-        temp.append(cal_data(data, ok_group_index))
+        temp.append(cal_data(test_item_data, ok_group_index))
         # 计算数据
         result.append(temp)
     return result, format_ok_group_list, ok_group_index, group_name
 
 
 def calc(data):
-    min_value = data.min()
-    max_value = data.max()
-    std_value = np.std(data)
-    mean_value = np.mean(data)
+    """
+    计算数据
+    :param data: 数据
+    :return: 最小值，中位数，最大值，标准方差
+    """
+    min_value = min(data)
+    max_value = max(data)
+    std_value = std(data)
+    mean_value = mean(data)
 
     # 付博观察值，>5%为异常值
     if mean_value != 0:
@@ -96,179 +128,105 @@ def calc(data):
 
 
 def cal_data(data, group_index):
-    # 获取测试值，并转成float类型
-    try:
-        data_val = data.astype("float")
-        calc_data = []
-        for i in group_index:
-            calc_data.append(calc(data_val.iloc[group_index[i]]))
-    except Exception as e:
-        print(e)
-
+    """
+    计算数据
+    :param data:数据 
+    :param group_index:分组索引 
+    :return: 
+    """
+    data_val = []
+    for num in data:
+        data_val.append(float(num))
+    calc_data = []
+    for i in group_index:
+        temp = []
+        for j in group_index[i]:
+            temp.append(data_val[j])
+        calc_data.append(calc(temp))
     return calc_data
 
+def save_data(save_file, data):
+    """
+    保存数据
+    :param save_file: 保存的文件路径
+    :param data: 数据
+    :return: 
+    """
+    file_name = save_file.split('.')[0]
+    date = datetime.now().strftime("%Y%m%d%H%M")
+    test_file_name = file_name + '_Analysis_by' + data[3] + '_' + date + '.xlsx'
+    print(test_file_name)
 
-def get_style(colour_id):
-    pattern = xlwt.Pattern()
-    pattern.pattern = xlwt.Pattern.SOLID_PATTERN  # May be:NO_PATTERN,SOLID_PATTERN
-    # May be: 0=Black,1=White,2=Red,3=Green,4=Blue,5=Yellow,6=Magenta,7=Cyan,
-    # 16=Maroon,17=Dark Green,18=Dark Blue,19=Dark Yellow,20=Dark Megenta,
-    # 21=Teal.22=Light Gray,23=Dark Gray
-    pattern.pattern_fore_colour = colour_id
-    style = xlwt.XFStyle()
-    style.pattern = pattern
-    return style
+    wb = Workbook()
 
-
-# 获取字符串长度，一个中文长度为2
-def len_byte(value):
-    length = len(str(value))
-    uft8_length = len(value.encode('utf-8'))
-    length = (uft8_length - length) / 2 + length
-    return int(length)
-
-
-def analysis_data(analysis_file, data):
-    # 生成csv文件名拼接
-    file_name = analysis_file.split('.')[0]
-    date = datetime.datetime.now().strftime("%Y%m%d%H%M")
-
-    test_file_name = file_name + '_Analysis_by' + data[3] + '_' + date + '.xls'
-
-    workbook = xlwt.Workbook(style_compression=2)
-
-    line_sourcefile = ['Source file', analysis_file]
     line_title = ['TestName', 'Unit', 'LoLimit', 'HiLimit', 'Min', 'Mean', 'Max', 'std', 'StdDivMeanPercent']
     std_style = ['(1,10]', '(10,100]', '(100,+∞)']
     StdDivMeanPercent_style = ['[-50%,-5%),(5%,50%]', '[-500%,-50%),(50%,500%]', '(-∞,-500%),(500%,+∞)']
 
     for i in range(len(data[1])):
-        worksheet = workbook.add_sheet(data[3] + str(data[1][i]))
+        ws = wb.create_sheet(data[3] + str(data[1][i]))
+        ws.freeze_panes = 'B7'
 
-        # 确定栏位宽度
-        col_width = []
-        col_num = 0
-        for m in range(len(data[0])):
-            col_num_tmp = 0
-            for n in range(len(data[0][m]) - 1):
-                if m == 0:
-                    col_width.append(len_byte(data[0][m][n]))
-                else:
-                    if col_width[col_num_tmp] < len_byte(str(data[0][m][n])):
-                        col_width[col_num_tmp] = len_byte(data[0][m][n])
-                col_num_tmp += 1
+        irow = 1
+        ws.cell(row=irow, column=8).value = line_title[7]
+        ws.cell(row=irow, column=9).value = line_title[8]
 
-            for x in range(len(data[0][m][4][i])):
-                if m == 0:
-                    col_width.append(len_byte(str(data[0][m][4][i][x])))
-                else:
-                    if col_width[col_num_tmp] < len_byte(str(data[0][m][4][i][x])):
-                        col_width[col_num_tmp] = len_byte(str(data[0][m][4][i][x]))
-                col_num_tmp += 1
-            col_num = col_num_tmp
-        for m in range(len(std_style)):
-            if m == 0:
-                col_width.append(len_byte(std_style[m]))
-            else:
-                if col_width[col_num] < len_byte(str(std_style[m])):
-                    col_width[col_num] = len_byte(std_style[m])
-        col_num += 1
-        for m in range(len(StdDivMeanPercent_style)):
-            if m == 0:
-                col_width.append(len_byte(StdDivMeanPercent_style[m]))
-            else:
-                if col_width[col_num] < len_byte(str(StdDivMeanPercent_style[m])):
-                    col_width[col_num] = len_byte(StdDivMeanPercent_style[m])
-        if col_width[col_num] < len_byte(str(line_title[8])):
-            col_width[col_num] = len_byte(line_title[8])
+        irow += 1
+        for j in range(len(std_style)):
+            ws.cell(row=irow, column=8).value = std_style[j]
+            ws.cell(row=irow, column=9).value = StdDivMeanPercent_style[j]
+            irow += 1
+        ws.cell(row=2, column=8).fill = PatternFill(fill_type='solid', fgColor=YELLOW)
+        ws.cell(row=2, column=9).fill = PatternFill(fill_type='solid', fgColor=YELLOW)
+        ws.cell(row=3, column=8).fill = PatternFill(fill_type='solid', fgColor=DARKYELLOW)
+        ws.cell(row=3, column=9).fill = PatternFill(fill_type='solid', fgColor=DARKYELLOW)
+        ws.cell(row=4, column=8).fill = PatternFill(fill_type='solid', fgColor=RED)
+        ws.cell(row=4, column=9).fill = PatternFill(fill_type='solid', fgColor=RED)
 
-        col_num = 0
-        for m in range(len(line_title)):
-            if col_width[col_num] < len_byte(str(line_title[m])):
-                col_width[col_num] = len_byte(line_title[m])
-            col_num += 1
-
-        # 设置栏位宽度，栏位宽度小于10时采用默认宽度
-        for l in range(len(col_width)):
-            if col_width[l] > 10:
-                worksheet.col(l).width = 256 * (col_width[l] + 1)
-
-        iRowIndex = 0
-        worksheet.write(iRowIndex, 0, line_sourcefile[0])
-        worksheet.write_merge(iRowIndex, 0, 1, 8, line_sourcefile[1])
-        worksheet.write(iRowIndex, 9, line_title[7])
-        worksheet.write(iRowIndex, 10, line_title[8])
-        iRowIndex += 1
-        worksheet.write(iRowIndex, 9, std_style[0], get_style(5))
-        worksheet.write(iRowIndex, 10, StdDivMeanPercent_style[0], get_style(5))
-        iRowIndex += 1
-        worksheet.write(iRowIndex, 9, std_style[1], get_style(19))
-        worksheet.write(iRowIndex, 10, StdDivMeanPercent_style[1], get_style(19))
-        iRowIndex += 1
-        worksheet.write(iRowIndex, 9, std_style[2], get_style(2))
-        worksheet.write(iRowIndex, 10, StdDivMeanPercent_style[2], get_style(2))
-        iRowIndex += 1
         line_loop_times = ['Test times', len(data[2][data[1][i]])]
         for index in range(len(line_loop_times)):
-            worksheet.write(iRowIndex, index, line_loop_times[index])
-        iRowIndex += 1
-        for index in range(len(line_title)):
-            worksheet.write(iRowIndex, index, line_title[index])
-        iRowIndex += 1
+            ws.cell(row=irow, column=index + 1).value = line_loop_times[index]
 
+        irow += 1
+        for index in range(len(line_title)):
+            ws.cell(row=irow, column=index + 1).value = line_title[index]
+            ws.cell(row=irow, column=index + 1).fill = PatternFill(fill_type='solid', fgColor=GREEN)
+
+        irow += 1
         for j in range(len(data[0])):
             line = [data[0][j][0], data[0][j][1], data[0][j][3], data[0][j][2], data[0][j][4][i][0],
                     data[0][j][4][i][1], data[0][j][4][i][2], data[0][j][4][i][3], data[0][j][4][i][4]]
             for index in range(len(line)):
                 if index == 7:
+                    ws.cell(row=irow, column=index + 1).value = line[index]
                     if 1 < line[index] <= 10:
-                        worksheet.write(iRowIndex, index, line[index], get_style(5))
+                        ws.cell(row=irow, column=index + 1).fill = PatternFill(fill_type='solid', fgColor=YELLOW)
                     elif 10 < line[index] <= 100:
-                        worksheet.write(iRowIndex, index, line[index], get_style(19))
+                        ws.cell(row=irow, column=index + 1).fill = PatternFill(fill_type='solid', fgColor=DARKYELLOW)
                     elif 100 < line[index]:
-                        worksheet.write(iRowIndex, index, line[index], get_style(2))
-                    else:
-                        worksheet.write(iRowIndex, index, line[index])
+                        ws.cell(row=irow, column=index + 1).fill = PatternFill(fill_type='solid', fgColor=RED)
                 elif index == 8:
+                    ws.cell(row=irow, column=index + 1).value = '{:.2%}'.format(line[index])
                     if -0.5 <= line[index] < -0.05 or 0.05 < line[index] <= 0.5:
-                        worksheet.write(iRowIndex, index, '{:.2%}'.format(line[index]), get_style(5))
+                        ws.cell(row=irow, column=index + 1).fill = PatternFill(fill_type='solid', fgColor=YELLOW)
                     elif -5 <= line[index] < -0.5 or 0.5 < line[index] <= 5:
-                        worksheet.write(iRowIndex, index, '{:.2%}'.format(line[index]), get_style(19))
+                        ws.cell(row=irow, column=index + 1).fill = PatternFill(fill_type='solid', fgColor=DARKYELLOW)
                     elif line[index] < -5 or 5 < line[index]:
-                        worksheet.write(iRowIndex, index, '{:.2%}'.format(line[index]), get_style(2))
-                    else:
-                        worksheet.write(iRowIndex, index, '{:.2%}'.format(line[index]))
+                        ws.cell(row=irow, column=index + 1).fill = PatternFill(fill_type='solid', fgColor=RED)
                 else:
-                    worksheet.write(iRowIndex, index, line[index])
-            iRowIndex += 1
-        # 设置第1列第6行窗口冻结
-        worksheet.panes_frozen = True
-        worksheet.vert_split_pos = 1
-        worksheet.horz_split_pos = 6
-    workbook.save(test_file_name)
-
-
-def mkdir(dir):
-    dir = dir.strip()
-    dir = dir.rstrip("\\")
-    isExists = os.path.exists(dir)
-    if not isExists:
-        os.makedirs(dir)
-        # print(path + '创建成功')
-        return True
-    else:
-        # print(path + '目录已存在')
-        return False
-
-
-def get_file(folder):
-    result = []
-    get_dir = os.listdir(folder)
-    for dir in get_dir:
-        sub_dir = os.path.join(folder, dir)
-        if not os.path.isdir(sub_dir):
-            result.append(dir)
-    return result
+                    ws.cell(row=irow, column=index + 1).value = line[index]
+            irow += 1
+        for row in ws.rows:
+            for cell in row:
+                cell.border = border
+    for sheet_name in wb.sheetnames:
+        if sheet_name == 'Sheet':
+            del wb[sheet_name]
+        else:
+            Common.set_column_width(wb[sheet_name])
+    print("保存数据开始-----------------")
+    wb.save(test_file_name)
+    print("保存数据结束-----------------")
 
 
 def main():
@@ -280,12 +238,14 @@ def main():
 
     if argv.count('-s') != 0:
         sourcefile_folder = argv[argv.index('-s') + 1]
-        file_list = get_file(sourcefile_folder)
+        file_list = Common.get_filelist(sourcefile_folder, '.csv')
+        if not file_list:
+            exit()
 
     if argv.count('-f') != 0:
         single_file = argv[argv.index('-f') + 1]
-        sourcefile_folder = os.path.dirname(single_file)
-        file_list = [os.path.basename(single_file)]
+        sourcefile_folder = dirname(single_file)
+        file_list = [single_file]
 
     # Analysis folder path
     if argv.count('-a') == 0:
@@ -298,16 +258,15 @@ def main():
     else:
         group_by_id = int(argv[argv.index('-b') + 1])
 
-    mkdir(analysis_folder)
+    Common.mkdir(analysis_folder)
 
     for file in file_list:
-        original_file = os.path.join(sourcefile_folder, file)
         # parse file
-        data = parse_file(original_file, group_by_id)
+        data = parse_file(file, group_by_id)
 
-        analysis_file = os.path.join(analysis_folder, file)
-        # analysis data
-        analysis_data(analysis_file, data)
+        save_file = join(analysis_folder, basename(file))
+        # save data
+        save_data(save_file, data)
 
 
 if __name__ == '__main__':

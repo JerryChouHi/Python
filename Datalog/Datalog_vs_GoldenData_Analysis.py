@@ -3,22 +3,34 @@
 # @Author   : Jerry Chou
 # @File     :
 # @Function :
-import csv
-import os
-import datetime, math
-from sys import argv
 
+from csv import reader
+from os.path import basename, dirname, join, abspath
+from os import getcwd
+from datetime import datetime
+from math import isnan
+from sys import argv, path
 from openpyxl import Workbook
-from openpyxl.styles import PatternFill, Border, Side
+from openpyxl.styles import PatternFill, Border, Side, Alignment
+from openpyxl.styles.colors import BLACK
+
+path.append(abspath(join(getcwd(), '..')))
+import Common
 
 row_offset = 5
 col_offset = 4
 
 golden_data_color = '00FFFF'  # 水绿色
-iic_test = 'iic_test'
+alignment = Alignment(horizontal='center', vertical='center')
+thin = Side(border_style='thin', color=BLACK)
+border = Border(top=thin, left=thin, right=thin, bottom=thin)
 
 
 def get_golden_data():
+    """
+    F28 golden数据列表
+    :return: golden高阈值和低阈值
+    """
     golden_data_list = [('PCLK_O/S', -0.38, -0.5),
                         ('HSYNC_O/S', -0.38, -0.5),
                         ('VSYNC_O/S', -0.38, -0.5),
@@ -320,53 +332,53 @@ def get_golden_data():
 
 
 def parse_file(file, golden_data):
+    """
+    解析文件
+    :param file: 待分析文件
+    :param golden_data: golden数据
+    :return: 分析结果
+    """
     data = []
     with open(file) as f:
-        csv_reader = csv.reader(f)
+        csv_reader = reader(f)
         for row in csv_reader:
             data.append(row)
 
-    for i in range(len(data)):
+    search_full_error = Common.search_string(data, 'Full_Error')
+    if not search_full_error:
+        exit()
+    else:
+        full_error_row_num = search_full_error[0]
+        full_error_col_num = search_full_error[1]
+
+    search_iic_test = Common.search_string(data, 'iic_test')
+    if not search_iic_test:
+        exit()
+    else:
+        iic_test_col_num = search_iic_test[1]
+
+    first_register_row_num = len(data) - 1
+    for i in range(full_error_row_num + row_offset, len(data)):
         try:
-            binning_col_num = data[i].index('Binning')
-            break
+            int(data[i][0])
         except:
-            pass
+            first_register_row_num = i
+            break
+
     for i in range(0, len(data)):
-        add_count = binning_col_num + 1 - len(data[i])
+        add_count = full_error_col_num + 1 - len(data[i])
         if add_count > 0:
             for j in range(add_count):
                 data[i].append('')
 
-    for i in range(len(data)):
-        try:
-            data[i].index('ChipNo')
-            chipno_row_num = i
-            break
-        except:
-            pass
-    col_count = binning_col_num + 1
+    col_count = full_error_col_num + 1
     row_count = len(data)
-    firstregister_row_num = len(data)
-    for i in range(chipno_row_num + row_offset, len(data)):
-        try:
-            int(data[i][0])
-        except:
-            firstregister_row_num = i
-            break
     exist_nan_row_list = []
-    for i in range(chipno_row_num + row_offset, firstregister_row_num):
-        for j in range(col_count):
+    for i in range(full_error_row_num + row_offset, first_register_row_num):
+        for j in range(full_error_col_num - 1):
             if len(data[i][j].strip()) == 0:
                 exist_nan_row_list.append(i)
                 break
-
-    for i in range(len(data)):
-        try:
-            iic_test_col_num = data[i].index(iic_test)
-            break
-        except:
-            pass
 
     result = []
 
@@ -374,19 +386,19 @@ def parse_file(file, golden_data):
         row_data = []
         for col_num in range(col_count):
             value = data[row_num][col_num]
-            if chipno_row_num + 2 <= row_num <= chipno_row_num + 3:
+            if col_offset <= col_num < col_count - 2 and full_error_row_num + 2 <= row_num <= full_error_row_num + 3:
                 row_data.append((value, '008000'))  # 纯绿
             elif col_num == 0 and row_num in exist_nan_row_list:
                 row_data.append((value, 'A020F0'))  # purple
-            elif col_num >= col_offset and chipno_row_num + row_offset <= row_num < firstregister_row_num:
+            elif col_offset <= col_num < col_count - 2 and full_error_row_num + row_offset <= row_num < first_register_row_num:
                 try:
                     value_convert = float(value)
-                    high_limit_data = data[chipno_row_num + 2][col_num]
+                    high_limit_data = data[full_error_row_num + 2][col_num]
                     try:
                         high_limit = float(high_limit_data)
                     except:
                         high_limit = high_limit_data
-                    low_limit_data = data[chipno_row_num + 3][col_num]
+                    low_limit_data = data[full_error_row_num + 3][col_num]
                     try:
                         low_limit = float(low_limit_data)
                     except:
@@ -402,79 +414,69 @@ def parse_file(file, golden_data):
                     else:
                         row_data.append((value_convert, 'FF0000'))  # 纯红
                 except:
-                    if value.isspace():
+                    if not value.strip():
                         row_data.append((value, 'A020F0'))  # purple
                     elif col_num == iic_test_col_num and value != '1':
                         row_data.append((value, 'FFFF00'))  # 纯黄
             else:
-                if isinstance(value, float) and math.isnan(value):
+                if isinstance(value, float) and isnan(value):
                     value = ''
                 row_data.append((value, 'FFFFFF'))
         result.append(row_data)
-        print("解析文件：第 " + str(row_num + 1) + " 行")
+        if row_num % 100 == 0 or row_num == row_count - 1:
+            print("解析文件：第 " + str(row_num + 1) + " 行")
     return result
 
 
-def analysis_data(file, data, golden_data):
-    file_name = file.split('.')[0]
-    date = datetime.datetime.now().strftime("%Y%m%d%H%M")
+def save_data(analysis_folder, file, parse_data, golden_data):
+    """
+    保存数据
+    :param analysis_folder: 分析文件夹
+    :param file: 文件名
+    :param parse_data: 解析数据
+    :param golden_data: golden数据
+    :return: 
+    """
+    analysis_file = join(analysis_folder, basename(file))
+    file_name = analysis_file.split('.')[0]
+    date = datetime.now().strftime("%Y%m%d%H%M")
     test_file_name = file_name + ' vs GoldenData_' + date + '.xlsx'
+    print(test_file_name)
 
     wb = Workbook()  # 创建文件对象
-
     ws = wb.active  # 获取第一个sheet
     ws.freeze_panes = 'E19'
 
-    border = Border(left=Side(border_style='thin', color='000000'),
-
-                    right=Side(border_style='thin', color='000000'),
-
-                    top=Side(border_style='thin', color='000000'),
-
-                    bottom=Side(border_style='thin', color='000000'))
     irow = 1
-    for i in range(len(data)):
+    for i in range(len(parse_data)):
         if i == 14:
             for m in range(len(golden_data[0])):
                 ws.cell(row=irow, column=m + 1).value = golden_data[0][m]
                 ws.cell(row=irow, column=m + 1).fill = PatternFill(fill_type='solid', fgColor=golden_data_color)
                 ws.cell(row=irow, column=m + 1).border = border
+                if m == len(golden_data[0]) - 1:
+                    ws.cell(row=irow, column=m + 2).border = border
+                    ws.cell(row=irow, column=m + 3).border = border
             irow += 1
             for n in range(len(golden_data[1])):
                 ws.cell(row=irow, column=n + 1).value = golden_data[1][n]
                 ws.cell(row=irow, column=n + 1).fill = PatternFill(fill_type='solid', fgColor=golden_data_color)
                 ws.cell(row=irow, column=n + 1).border = border
+                if n == len(golden_data[0]) - 1:
+                    ws.cell(row=irow, column=n + 2).border = border
+                    ws.cell(row=irow, column=n + 3).border = border
             irow += 1
-        for j in range(len(data[i])):
-            ws.cell(row=irow, column=j + 1).value = data[i][j][0]
-            ws.cell(row=irow, column=j + 1).fill = PatternFill(fill_type='solid', fgColor=data[i][j][1])
+        for j in range(len(parse_data[i])):
+            ws.cell(row=irow, column=j + 1).value = parse_data[i][j][0]
+            ws.cell(row=irow, column=j + 1).fill = PatternFill(fill_type='solid', fgColor=parse_data[i][j][1])
             ws.cell(row=irow, column=j + 1).border = border
-        print("组装Excel数据：第 " + str(i + 1) + " 行")
+        if i % 100 == 0 or i == len(parse_data) - 1:
+            print("组装Excel数据：第 " + str(i + 1) + " 行")
         irow += 1
+
     print("保存数据开始-----------------")
     wb.save(test_file_name)
     print("保存数据结束-----------------")
-
-
-def mkdir(dir):
-    dir = dir.strip()
-    dir = dir.rstrip("\\")
-    isExists = os.path.exists(dir)
-    if not isExists:
-        os.makedirs(dir)
-        return True
-    else:
-        return False
-
-
-def get_file(folder):
-    result = []
-    get_dir = os.listdir(folder)
-    for dir in get_dir:
-        sub_dir = os.path.join(folder, dir)
-        if not os.path.isdir(sub_dir):
-            result.append(dir)
-    return result
 
 
 def main():
@@ -486,12 +488,14 @@ def main():
 
     if argv.count('-s') != 0:
         sourcefile_folder = argv[argv.index('-s') + 1]
-        file_list = get_file(sourcefile_folder)
+        file_list = Common.get_filelist(sourcefile_folder, '.csv')
+        if not file_list:
+            exit()
 
     if argv.count('-f') != 0:
         single_file = argv[argv.index('-f') + 1]
-        sourcefile_folder = os.path.dirname(single_file)
-        file_list = [os.path.basename(single_file)]
+        sourcefile_folder = dirname(single_file)
+        file_list = [single_file]
 
     # Analysis folder path
     if argv.count('-a') == 0:
@@ -499,20 +503,15 @@ def main():
     else:
         analysis_folder = argv[argv.index('-a') + 1]
 
-    # golden_data = parse_golden_data_file(golden_data_file)
     golden_data = get_golden_data()
-    mkdir(analysis_folder)
+    Common.mkdir(analysis_folder)
 
     for file in file_list:
-        original_file = os.path.join(sourcefile_folder, file)
-        print(original_file)
+        print(file)
         # parse file
-        data = parse_file(original_file, golden_data)
-
-        analysis_file = os.path.join(analysis_folder, file)
-        print(analysis_file)
-        # analysis data
-        analysis_data(analysis_file, data, golden_data)
+        parse_data = parse_file(file, golden_data)
+        # save data
+        save_data(analysis_folder, file, parse_data, golden_data)
 
 
 if __name__ == '__main__':
