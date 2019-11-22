@@ -4,63 +4,22 @@
 # @File     : Xml_to_Excel.py
 # @Function :
 
-from sys import argv
-from os import listdir, path
+from sys import argv, path
+from os.path import abspath,join
+from os import getcwd
 from openpyxl import Workbook
 from openpyxl.styles import PatternFill, Border, Side, Font, Alignment
 from openpyxl.styles.colors import RED, YELLOW, GREEN, BLACK
-from openpyxl.utils import get_column_letter, quote_sheetname
+from openpyxl.utils import quote_sheetname
 from openpyxl.worksheet.datavalidation import DataValidation
 from xml.dom.minidom import parse
+
+path.append(abspath(join(getcwd(), '..')))
+import Common
 
 alignment = Alignment(horizontal='center', vertical='center')
 thin = Side(border_style='thin', color=BLACK)
 border = Border(top=thin, left=thin, right=thin, bottom=thin)
-
-
-def get_attriValue(element, attribute):
-    value = element.getAttribute(attribute)
-    return attribute, value
-
-
-def get_tree(element):
-    tree = []
-    if element.hasAttribute('name'):
-        tree.append(get_attriValue(element, 'name'))
-    if element.hasAttribute('sigRef'):
-        tree.append(get_attriValue(element, 'sigRef'))
-    if element.hasAttribute('minorTestNum'):
-        tree.append(get_attriValue(element, 'minorTestNum'))
-    if element.hasAttribute('testNum'):
-        tree.append(get_attriValue(element, 'testNum'))
-    if element.hasAttribute('type'):
-        tree.append(get_attriValue(element, 'type'))
-    if len(element.childNodes) == 1:
-        tag_name = element.tagName
-        tag_content = element.childNodes[0].data
-        tree.append((tag_name, tag_content))
-    elif len(element.childNodes) > 1:
-        temp = []
-        for childNode in element.childNodes:
-            if len(childNode.childNodes) == 1:
-                tag_name = childNode.tagName
-                tag_content = childNode.childNodes[0].data
-                temp.append((tag_name, tag_content))
-            elif len(childNode.childNodes) > 1:
-                tree.append(get_tree(childNode))
-        if len(temp) > 0:
-            tree.append(temp)
-    return tree
-
-
-def get_file(folder):
-    result = []
-    get_dir = listdir(folder)
-    for dir in get_dir:
-        sub_dir = path.join(folder, dir)
-        if not path.isdir(sub_dir):
-            result.append(dir)
-    return result
 
 
 def read_project(project_folder):
@@ -72,11 +31,11 @@ def read_project(project_folder):
     projectsetup = root.getElementsByTagName('ProjectSetup')
     project_data = []
     for item in socketmap:
-        project_data.append(get_tree(item))
+        project_data.append(Common.get_tree(item))
     for item in datalog:
-        project_data.append(get_tree(item))
+        project_data.append(Common.get_tree(item))
     for item in projectsetup:
-        project_data.append(get_tree(item))
+        project_data.append(Common.get_tree(item))
     return project_data
 
 
@@ -87,7 +46,7 @@ def read_socketmap(project_folder):
     itemlist = root.getElementsByTagName('SignalRef')
     socketmap_data = []
     for item in itemlist:
-        socketmap_data.append(get_tree(item))
+        socketmap_data.append(Common.get_tree(item))
     return socketmap_data
 
 
@@ -98,7 +57,7 @@ def read_signals(project_folder):
     itemlist = root.getElementsByTagName('Signal')
     signals_data = []
     for item in itemlist:
-        signals_data.append(get_tree(item))
+        signals_data.append(Common.get_tree(item))
     return signals_data
 
 
@@ -109,7 +68,7 @@ def read_limit(project_folder):
     itemlist = root.getElementsByTagName('Limit')
     limit_data = []
     for item in itemlist:
-        limit_data.append(get_tree(item))
+        limit_data.append(Common.get_tree(item))
     return limit_data
 
 
@@ -120,7 +79,7 @@ def read_signalgroups(project_folder):
     itemlist = root.getElementsByTagName('Signalgroup')
     signalgroups_data = []
     for item in itemlist:
-        signalgroups_data.append(get_tree(item))
+        signalgroups_data.append(Common.get_tree(item))
     return signalgroups_data
 
 
@@ -132,9 +91,9 @@ def read_bindefinition(project_folder):
     bindefinition_data = []
     for item in itemlist:
         if item.getAttribute('name') == 'HardBins':
-            bindefinition_data.append(get_tree(item))
+            bindefinition_data.append(Common.get_tree(item))
         elif item.getAttribute('name') == 'SoftBins':
-            bindefinition_data.append(get_tree(item))
+            bindefinition_data.append(Common.get_tree(item))
     return bindefinition_data
 
 
@@ -145,7 +104,7 @@ def read_dcmeasure(project_folder):
     itemlist = root.getElementsByTagName('DCMeasure')
     dcmeasure_data = []
     for item in itemlist:
-        dcmeasure_data.append(get_tree(item))
+        dcmeasure_data.append(Common.get_tree(item))
     return dcmeasure_data
 
 
@@ -156,7 +115,7 @@ def read_tests(project_folder):
     itemlist = root.getElementsByTagName('Test')
     tests_data = []
     for item in itemlist:
-        tests_data.append(get_tree(item))
+        tests_data.append(Common.get_tree(item))
     return tests_data
 
 
@@ -167,7 +126,7 @@ def read_uservars(project_folder):
     itemlist = root.getElementsByTagName('Variable')
     uservars_data = []
     for item in itemlist:
-        uservars_data.append(get_tree(item))
+        uservars_data.append(Common.get_tree(item))
     return uservars_data
 
 
@@ -178,27 +137,8 @@ def read_levels(project_folder):
     itemlist = root.getElementsByTagName('Levels')
     levels_data = []
     for item in itemlist:
-        levels_data.append(get_tree(item))
+        levels_data.append(Common.get_tree(item))
     return levels_data
-
-
-def set_column_width(sheet):
-    # 获取每一列的内容的最大宽度
-    col_width = [0.5] * sheet.max_column
-    for row in range(sheet.max_row):
-        for col in range(sheet.max_column):
-            value = sheet.cell(row=row + 1, column=col + 1).value
-            if value:
-                width = len(value)
-                if width > col_width[col]:
-                    col_width[col] = width
-    # 设置列宽
-    for i in range(len(col_width)):
-        col_lettert = get_column_letter(i + 1)
-        if col_width[i] > 100:
-            sheet.column_dimensions[col_lettert].width = 100
-        else:
-            sheet.column_dimensions[col_lettert].width = col_width[i] + 2
 
 
 def write_excel(project_data, socketmap_data, signals_data, limit_data, signalgroups_data, bindefinition_data,
@@ -698,7 +638,7 @@ def write_excel(project_data, socketmap_data, signals_data, limit_data, signalgr
         if sheet_name == 'Sheet':
             del wb[sheet_name]
         else:
-            set_column_width(wb[sheet_name])
+            Common.set_column_width(wb[sheet_name])
 
     print("保存数据开始-----------------")
     wb.save(file_name)
