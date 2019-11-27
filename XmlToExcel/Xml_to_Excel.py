@@ -5,7 +5,7 @@
 # @Function :
 
 from sys import argv, path
-from os.path import abspath,join
+from os.path import abspath, join
 from os import getcwd
 from openpyxl import Workbook
 from openpyxl.styles import PatternFill, Border, Side, Font, Alignment
@@ -23,7 +23,7 @@ border = Border(top=thin, left=thin, right=thin, bottom=thin)
 
 
 def read_project(project_folder):
-    socketmap_path = path.join(project_folder, "Project.xml")
+    socketmap_path = join(project_folder, "Project.xml")
     dom = parse(socketmap_path)
     root = dom.documentElement
     socketmap = root.getElementsByTagName('SocketMap')
@@ -40,7 +40,7 @@ def read_project(project_folder):
 
 
 def read_socketmap(project_folder):
-    socketmap_path = path.join(project_folder, "XML\\SocketMap.xml")
+    socketmap_path = join(project_folder, "XML\\SocketMap.xml")
     dom = parse(socketmap_path)
     root = dom.documentElement
     itemlist = root.getElementsByTagName('SignalRef')
@@ -51,7 +51,7 @@ def read_socketmap(project_folder):
 
 
 def read_signals(project_folder):
-    signals_path = path.join(project_folder, "XML\\Signals.xml")
+    signals_path = join(project_folder, "XML\\Signals.xml")
     dom = parse(signals_path)
     root = dom.documentElement
     itemlist = root.getElementsByTagName('Signal')
@@ -62,7 +62,7 @@ def read_signals(project_folder):
 
 
 def read_limit(project_folder):
-    limit_path = path.join(project_folder, "XML\\Limit.xml")
+    limit_path = join(project_folder, "XML\\Limit.xml")
     dom = parse(limit_path)
     root = dom.documentElement
     itemlist = root.getElementsByTagName('Limit')
@@ -73,7 +73,7 @@ def read_limit(project_folder):
 
 
 def read_signalgroups(project_folder):
-    signalgroups_path = path.join(project_folder, "XML\\SignalGroups.xml")
+    signalgroups_path = join(project_folder, "XML\\SignalGroups.xml")
     dom = parse(signalgroups_path)
     root = dom.documentElement
     itemlist = root.getElementsByTagName('Signalgroup')
@@ -84,7 +84,7 @@ def read_signalgroups(project_folder):
 
 
 def read_bindefinition(project_folder):
-    bindefinition_path = path.join(project_folder, "XML\\BinDefinition.xml")
+    bindefinition_path = join(project_folder, "XML\\BinDefinition.xml")
     dom = parse(bindefinition_path)
     root = dom.documentElement
     itemlist = root.getElementsByTagName('BinGroup')
@@ -98,7 +98,7 @@ def read_bindefinition(project_folder):
 
 
 def read_dcmeasure(project_folder):
-    testblock_path = path.join(project_folder, "XML\\TestBlock.xml")
+    testblock_path = join(project_folder, "XML\\TestBlock.xml")
     dom = parse(testblock_path)
     root = dom.documentElement
     itemlist = root.getElementsByTagName('DCMeasure')
@@ -109,7 +109,7 @@ def read_dcmeasure(project_folder):
 
 
 def read_tests(project_folder):
-    testblock_path = path.join(project_folder, "XML\\TestBlock.xml")
+    testblock_path = join(project_folder, "XML\\TestBlock.xml")
     dom = parse(testblock_path)
     root = dom.documentElement
     itemlist = root.getElementsByTagName('Test')
@@ -120,7 +120,7 @@ def read_tests(project_folder):
 
 
 def read_uservars(project_folder):
-    uservars_path = path.join(project_folder, "XML\\UserVars.xml")
+    uservars_path = join(project_folder, "XML\\UserVars.xml")
     dom = parse(uservars_path)
     root = dom.documentElement
     itemlist = root.getElementsByTagName('Variable')
@@ -131,7 +131,7 @@ def read_uservars(project_folder):
 
 
 def read_levels(project_folder):
-    levels_path = path.join(project_folder, "XML\\Levels.xml")
+    levels_path = join(project_folder, "XML\\Levels.xml")
     dom = parse(levels_path)
     root = dom.documentElement
     itemlist = root.getElementsByTagName('Levels')
@@ -222,94 +222,208 @@ def write_excel(project_data, socketmap_data, signals_data, limit_data, signalgr
         ['J1', 'J2', 'Seg 0_0/Site12', 'Seg 0_0/Site13'],
         ['J3', 'J4', 'Seg 1_0/Site14', 'Seg 1_0/Site15']
     ]
-    HWPins = []
+    LoadBoardPins = []
     for i in range(len(loadboard)):
-        HWPins.append(
+        LoadBoardPins.append(
             [
                 loadboard[i][2],
-                ['PMU0', loadboard[i][0] + ': H_LCH00(PMU 0-31)', 'PMU0', 0],
-                ['PMU1', loadboard[i][0] + ': H_LCH01(PMU 0-31)', 'PMU1', 1],
-                ['PMU2', loadboard[i][0] + ': H_LCH02(PMU 0-31)', 'PMU2', 2],
-                ['PMU3', loadboard[i][0] + ': H_LCH03(PMU 0-31)', 'PMU3', 3],
-                ['PMU4', loadboard[i][0] + ': H_LCH04(PMU 0-31)', 'PMU4', 4],
-                ['PMU5', loadboard[i][0] + ': H_LCH05(PMU 0-31)', 'PMU5', 5],
-                ['PMU6/Mipi clk n', loadboard[i][0] + ': H_LCH12(PMU 0-31)/CH1_CSI_A_n', 'CSI_A_N_PMU12', 12],
-                ['PMU7/Mipi clk p', loadboard[i][0] + ': H_LCH13(PMU 0-31)/CH1_CSI_A_p', 'CSI_A_P_PMU13', 13],
-                ['PMU8/Mipi data0 n', loadboard[i][0] + ': H_LCH14(PMU 0-31)/CH1_CSI_B_n', 'CSI_B_N_PMU14', 14],
-                ['PMU9/Mipi data0 p', loadboard[i][0] + ': H_LCH15(PMU 0-31)/CH1_CSI_B_p', 'CSI_B_P_PMU15', 15],
-                ['PMU10/Mipi data1 n', loadboard[i][0] + ': H_LCH16(PMU 0-31)/CH1_CSI_C_n', 'CSI_C_N_PMU16', 16],
-                ['PMU11/Mipi data1 p', loadboard[i][0] + ': H_LCH17(PMU 0-31)/CH1_CSI_C_p', 'CSI_C_P_PMU17', 17],
-                ['PMU12/Mipi data2 n', loadboard[i][0] + ': H_LCH18(PMU 0-31)/CH1_CSI_D_n', 'CSI_D_N_PMU18', 18],
-                ['PMU13/Mipi data2 p', loadboard[i][0] + ': H_LCH19(PMU 0-31)/CH1_CSI_D_p', 'CSI_D_P_PMU19', 19],
-                ['PMU14/Mipi data3 n', loadboard[i][0] + ': H_LCH20(PMU 0-31)/CH1_CSI_E_n', 'CSI_E_N_PMU20', 20],
-                ['PMU15/Mipi data3 p', loadboard[i][0] + ': H_LCH21(PMU 0-31)/CH1_CSI_E_p', 'CSI_E_P_PMU21', 21],
-                ['PMU16', loadboard[i][1] + ': PE_E_S_0', 'PE_S0', 'M0'],
-                ['PMU17', loadboard[i][1] + ': PE_E_S_1', 'PE_S1', 'M1'],
-                ['PMU18', loadboard[i][1] + ': PE_E_S_2', 'PE_S2', 'M2'],
-                ['PMU19', loadboard[i][1] + ': PE_E_S_3', 'PE_S3', 'M3'],
-                ['PMU20', loadboard[i][1] + ': PE_E_S_4', 'PE_S4', 'M4'],
-                ['PMU21', loadboard[i][1] + ': PE_E_S_5', '', 'M5'],
-                ['PMU22', loadboard[i][1] + ': PE_E_S_6', '', 'M6'],
-                ['PMU23', loadboard[i][1] + ': PE_E_S_7', '', 'M7'],
-                ['DPS0', loadboard[i][1] + ': LVLC_F+_0', 'DPS_F0', 2000],
-                ['DPS1', loadboard[i][1] + ': LVLC_F+_1', 'DPS_F1', 2001],
-                ['DPS2', loadboard[i][1] + ': LVLC_F+_2', 'DPS_F2', 2002],
-                ['DPS3', loadboard[i][1] + ': LVLC_F+_3', 'DPS_F3', 2003],
-                ['GPIO1', loadboard[i][0] + ': gpio_3v3_2', '', 5065],
-                ['GPIO2', loadboard[i][0] + ': gpio_3v3_5', '', 5068],
-                ['GPIO3', loadboard[i][0] + ': gpio_3v3_6', '', 5069],
-                ['GPIO4', 'gpio_2V5_0_p(Transition Board)', '', 5048],
-                ['GPIO5', 'gpio_2V5_0_n(Transition Board)', '', 5049],
-                ['GPIO6', 'gpio_2V5_1_p(Transition Board)', '', 5050],
-                ['GPIO7', 'gpio_2V5_1_n(Transition Board)', '', 5051]
+                ['PMU_0', loadboard[i][0] + ': H_LCH00(PMU 0-31)', 0],
+                ['PMU_1', loadboard[i][0] + ': H_LCH01(PMU 0-31)', 1],
+                ['PMU_2', loadboard[i][0] + ': H_LCH02(PMU 0-31)', 2],
+                ['PMU_3', loadboard[i][0] + ': H_LCH03(PMU 0-31)', 3],
+                ['PMU_4', loadboard[i][0] + ': H_LCH04(PMU 0-31)', 4],
+                ['PMU_5', loadboard[i][0] + ': H_LCH05(PMU 0-31)', 5],
+                ['PMU_6', loadboard[i][0] + ': H_LCH06(PMU 0-31)', 6],
+                ['PMU_7', loadboard[i][0] + ': H_LCH07(PMU 0-31)', 7],
+                ['PMU_8', loadboard[i][0] + ': H_LCH08(PMU 0-31)', 8],
+                ['PMU_9', loadboard[i][0] + ': H_LCH09(PMU 0-31)', 9],
+                ['PMU_10', loadboard[i][0] + ': H_LCH10(PMU 0-31)', 10],
+                ['PMU_11', loadboard[i][0] + ': H_LCH11(PMU 0-31)', 11],
+                ['PMU_12/Mipi clk n', loadboard[i][0] + ': H_LCH12(PMU 0-31)/CH1_CSI_A_n', 12],
+                ['PMU_13/Mipi clk p', loadboard[i][0] + ': H_LCH13(PMU 0-31)/CH1_CSI_A_p', 13],
+                ['PMU_14/Mipi data0 n', loadboard[i][0] + ': H_LCH14(PMU 0-31)/CH1_CSI_B_n', 14],
+                ['PMU_15/Mipi data0 p', loadboard[i][0] + ': H_LCH15(PMU 0-31)/CH1_CSI_B_p', 15],
+                ['PMU_16/Mipi data1 n', loadboard[i][0] + ': H_LCH16(PMU 0-31)/CH1_CSI_C_n', 16],
+                ['PMU_17/Mipi data1 p', loadboard[i][0] + ': H_LCH17(PMU 0-31)/CH1_CSI_C_p', 17],
+                ['PMU_18/Mipi data2 n', loadboard[i][0] + ': H_LCH18(PMU 0-31)/CH1_CSI_D_n', 18],
+                ['PMU_19/Mipi data2 p', loadboard[i][0] + ': H_LCH19(PMU 0-31)/CH1_CSI_D_p', 19],
+                ['PMU_20/Mipi data3 n', loadboard[i][0] + ': H_LCH20(PMU 0-31)/CH1_CSI_E_n', 20],
+                ['PMU_21/Mipi data3 p', loadboard[i][0] + ': H_LCH21(PMU 0-31)/CH1_CSI_E_p', 21],
+                ['PMU_22/Mipi clk n', loadboard[i][0] + ': H_LCH22(PMU 0-31)/CH2_CSI_A_n', 22],
+                ['PMU_23/Mipi clk p', loadboard[i][0] + ': H_LCH23(PMU 0-31)/CH2_CSI_A_p', 23],
+                ['PMU_24/Mipi data0 n', loadboard[i][0] + ': H_LCH24(PMU 0-31)/CH2_CSI_B_n', 24],
+                ['PMU_25/Mipi data0 p', loadboard[i][0] + ': H_LCH25(PMU 0-31)/CH2_CSI_B_p', 25],
+                ['PMU_26/Mipi data1 n', loadboard[i][0] + ': H_LCH26(PMU 0-31)/CH2_CSI_C_n', 26],
+                ['PMU_27/Mipi data1 p', loadboard[i][0] + ': H_LCH27(PMU 0-31)/CH2_CSI_C_p', 27],
+                ['PMU_28/Mipi data2 n', loadboard[i][0] + ': H_LCH28(PMU 0-31)/CH2_CSI_D_n', 28],
+                ['PMU_29/Mipi data2 p', loadboard[i][0] + ': H_LCH29(PMU 0-31)/CH2_CSI_D_p', 29],
+                ['PMU_30/Mipi data3 n', loadboard[i][0] + ': H_LCH30(PMU 0-31)/CH2_CSI_E_n', 30],
+                ['PMU_31/Mipi data3 p', loadboard[i][0] + ': H_LCH31(PMU 0-31)/CH2_CSI_E_p', 31],
+                ['UTP_0', loadboard[i][1] + ': PE_E_S_0', 'M0'],
+                ['UTP_1', loadboard[i][1] + ': PE_E_S_1', 'M1'],
+                ['UTP_2', loadboard[i][1] + ': PE_E_S_2', 'M2'],
+                ['UTP_3', loadboard[i][1] + ': PE_E_S_3', 'M3'],
+                ['UTP_4', loadboard[i][1] + ': PE_E_S_4', 'M4'],
+                ['UTP_5', loadboard[i][1] + ': PE_E_S_5', 'M5'],
+                ['UTP_6', loadboard[i][1] + ': PE_E_S_6', 'M6'],
+                ['UTP_7', loadboard[i][1] + ': PE_E_S_7', 'M7'],
+                ['UTP_8', loadboard[i][0] + ': PE_E_S_0_B', 'M8'],
+                ['UTP_9', loadboard[i][0] + ': PE_E_S_1_B', 'M9'],
+                ['UTP_10', loadboard[i][0] + ': PE_E_S_2_B', 'M10'],
+                ['UTP_11', loadboard[i][0] + ': PE_E_S_3_B', 'M11'],
+                ['UTP_12', loadboard[i][0] + ': PE_E_S_4_B', 'M12'],
+                ['UTP_13', loadboard[i][0] + ': PE_E_S_5_B', 'M13'],
+                ['UTP_14', loadboard[i][0] + ': PE_E_S_6_B', 'M14'],
+                ['UTP_15', loadboard[i][0] + ': PE_E_S_7_B', 'M15'],
+                ['DPS_0', loadboard[i][1] + ': LVLC_F+_0', 2000],
+                ['DPS_1', loadboard[i][1] + ': LVLC_F+_1', 2001],
+                ['DPS_2', loadboard[i][1] + ': LVLC_F+_2', 2002],
+                ['DPS_3', loadboard[i][1] + ': LVLC_F+_3', 2003],
+                ['DPS_4', loadboard[i][1] + ': LVLC_F+_4', 2004],
+                ['DPS_5', loadboard[i][1] + ': LVLC_F+_5', 2005],
+                ['DPS_6', loadboard[i][1] + ': LVLC_F+_6', 2006],
+                ['DPS_7', loadboard[i][1] + ': LVLC_F+_7', 2007],
+                ['DPS_8', loadboard[i][1] + ': LVLC_S+_0', 2008],
+                ['DPS_9', loadboard[i][1] + ': LVLC_S+_1', 2009],
+                ['DPS_10', loadboard[i][1] + ': LVLC_S+_2', 2010],
+                ['DPS_11', loadboard[i][1] + ': LVLC_S+_3', 2011],
+                ['DPS_12', loadboard[i][1] + ': LVLC_S+_4', 2012],
+                ['DPS_13', loadboard[i][1] + ': LVLC_S+_5', 2013],
+                ['DPS_14', loadboard[i][1] + ': LVLC_S+_6', 2014],
+                ['DPS_15', loadboard[i][1] + ': LVLC_S+_7', 2015],
+                ['GPIO_0', 'gpio_2V5_0_p(Transition Board)', 5048],
+                ['GPIO_1', 'gpio_2V5_0_n(Transition Board)', 5049],
+                ['GPIO_2', 'gpio_2V5_1_p(Transition Board)', 5050],
+                ['GPIO_3', 'gpio_2V5_1_n(Transition Board)', 5051],
+                ['GPIO_4', loadboard[i][0] + ': gpio_2v5_2_p', 5052],
+                ['GPIO_5', loadboard[i][0] + ': gpio_2v5_2_n', 5053],
+                ['GPIO_6', loadboard[i][0] + ': gpio_2v5_3_p', 5054],
+                ['GPIO_7', loadboard[i][0] + ': gpio_2v5_3_n', 5055],
+                ['GPIO_8', loadboard[i][0] + ': gpio_1v8_0_p', 5056],
+                ['GPIO_9', loadboard[i][0] + ': gpio_1v8_0_n', 5057],
+                ['GPIO_10', loadboard[i][0] + ': gpio_1v8_1_p', 5058],
+                ['GPIO_11', loadboard[i][0] + ': gpio_1v8_1_n', 5059],
+                ['GPIO_12', loadboard[i][0] + ': gpio_1v8_2_p', 5060],
+                ['GPIO_13', loadboard[i][0] + ': gpio_1v8_2_n', 5061],
+                ['GPIO_14', loadboard[i][0] + ': gpio_1v8_3_p', 5062],
+                ['GPIO_15', loadboard[i][0] + ': gpio_1v8_3_n', 5063],
+                ['GPIO_16', loadboard[i][0] + ': gpio_3v3_1', 5064],
+                ['GPIO_17', loadboard[i][0] + ': gpio_3v3_2', 5065],
+                ['GPIO_18', loadboard[i][0] + ': gpio_3v3_3', 5066],
+                ['GPIO_19', loadboard[i][0] + ': gpio_3v3_4', 5067],
+                ['GPIO_20', loadboard[i][0] + ': gpio_3v3_5', 5068],
+                ['GPIO_21', loadboard[i][0] + ': gpio_3v3_6', 5069],
+                ['GPIO_22', loadboard[i][0] + ': gpio_3v3_7', 5070],
+                ['GPIO_23', loadboard[i][0] + ': gpio_3v3_8', 5071],
+                ['GPIO_24', loadboard[i][0] + ': gpio_3v3_9', 5072],
+                ['GPIO_25', loadboard[i][0] + ': gpio_3v3_10', 5073],
+                ['GPIO_26', loadboard[i][0] + ': gpio_3v3_11', 5074],
+                ['GPIO_27', loadboard[i][0] + ': gpio_3v3_12', 5075]
             ])
-        HWPins.append(
+        LoadBoardPins.append(
             [
                 loadboard[i][3],
-                ['PMU0', loadboard[i][0] + ': H_LCH06(PMU 0-31)', 'PMU6', 6],
-                ['PMU1', loadboard[i][0] + ': H_LCH07(PMU 0-31)', 'PMU7', 7],
-                ['PMU2', loadboard[i][0] + ': H_LCH08(PMU 0-31)', 'PMU8', 8],
-                ['PMU3', loadboard[i][0] + ': H_LCH09(PMU 0-31)', 'PMU9', 9],
-                ['PMU4', loadboard[i][0] + ': H_LCH10(PMU 0-31)', 'PMU10', 10],
-                ['PMU5', loadboard[i][0] + ': H_LCH11(PMU 0-31)', 'PMU11', 11],
-                ['PMU6/Mipi clk n', loadboard[i][0] + ': H_LCH22(PMU 0-31)/CH1_CSI_A_n', 'CSI_A_N_PMU22', 22],
-                ['PMU7/Mipi clk p', loadboard[i][0] + ': H_LCH23(PMU 0-31)/CH1_CSI_A_p', 'CSI_A_P_PMU23', 23],
-                ['PMU8/Mipi data0 n', loadboard[i][0] + ': H_LCH24(PMU 0-31)/CH1_CSI_B_n', 'CSI_B_N_PMU24', 24],
-                ['PMU9/Mipi data0 p', loadboard[i][0] + ': H_LCH25(PMU 0-31)/CH1_CSI_B_p', 'CSI_B_P_PMU25', 25],
-                ['PMU10/Mipi data1 n', loadboard[i][0] + ': H_LCH26(PMU 0-31)/CH1_CSI_C_n', 'CSI_C_N_PMU26', 26],
-                ['PMU11/Mipi data1 p', loadboard[i][0] + ': H_LCH27(PMU 0-31)/CH1_CSI_C_p', 'CSI_C_P_PMU27', 27],
-                ['PMU12/Mipi data2 n', loadboard[i][0] + ': H_LCH28(PMU 0-31)/CH1_CSI_D_n', 'CSI_D_N_PMU28', 28],
-                ['PMU13/Mipi data2 p', loadboard[i][0] + ': H_LCH29(PMU 0-31)/CH1_CSI_D_p', 'CSI_D_P_PMU29', 29],
-                ['PMU14/Mipi data3 n', loadboard[i][0] + ': H_LCH30(PMU 0-31)/CH1_CSI_E_n', 'CSI_E_N_PMU30', 30],
-                ['PMU15/Mipi data3 p', loadboard[i][0] + ': H_LCH31(PMU 0-31)/CH1_CSI_E_p', 'CSI_E_P_PMU31', 31],
-                ['PMU16', loadboard[i][0] + ': PE_E_S_0_B', 'PE_S8', 'M8'],
-                ['PMU17', loadboard[i][0] + ': PE_E_S_1_B', 'PE_S9', 'M9'],
-                ['PMU18', loadboard[i][0] + ': PE_E_S_2_B', 'PE_S10', 'M10'],
-                ['PMU19', loadboard[i][0] + ': PE_E_S_3_B', 'PE_S11', 'M11'],
-                ['PMU20', loadboard[i][0] + ': PE_E_S_4_B', 'PE_S12', 'M12'],
-                ['PMU21', loadboard[i][0] + ': PE_E_S_5_B', '', 'M13'],
-                ['PMU22', loadboard[i][0] + ': PE_E_S_6_B', '', 'M14'],
-                ['PMU23', loadboard[i][0] + ': PE_E_S_7_B', '', 'M15'],
-                ['DPS0', loadboard[i][1] + ': LVLC_F+_4', 'DPS_F4', 2004],
-                ['DPS1', loadboard[i][1] + ': LVLC_F+_5', 'DPS_F5', 2005],
-                ['DPS2', loadboard[i][1] + ': LVLC_F+_6', 'DPS_F6', 2006],
-                ['DPS3', loadboard[i][1] + ': LVLC_F+_7', 'DPS_F7', 2007],
-                ['GPIO1', loadboard[i][0] + ': gpio_3v3_1', '', 5064],
-                ['GPIO2', loadboard[i][0] + ': gpio_3v3_7', '', 5070],
-                ['GPIO3', loadboard[i][0] + ': gpio_3v3_8', '', 5071],
-                ['GPIO4', 'gpio_2V5_0_p(Transition Board)', '', 5048],
-                ['GPIO5', 'gpio_2V5_0_n(Transition Board)', '', 5049],
-                ['GPIO6', 'gpio_2V5_1_p(Transition Board)', '', 5050],
-                ['GPIO7', 'gpio_2V5_1_n(Transition Board)', '', 5051]
+                ['PMU_0', loadboard[i][0] + ': H_LCH00(PMU 0-31)', 0],
+                ['PMU_1', loadboard[i][0] + ': H_LCH01(PMU 0-31)', 1],
+                ['PMU_2', loadboard[i][0] + ': H_LCH02(PMU 0-31)', 2],
+                ['PMU_3', loadboard[i][0] + ': H_LCH03(PMU 0-31)', 3],
+                ['PMU_4', loadboard[i][0] + ': H_LCH04(PMU 0-31)', 4],
+                ['PMU_5', loadboard[i][0] + ': H_LCH05(PMU 0-31)', 5],
+                ['PMU_6', loadboard[i][0] + ': H_LCH06(PMU 0-31)', 6],
+                ['PMU_7', loadboard[i][0] + ': H_LCH07(PMU 0-31)', 7],
+                ['PMU_8', loadboard[i][0] + ': H_LCH08(PMU 0-31)', 8],
+                ['PMU_9', loadboard[i][0] + ': H_LCH09(PMU 0-31)', 9],
+                ['PMU_10', loadboard[i][0] + ': H_LCH10(PMU 0-31)', 10],
+                ['PMU_11', loadboard[i][0] + ': H_LCH11(PMU 0-31)', 11],
+                ['PMU_12/Mipi clk n', loadboard[i][0] + ': H_LCH12(PMU 0-31)/CH1_CSI_A_n', 12],
+                ['PMU_13/Mipi clk p', loadboard[i][0] + ': H_LCH13(PMU 0-31)/CH1_CSI_A_p', 13],
+                ['PMU_14/Mipi data0 n', loadboard[i][0] + ': H_LCH14(PMU 0-31)/CH1_CSI_B_n', 14],
+                ['PMU_15/Mipi data0 p', loadboard[i][0] + ': H_LCH15(PMU 0-31)/CH1_CSI_B_p', 15],
+                ['PMU_16/Mipi data1 n', loadboard[i][0] + ': H_LCH16(PMU 0-31)/CH1_CSI_C_n', 16],
+                ['PMU_17/Mipi data1 p', loadboard[i][0] + ': H_LCH17(PMU 0-31)/CH1_CSI_C_p', 17],
+                ['PMU_18/Mipi data2 n', loadboard[i][0] + ': H_LCH18(PMU 0-31)/CH1_CSI_D_n', 18],
+                ['PMU_19/Mipi data2 p', loadboard[i][0] + ': H_LCH19(PMU 0-31)/CH1_CSI_D_p', 19],
+                ['PMU_20/Mipi data3 n', loadboard[i][0] + ': H_LCH20(PMU 0-31)/CH1_CSI_E_n', 20],
+                ['PMU_21/Mipi data3 p', loadboard[i][0] + ': H_LCH21(PMU 0-31)/CH1_CSI_E_p', 21],
+                ['PMU_22/Mipi clk n', loadboard[i][0] + ': H_LCH22(PMU 0-31)/CH2_CSI_A_n', 22],
+                ['PMU_23/Mipi clk p', loadboard[i][0] + ': H_LCH23(PMU 0-31)/CH2_CSI_A_p', 23],
+                ['PMU_24/Mipi data0 n', loadboard[i][0] + ': H_LCH24(PMU 0-31)/CH2_CSI_B_n', 24],
+                ['PMU_25/Mipi data0 p', loadboard[i][0] + ': H_LCH25(PMU 0-31)/CH2_CSI_B_p', 25],
+                ['PMU_26/Mipi data1 n', loadboard[i][0] + ': H_LCH26(PMU 0-31)/CH2_CSI_C_n', 26],
+                ['PMU_27/Mipi data1 p', loadboard[i][0] + ': H_LCH27(PMU 0-31)/CH2_CSI_C_p', 27],
+                ['PMU_28/Mipi data2 n', loadboard[i][0] + ': H_LCH28(PMU 0-31)/CH2_CSI_D_n', 28],
+                ['PMU_29/Mipi data2 p', loadboard[i][0] + ': H_LCH29(PMU 0-31)/CH2_CSI_D_p', 29],
+                ['PMU_30/Mipi data3 n', loadboard[i][0] + ': H_LCH30(PMU 0-31)/CH2_CSI_E_n', 30],
+                ['PMU_31/Mipi data3 p', loadboard[i][0] + ': H_LCH31(PMU 0-31)/CH2_CSI_E_p', 31],
+                ['UTP_0', loadboard[i][1] + ': PE_E_S_0', 'M0'],
+                ['UTP_1', loadboard[i][1] + ': PE_E_S_1', 'M1'],
+                ['UTP_2', loadboard[i][1] + ': PE_E_S_2', 'M2'],
+                ['UTP_3', loadboard[i][1] + ': PE_E_S_3', 'M3'],
+                ['UTP_4', loadboard[i][1] + ': PE_E_S_4', 'M4'],
+                ['UTP_5', loadboard[i][1] + ': PE_E_S_5', 'M5'],
+                ['UTP_6', loadboard[i][1] + ': PE_E_S_6', 'M6'],
+                ['UTP_7', loadboard[i][1] + ': PE_E_S_7', 'M7'],
+                ['UTP_8', loadboard[i][0] + ': PE_E_S_0_B', 'M8'],
+                ['UTP_9', loadboard[i][0] + ': PE_E_S_1_B', 'M9'],
+                ['UTP_10', loadboard[i][0] + ': PE_E_S_2_B', 'M10'],
+                ['UTP_11', loadboard[i][0] + ': PE_E_S_3_B', 'M11'],
+                ['UTP_12', loadboard[i][0] + ': PE_E_S_4_B', 'M12'],
+                ['UTP_13', loadboard[i][0] + ': PE_E_S_5_B', 'M13'],
+                ['UTP_14', loadboard[i][0] + ': PE_E_S_6_B', 'M14'],
+                ['UTP_15', loadboard[i][0] + ': PE_E_S_7_B', 'M15'],
+                ['DPS_0', loadboard[i][1] + ': LVLC_F+_0', 2000],
+                ['DPS_1', loadboard[i][1] + ': LVLC_F+_1', 2001],
+                ['DPS_2', loadboard[i][1] + ': LVLC_F+_2', 2002],
+                ['DPS_3', loadboard[i][1] + ': LVLC_F+_3', 2003],
+                ['DPS_4', loadboard[i][1] + ': LVLC_F+_4', 2004],
+                ['DPS_5', loadboard[i][1] + ': LVLC_F+_5', 2005],
+                ['DPS_6', loadboard[i][1] + ': LVLC_F+_6', 2006],
+                ['DPS_7', loadboard[i][1] + ': LVLC_F+_7', 2007],
+                ['DPS_8', loadboard[i][1] + ': LVLC_S+_0', 2008],
+                ['DPS_9', loadboard[i][1] + ': LVLC_S+_1', 2009],
+                ['DPS_10', loadboard[i][1] + ': LVLC_S+_2', 2010],
+                ['DPS_11', loadboard[i][1] + ': LVLC_S+_3', 2011],
+                ['DPS_12', loadboard[i][1] + ': LVLC_S+_4', 2012],
+                ['DPS_13', loadboard[i][1] + ': LVLC_S+_5', 2013],
+                ['DPS_14', loadboard[i][1] + ': LVLC_S+_6', 2014],
+                ['DPS_15', loadboard[i][1] + ': LVLC_S+_7', 2015],
+                ['GPIO_0', 'gpio_2V5_0_p(Transition Board)', 5048],
+                ['GPIO_1', 'gpio_2V5_0_n(Transition Board)', 5049],
+                ['GPIO_2', 'gpio_2V5_1_p(Transition Board)', 5050],
+                ['GPIO_3', 'gpio_2V5_1_n(Transition Board)', 5051],
+                ['GPIO_4', loadboard[i][0] + ': gpio_2v5_2_p', 5052],
+                ['GPIO_5', loadboard[i][0] + ': gpio_2v5_2_n', 5053],
+                ['GPIO_6', loadboard[i][0] + ': gpio_2v5_3_p', 5054],
+                ['GPIO_7', loadboard[i][0] + ': gpio_2v5_3_n', 5055],
+                ['GPIO_8', loadboard[i][0] + ': gpio_1v8_0_p', 5056],
+                ['GPIO_9', loadboard[i][0] + ': gpio_1v8_0_n', 5057],
+                ['GPIO_10', loadboard[i][0] + ': gpio_1v8_1_p', 5058],
+                ['GPIO_11', loadboard[i][0] + ': gpio_1v8_1_n', 5059],
+                ['GPIO_12', loadboard[i][0] + ': gpio_1v8_2_p', 5060],
+                ['GPIO_13', loadboard[i][0] + ': gpio_1v8_2_n', 5061],
+                ['GPIO_14', loadboard[i][0] + ': gpio_1v8_3_p', 5062],
+                ['GPIO_15', loadboard[i][0] + ': gpio_1v8_3_n', 5063],
+                ['GPIO_16', loadboard[i][0] + ': gpio_3v3_1', 5064],
+                ['GPIO_17', loadboard[i][0] + ': gpio_3v3_2', 5065],
+                ['GPIO_18', loadboard[i][0] + ': gpio_3v3_3', 5066],
+                ['GPIO_19', loadboard[i][0] + ': gpio_3v3_4', 5067],
+                ['GPIO_20', loadboard[i][0] + ': gpio_3v3_5', 5068],
+                ['GPIO_21', loadboard[i][0] + ': gpio_3v3_6', 5069],
+                ['GPIO_22', loadboard[i][0] + ': gpio_3v3_7', 5070],
+                ['GPIO_23', loadboard[i][0] + ': gpio_3v3_8', 5071],
+                ['GPIO_24', loadboard[i][0] + ': gpio_3v3_9', 5072],
+                ['GPIO_25', loadboard[i][0] + ': gpio_3v3_10', 5073],
+                ['GPIO_26', loadboard[i][0] + ': gpio_3v3_11', 5074],
+                ['GPIO_27', loadboard[i][0] + ': gpio_3v3_12', 5075]
             ]
         )
 
-    pin_count = len(HWPins[0]) - 1
+    pin_count = len(LoadBoardPins[0]) - 1
     irow = 1
     sheet_pinmap.cell(row=irow, column=1).value = 'Segment/Site'
     sheet_pinmap.cell(row=irow, column=2).value = 'Name'
     sheet_pinmap.cell(row=irow, column=3).value = 'LoadBoard Pin'
-    sheet_pinmap.cell(row=irow, column=4).value = 'SocketBoard Pin'
+    sheet_pinmap.cell(row=irow, column=5).value = 'SocketBoard Pin'
     sheet_pinmap.cell(row=irow, column=6).value = 'PinName'
     sheet_pinmap.cell(row=irow, column=7).value = 'PinType'
     sheet_pinmap.merge_cells(start_row=1, end_row=1, start_column=9, end_column=11)
@@ -321,49 +435,45 @@ def write_excel(project_data, socketmap_data, signals_data, limit_data, signalgr
     irow += 1
     site_row = []
     used_limit = []
-    for i in range(len(HWPins)):
+    for i in range(len(LoadBoardPins)):
         start = i * pin_count + i + 2
         end = (i + 1) * (pin_count + 1)
         site_row.append((start, end))
-        sheet_pinmap.cell(row=irow, column=1).value = HWPins[i][0]
+        sheet_pinmap.cell(row=irow, column=1).value = LoadBoardPins[i][0]
         for j in range(1, pin_count + 1):
-            sheet_pinmap.cell(row=irow, column=2).value = HWPins[i][j][0]
-            sheet_pinmap.cell(row=irow, column=3).value = HWPins[i][j][1]
-            sheet_pinmap.cell(row=irow, column=4).value = HWPins[i][j][2]
-            channel_id = str(HWPins[i][j][3])
+            sheet_pinmap.cell(row=irow, column=2).value = LoadBoardPins[i][j][0]
+            sheet_pinmap.cell(row=irow, column=3).value = LoadBoardPins[i][j][1]
+            loadboard_channel_id = str(LoadBoardPins[i][j][2])
             for m in range(len(socketmap_data)):
                 socket_list = socketmap_data[m][1][0][1].split(' ')
-                for socket in socket_list:
-                    socket_channel_id = socket.split('.')[3]
-                    if channel_id == socket_channel_id:
-                        pin_name = socketmap_data[m][0][1]
-                        sheet_pinmap.cell(row=irow, column=6).value = pin_name
-                        for x in range(len(signals_data)):
-                            if signals_data[x][0][1] == pin_name:
-                                sheet_pinmap.cell(row=irow, column=7).value = signals_data[x][1][0][1]
-                                break
-                        for y in range(len(limit_data)):
-                            if (limit_data[y][0][1].split('_')[0].upper() == pin_name and
-                                        limit_data[y][0][1].split('_')[1].upper() == 'OS') \
-                                    or (limit_data[y][0][1].split('_')[0].upper() == 'VN1' and pin_name == 'VN' and
-                                                limit_data[y][0][1].split('_')[1].upper() == 'OS'):
-                                used_limit.append(y)
-                                sheet_pinmap.cell(row=irow, column=9).value = limit_data[y][1][2][1]
-                                sheet_pinmap.cell(row=irow, column=10).value = limit_data[y][1][1][1]
-                                sheet_pinmap.cell(row=irow, column=11).value = limit_data[y][1][3][1]
-                            if limit_data[y][0][1].split('_')[0].upper() == pin_name and limit_data[y][0][1].split('_')[
-                                1].upper() == 'IIL':
-                                used_limit.append(y)
-                                sheet_pinmap.cell(row=irow, column=12).value = limit_data[y][1][2][1]
-                                sheet_pinmap.cell(row=irow, column=13).value = limit_data[y][1][1][1]
-                                sheet_pinmap.cell(row=irow, column=14).value = limit_data[y][1][3][1]
-                            if limit_data[y][0][1].split('_')[0].upper() == pin_name and limit_data[y][0][1].split('_')[
-                                1].upper() == 'IIH':
-                                used_limit.append(y)
-                                sheet_pinmap.cell(row=irow, column=15).value = limit_data[y][1][2][1]
-                                sheet_pinmap.cell(row=irow, column=16).value = limit_data[y][1][1][1]
-                                sheet_pinmap.cell(row=irow, column=17).value = limit_data[y][1][3][1]
-                        break
+                socket_channel_id = socket_list[i].split('.')[3]
+                if loadboard_channel_id == socket_channel_id:
+                    pin_name = socketmap_data[m][0][1]
+                    sheet_pinmap.cell(row=irow, column=6).value = pin_name
+                    for x in range(len(signals_data)):
+                        if signals_data[x][0][1] == pin_name:
+                            sheet_pinmap.cell(row=irow, column=7).value = signals_data[x][1][0][1]
+                            break
+                    for y in range(len(limit_data)):
+                        if limit_data[y][0][1].split('_')[0].upper() == pin_name.upper() and limit_data[y][0][1].split('_')[
+                            1].upper() == 'OS':
+                            used_limit.append(y)
+                            sheet_pinmap.cell(row=irow, column=9).value = limit_data[y][1][2][1]
+                            sheet_pinmap.cell(row=irow, column=10).value = limit_data[y][1][1][1]
+                            sheet_pinmap.cell(row=irow, column=11).value = limit_data[y][1][3][1]
+                        if limit_data[y][0][1].split('_')[0].upper() == pin_name.upper() and limit_data[y][0][1].split('_')[
+                            1].upper() == 'IIL':
+                            used_limit.append(y)
+                            sheet_pinmap.cell(row=irow, column=12).value = limit_data[y][1][2][1]
+                            sheet_pinmap.cell(row=irow, column=13).value = limit_data[y][1][1][1]
+                            sheet_pinmap.cell(row=irow, column=14).value = limit_data[y][1][3][1]
+                        if limit_data[y][0][1].split('_')[0].upper() == pin_name.upper() and limit_data[y][0][1].split('_')[
+                            1].upper() == 'IIH':
+                            used_limit.append(y)
+                            sheet_pinmap.cell(row=irow, column=15).value = limit_data[y][1][2][1]
+                            sheet_pinmap.cell(row=irow, column=16).value = limit_data[y][1][1][1]
+                            sheet_pinmap.cell(row=irow, column=17).value = limit_data[y][1][3][1]
+                    break
             irow += 1
         irow += 1
     used_limit = list(set(used_limit))
@@ -373,7 +483,7 @@ def write_excel(project_data, socketmap_data, signals_data, limit_data, signalgr
     for row in sheet_pinmap.rows:
         for cell in row:
             cell.border = border
-            if cell.row == 1 and cell.column not in (5, 8):
+            if cell.row == 1 and cell.column not in (4, 8):
                 cell.alignment = alignment
                 cell.font = Font(color=RED, bold=True)
                 cell.fill = PatternFill(fill_type='solid', fgColor=YELLOW)
@@ -383,9 +493,9 @@ def write_excel(project_data, socketmap_data, signals_data, limit_data, signalgr
                 if item[0] <= cell.row <= item[1]:
                     if cell.column == 2:
                         cell.font = Font(bold=True)
-                    if 1 <= cell.column <= 4:
+                    if 1 <= cell.column <= 3:
                         cell.fill = PatternFill(fill_type='solid', fgColor='CAE1FF')  # 浅蓝
-                    if 6 <= cell.column <= 7 or cell.column >= 9:
+                    if 5 <= cell.column <= 7 or cell.column >= 9:
                         cell.fill = PatternFill(fill_type='solid', fgColor='66CD00')  # 浅绿
 
     sheet_pingroup = wb.create_sheet('PinGroup')
@@ -480,8 +590,10 @@ def write_excel(project_data, socketmap_data, signals_data, limit_data, signalgr
     for i in range(len(limit_data)):
         if i not in used_limit:
             sheet_limits.cell(row=irow, column=1).value = limit_data[i][0][1]
-            sheet_limits.cell(row=irow, column=2).value = limit_data[i][1][2][1]
-            sheet_limits.cell(row=irow, column=3).value = limit_data[i][1][1][1]
+            if len(limit_data[i][1]) >= 2:
+                sheet_limits.cell(row=irow, column=2).value = limit_data[i][1][2][1]
+            if len(limit_data[i][1]) >= 3:
+                sheet_limits.cell(row=irow, column=3).value = limit_data[i][1][1][1]
             if len(limit_data[i][1]) >= 4:
                 sheet_limits.cell(row=irow, column=4).value = limit_data[i][1][3][1]
             if len(limit_data[i][1]) >= 5:
@@ -495,7 +607,7 @@ def write_excel(project_data, socketmap_data, signals_data, limit_data, signalgr
             if cell.row == 1:
                 cell.alignment = alignment
                 cell.fill = PatternFill(fill_type='solid', fgColor=YELLOW)
-                if cell.column <= 4:
+                if cell.column == 1:
                     cell.font = Font(color=RED, bold=True)
                 else:
                     cell.font = Font(color=BLACK, bold=True)
