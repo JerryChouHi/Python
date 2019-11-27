@@ -6,11 +6,10 @@
 
 from sys import argv, exit, path
 from os import getcwd
-from os.path import abspath, join
+from os.path import abspath, join, dirname, exists
 from xml.dom.minidom import parse
-from math import isnan
-from pandas import read_excel
 from shutil import copy
+from xlrd import open_workbook
 
 path.append(abspath(join(getcwd(), '..')))
 import Common
@@ -520,7 +519,7 @@ def write_empty_file(file):
 
 
 def generate_project(excel_dir, project_directory):
-    dir_list = [project_directory,
+    directory_list = [project_directory,
                 join(project_directory, 'XML'),
                 join(project_directory, 'UserExtension'),
                 join(project_directory, 'Pattern'),
@@ -531,9 +530,9 @@ def generate_project(excel_dir, project_directory):
                 join(project_directory, 'UserExtension\\x64\debug'),
                 join(project_directory, 'UserExtension\\x64\\release')
                 ]
-    for dir in dir_list:
-        Common.mkdir(dir)
-    source_project_path = join(path.dirname(excel_dir), 'Project.xml')
+    for directory in directory_list:
+        Common.mkdir(directory)
+    source_project_path = join(dirname(excel_dir), 'Project.xml')
     target_project_path = join(project_directory, 'Project.xml')
     bindefinition_path = join(project_directory, 'XML\BinDefinition.xml')
     signal_path = join(project_directory, 'XML\Signals.xml')
@@ -551,177 +550,275 @@ def generate_project(excel_dir, project_directory):
     testerconfig_path = join(project_directory, 'XML\TesterConfig.xml')
     testprogram_path = join(project_directory, 'XML\TestProgram.xml')
     runresultmap_path = join(project_directory, 'XML\RunResultMap.xml')
-    source_flows_path = join(path.dirname(excel_dir), 'Flows.xml')
+    source_flows_path = join(dirname(excel_dir), 'Flows.xml')
     target_flows_path = join(project_directory, 'XML\Flows.xml')
 
     # 数据提取与组装
-    project_df = read_excel(excel_dir, sheet_name='Project')
-    project_data = []
-    project_data.append(project_df.columns.values[2])
+    excel_data = open_workbook(excel_dir)
+    project_sheet = excel_data.sheet_by_name('Project')
+    project_data = [project_sheet.cell_value(0, 2)]
     datalog_row = -1
     projectsetup_row = -1
-    for i in range(project_df.shape[0]):
-        if project_df.iloc[i, 0] == 'Datalog':
+    for i in range(1, project_sheet.nrows):
+        if project_sheet.cell_value(i, 0) == 'Datalog':
             datalog_row = i
-        if project_df.iloc[i, 0] == 'ProjectSetup':
+        if project_sheet.cell_value(i, 0) == 'ProjectSetup':
             projectsetup_row = i
     if datalog_row != -1:
         temp_list = []
         if projectsetup_row == -1:
-            for i in range(datalog_row, project_df.shape[0]):
-                temp_list.append((project_df.iloc[i][1], project_df.iloc[i][2]))
+            for i in range(datalog_row, project_sheet.nrows):
+                if len(project_sheet.cell_value(i, 2)) > 0:
+                    temp_list.append((project_sheet.cell_value(i, 1), project_sheet.cell_value(i, 2)))
         else:
             for i in range(datalog_row, projectsetup_row):
-                temp_list.append((project_df.iloc[i][1], project_df.iloc[i][2]))
+                if len(project_sheet.cell_value(i, 2)) > 0:
+                    temp_list.append((project_sheet.cell_value(i, 1), project_sheet.cell_value(i, 2)))
         project_data.append(temp_list)
     if projectsetup_row != -1:
         temp_list = []
-        for i in range(projectsetup_row, project_df.shape[0]):
-            temp_list.append((project_df.iloc[i][1], project_df.iloc[i][2]))
+        for i in range(projectsetup_row, project_sheet.nrows):
+            if len(project_sheet.cell_value(i, 2)) > 0:
+                temp_list.append((project_sheet.cell_value(i, 1), project_sheet.cell_value(i, 2)))
         project_data.append(temp_list)
 
-    pinmap_df = read_excel(excel_dir, sheet_name='PinMap')
-    signal_df = pinmap_df.iloc[:35, [5, 6]]
-
+    channel_id_list = [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31,
+        'M0',
+        'M1',
+        'M2',
+        'M3',
+        'M4',
+        'M5',
+        'M6',
+        'M7',
+        'M8',
+        'M9',
+        'M10',
+        'M11',
+        'M12',
+        'M13',
+        'M14',
+        'M15',
+        2000,
+        2001,
+        2002,
+        2003,
+        2004,
+        2005,
+        2006,
+        2007,
+        2008,
+        2009,
+        2010,
+        2011,
+        2012,
+        2013,
+        2014,
+        2015,
+        5048,
+        5049,
+        5050,
+        5051,
+        5052,
+        5053,
+        5054,
+        5055,
+        5056,
+        5057,
+        5058,
+        5059,
+        5060,
+        5061,
+        5062,
+        5063,
+        5064,
+        5065,
+        5066,
+        5067,
+        5068,
+        5069,
+        5070,
+        5071,
+        5072,
+        5073,
+        5074,
+        5075
+    ]
+    segment_pin_num = len(channel_id_list)
+    pinmap_sheet = excel_data.sheet_by_name('PinMap')
     signals_data = []
-    for i in range(signal_df.dropna().shape[0]):
+    for i in range(1, segment_pin_num + 1):
+        if len(pinmap_sheet.cell_value(i, 5)) > 0:
+            signals_data.append((pinmap_sheet.cell_value(i, 5), pinmap_sheet.cell_value(i, 6)))
+
+    segment_list = []
+    for i in range(1, pinmap_sheet.nrows):
+        if len(pinmap_sheet.cell_value(i, 0)) > 0:
+            segment_list.append(pinmap_sheet.cell_value(i, 0))
+    pin_name_list = []
+    start_num = 1
+    for i in range(len(segment_list)):
         temp_list = []
-        for j in range(signal_df.dropna().shape[1]):
-            temp_list.append(signal_df.dropna().iloc[i, j])
-        signals_data.append(temp_list)
-
-    channel_id_list = [(0, 1, 2, 3, 4, 5, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 'M0', 'M1', 'M2', 'M3', 'M4', 'M5',
-                        'M6', 'M7', 2000, 2001, 2002, 2003, 5065, 5068, 5069, 5048, 5049, 5050, 5051),
-                       (6, 7, 8, 9, 10, 11, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 'M8', 'M9', 'M10', 'M11', 'M12',
-                        'M13', 'M14', 'M15', 2004, 2005, 2006, 2007, 5064, 5070, 5071, 5048, 5049, 5050, 5051)]
-
-    signal_notnull_df = pinmap_df.iloc[:35, 5].notnull()
-    segment_df = pinmap_df.iloc[:, 0].dropna()
+        for j in range(start_num, start_num + segment_pin_num):
+            temp_list.append(pinmap_sheet.cell_value(j, 5))
+        pin_name_list.append(temp_list)
+        start_num += (segment_pin_num + 1)
     socketmap_data = []
-    for i in range(signal_notnull_df.shape[0]):
-        if signal_notnull_df.iloc[i]:
-            temp_list = [signal_df.iloc[i, 0]]
-            for j in range(segment_df.shape[0]):
-                temp_list.append('0.' + segment_df.iloc[j].split('/')[0][4:].replace('_', '.') + '.' + str(
-                    channel_id_list[j % 2][i]))
+    for i in range(len(pin_name_list[0])):
+        if len(pin_name_list[0][i]) > 0:
+            temp_list = []
+            pin_name = pin_name_list[0][i]
+            temp_list.append(pin_name)
+            chassis_id = '0'
+            slot_segment_id = segment_list[0].split('/')[0][4:].replace('_', '.')
+            channel_id = str(channel_id_list[i])
+            temp_list.append(chassis_id + '.' + slot_segment_id + '.' + channel_id)
+            for m in range(1, len(pin_name_list)):
+                for n in range(len(pin_name_list[m])):
+                    if len(pin_name_list[m][n]) > 0:
+                        compare_pin_name = pin_name_list[m][n]
+                        if pin_name == compare_pin_name:
+                            compared_slot_segment_id = segment_list[m].split('/')[0][4:].replace('_', '.')
+                            compared_channel_id = str(channel_id_list[n])
+                            temp_list.append(chassis_id + '.' + compared_slot_segment_id + '.' + compared_channel_id)
+                            break
             socketmap_data.append(temp_list)
 
-    signalgroups_df = read_excel(excel_dir, sheet_name='PinGroup')
+    signalgroups_sheet = excel_data.sheet_by_name('PinGroup')
     signalgroups_data = []
-    for i in range(signalgroups_df.shape[0]):
+    for i in range(1, signalgroups_sheet.nrows):
         temp_list = []
-        for j in range(signalgroups_df.shape[1]):
-            temp_list.append(signalgroups_df.iloc[i, j])
+        for j in range(signalgroups_sheet.ncols):
+            temp_list.append(signalgroups_sheet.cell_value(i, j))
         signalgroups_data.append(temp_list)
 
-    bindefinition_df = read_excel(excel_dir, sheet_name='BinMap')
-    swbin_df = bindefinition_df.iloc[:, :4]
-    unknown_row = swbin_df[swbin_df.iloc[:, 1].isin(['Unknown', 'Unknow'])]
-    unknown_swbin_id = unknown_row.iloc[0, 0]
-    hwbin_df = bindefinition_df.iloc[:, 5:9].dropna(axis=0)
-    bindefinition_data = []
+    bindefinition_sheet = excel_data.sheet_by_name('BinMap')
     swbin_data = []
     hwbin_data = []
-    for i in range(swbin_df.shape[0]):
-        temp_list = []
-        for j in range(swbin_df.shape[1]):
-            temp_list.append(swbin_df.iloc[i, j])
-        swbin_data.append(temp_list)
-    for i in range(hwbin_df.shape[0]):
-        temp_list = []
-        for j in range(hwbin_df.shape[1]):
-            temp_list.append(hwbin_df.iloc[i, j])
-        hwbin_data.append(temp_list)
-    bindefinition_data.append(swbin_data)
-    bindefinition_data.append(hwbin_data)
+    for i in range(1, bindefinition_sheet.nrows):
+        if bindefinition_sheet.cell_value(i, 1) in ('Unknown', 'Unknow'):
+            unknown_swbin_id = bindefinition_sheet.cell_value(i, 0)
+        temp_swbin_list = []
+        temp_hwbin_list = []
+        for j in range(4):
+            temp_swbin_list.append(bindefinition_sheet.cell_value(i, j))
+        if len(bindefinition_sheet.cell_value(i, 5)) > 0:
+            for m in range(5, 9):
+                temp_hwbin_list.append(bindefinition_sheet.cell_value(i, m))
+            hwbin_data.append(temp_hwbin_list)
+        swbin_data.append(temp_swbin_list)
+    bindefinition_data = [swbin_data, hwbin_data]
 
+    limits_sheet = excel_data.sheet_by_name('Limits')
     limits_data = []
-    limit_df = pinmap_df.iloc[:35, 5:]
-    limit_isnull_df = limit_df.isnull()
-    for i in range(3, limit_df.shape[1]):
-        if limit_df.columns.values[i].find('Unnamed') < 0:
-            for j in range(limit_df.shape[0]):
-                if not limit_isnull_df.iloc[j, i]:
-                    limit_name = limit_df.iloc[j, 0] + '_' + limit_df.columns.values[i]
-                    limits_data.append(
-                        [limit_name, limit_df.iloc[j, i], limit_df.iloc[j, i + 1], limit_df.iloc[j, i + 2], '', ''])
+    for col_num in range(8, pinmap_sheet.ncols):
+        if len(pinmap_sheet.cell_value(0, col_num)) > 0:
+            for row_num in range(1, segment_pin_num + 1):
+                if len(pinmap_sheet.cell_value(row_num, col_num)) > 0:
+                    limit_name = pinmap_sheet.cell_value(row_num, 5) + '_' + pinmap_sheet.cell_value(0, col_num)
+                    high_limit = pinmap_sheet.cell_value(row_num, col_num)
+                    low_limit = pinmap_sheet.cell_value(row_num, col_num + 1)
+                    unit = pinmap_sheet.cell_value(row_num, col_num + 2)
+                    limits_data.append([limit_name, high_limit, low_limit, unit, '', ''])
 
-    limits_df = read_excel(excel_dir, sheet_name='Limits')
-    for i in range(limits_df.shape[0]):
+    for row_num in range(1, limits_sheet.nrows):
         temp_list = []
-        for j in range(limits_df.shape[1]):
-            data = limits_df.iloc[i, j]
-            if isinstance(data, float) and isnan(data):
-                data = ''
-            temp_list.append(data)
+        for col_num in range(limits_sheet.ncols):
+            temp_list.append(limits_sheet.cell_value(row_num, col_num))
         limits_data.append(temp_list)
 
-    dcmeasure_df = read_excel(excel_dir, sheet_name='DCMeasure').dropna(axis=0, how='all')
-    dcmeasure_notnull_df = dcmeasure_df.notnull()
+    dcmeasure_sheet = excel_data.sheet_by_name('DCMeasure')
     dcmeasure_data = []
     temp_list1 = []
-    for i in range(dcmeasure_df.shape[0]):
+    for row_num in range(1, dcmeasure_sheet.nrows):
         temp_list2 = []
-        if dcmeasure_notnull_df.iloc[i, 0]:
-            if i > 0:
+        if len(dcmeasure_sheet.cell_value(row_num, 0)) > 0:
+            if row_num > 1:
                 dcmeasure_data.append(temp_list1)
                 temp_list1 = []
-            temp_list1.append(dcmeasure_df.iloc[i, 0])
-        for j in range(1, dcmeasure_df.shape[1]):
-            temp_list2.append(dcmeasure_df.iloc[i, j])
-        temp_list1.append(temp_list2)
+            temp_list1.append(dcmeasure_sheet.cell_value(row_num, 0))
+        if len(dcmeasure_sheet.cell_value(row_num, 1)) > 0:
+            for col_num in range(1, dcmeasure_sheet.ncols):
+                temp_list2.append(dcmeasure_sheet.cell_value(row_num, col_num))
+            temp_list1.append(temp_list2)
     dcmeasure_data.append(temp_list1)
 
-    test_df = read_excel(excel_dir, sheet_name='Test')
-    test_notnull_df = test_df.notnull()
+    test_sheet = excel_data.sheet_by_name('Test')
     test_data = []
-    for i in range(test_df.shape[0]):
+    for row_num in range(1, test_sheet.nrows):
         temp_list = []
-        for j in range(test_df.shape[1]):
-            if j >= 3:
-                if test_notnull_df.iloc[i, j]:
-                    temp_list.append(test_df.iloc[i, j].split(':')[0])
-                    temp_list.append(test_df.iloc[i, j].split(':')[1])
+        for col_num in range(test_sheet.ncols):
+            if col_num >= 3:
+                if len(test_sheet.cell_value(row_num, col_num)) > 0:
+                    temp_list.append(test_sheet.cell_value(row_num, col_num).split(':')[0])
+                    temp_list.append(test_sheet.cell_value(row_num, col_num).split(':')[1])
                 else:
                     temp_list.append('')
                     temp_list.append('')
             else:
-                temp_list.append(test_df.iloc[i, j])
+                temp_list.append(test_sheet.cell_value(row_num, col_num))
         test_data.append(temp_list)
 
-    block_data = []
-    block_data.append(dcmeasure_data)
-    block_data.append(test_data)
 
-    uservars_df = read_excel(excel_dir, sheet_name='UserVars')
+    block_data = [dcmeasure_data, test_data]
+
+    uservars_sheet = excel_data.sheet_by_name('UserVars')
     uservars_data = []
-    for i in range(uservars_df.shape[0]):
+    for row_num in range(1,uservars_sheet.nrows):
         temp_list = []
-        for j in range(uservars_df.shape[1]):
-            temp_list.append(uservars_df.iloc[i, j])
+        for col_num in range(uservars_sheet.ncols):
+            temp_list.append(uservars_sheet.cell_value(row_num,col_num))
         uservars_data.append(temp_list)
 
-    levels_df = read_excel(excel_dir, sheet_name='Level')
-    levels_notnull_df = levels_df.notnull()
+    levels_sheet = excel_data.sheet_by_name('Level')
     levels_data = []
     temp_list1 = []
-    for i in range(levels_df.shape[0]):
+    for row_num in range(1, levels_sheet.nrows):
         temp_list2 = []
-        if levels_notnull_df.iloc[i, 0]:
-            if i > 0:
+        if len(levels_sheet.cell_value(row_num, 0)) > 0:
+            if row_num > 1:
                 levels_data.append(temp_list1)
                 temp_list1 = []
-            temp_list1.append(levels_df.iloc[i, 0])
-        if levels_notnull_df.iloc[i, 1]:
-            for j in range(1, levels_df.shape[1]):
-                data = levels_df.iloc[i, j]
-                if isinstance(data, float) and isnan(data):
-                    data = ''
-                temp_list2.append(data)
+            temp_list1.append(levels_sheet.cell_value(row_num, 0))
+        if len(levels_sheet.cell_value(row_num, 1)) > 0:
+            for col_num in range(1, levels_sheet.ncols):
+                temp_list2.append(levels_sheet.cell_value(row_num, col_num))
             temp_list1.append(temp_list2)
     levels_data.append(temp_list1)
 
-    if path.exists(source_project_path):
+    if exists(source_project_path):
         copy(source_project_path, target_project_path)
         DOMTree = parse(source_project_path)
         collection = DOMTree.documentElement
@@ -764,7 +861,7 @@ def generate_project(excel_dir, project_directory):
         write_empty_file(timingmap_file)
     with open(patternburst_path, 'w') as patternburst_file:
         write_empty_file(patternburst_file)
-    if path.exists(source_flows_path):
+    if exists(source_flows_path):
         copy(source_flows_path, target_flows_path)
     else:
         with open(target_flows_path, 'w') as flows_file:
