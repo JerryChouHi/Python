@@ -4,15 +4,28 @@
 # @File     : Excel_to_Xml.py
 # @Function :
 
-from sys import argv, exit, path
-from os import getcwd
-from os.path import abspath, join, dirname, exists
+from sys import argv, exit
+from os import getcwd, makedirs
+from os.path import join, dirname, exists
 from xml.dom.minidom import parse
 from shutil import copy
 from xlrd import open_workbook
 
-path.append(abspath(join(getcwd(), '..')))
-import Common
+
+def mkdir(path):
+    """
+    创建文件夹目录
+    :param path: 文件夹目录
+    :return:
+    """
+    path = path.strip()
+    path = path.rstrip("\\")
+    is_exists = exists(path)
+    if not is_exists:
+        makedirs(path)
+        return True
+    else:
+        return False
 
 
 def write_signals_file(data, file):
@@ -520,18 +533,18 @@ def write_empty_file(file):
 
 def generate_project(excel_dir, project_directory):
     directory_list = [project_directory,
-                join(project_directory, 'XML'),
-                join(project_directory, 'UserExtension'),
-                join(project_directory, 'Pattern'),
-                join(project_directory, 'UserExtension\\x86'),
-                join(project_directory, 'UserExtension\\x64'),
-                join(project_directory, 'UserExtension\\x86\debug'),
-                join(project_directory, 'UserExtension\\x86\\release'),
-                join(project_directory, 'UserExtension\\x64\debug'),
-                join(project_directory, 'UserExtension\\x64\\release')
-                ]
+                      join(project_directory, 'XML'),
+                      join(project_directory, 'UserExtension'),
+                      join(project_directory, 'Pattern'),
+                      join(project_directory, 'UserExtension\\x86'),
+                      join(project_directory, 'UserExtension\\x64'),
+                      join(project_directory, 'UserExtension\\x86\debug'),
+                      join(project_directory, 'UserExtension\\x86\\release'),
+                      join(project_directory, 'UserExtension\\x64\debug'),
+                      join(project_directory, 'UserExtension\\x64\\release')
+                      ]
     for directory in directory_list:
-        Common.mkdir(directory)
+        mkdir(directory)
     source_project_path = join(dirname(excel_dir), 'Project.xml')
     target_project_path = join(project_directory, 'Project.xml')
     bindefinition_path = join(project_directory, 'XML\BinDefinition.xml')
@@ -679,14 +692,14 @@ def generate_project(excel_dir, project_directory):
     segment_pin_num = len(channel_id_list)
     pinmap_sheet = excel_data.sheet_by_name('PinMap')
     signals_data = []
-    for i in range(1, segment_pin_num + 1):
-        if len(pinmap_sheet.cell_value(i, 5)) > 0:
-            signals_data.append((pinmap_sheet.cell_value(i, 5), pinmap_sheet.cell_value(i, 6)))
+    for row_num in range(1, segment_pin_num + 1):
+        if len(pinmap_sheet.cell_value(row_num, 5)) > 0:
+            signals_data.append((pinmap_sheet.cell_value(row_num, 5), pinmap_sheet.cell_value(row_num, 6)))
 
     segment_list = []
-    for i in range(1, pinmap_sheet.nrows):
-        if len(pinmap_sheet.cell_value(i, 0)) > 0:
-            segment_list.append(pinmap_sheet.cell_value(i, 0))
+    for row_num in range(1, pinmap_sheet.nrows):
+        if len(pinmap_sheet.cell_value(row_num, 0)) > 0:
+            segment_list.append(pinmap_sheet.cell_value(row_num, 0))
     pin_name_list = []
     start_num = 1
     for i in range(len(segment_list)):
@@ -718,25 +731,25 @@ def generate_project(excel_dir, project_directory):
 
     signalgroups_sheet = excel_data.sheet_by_name('PinGroup')
     signalgroups_data = []
-    for i in range(1, signalgroups_sheet.nrows):
+    for row_num in range(1, signalgroups_sheet.nrows):
         temp_list = []
-        for j in range(signalgroups_sheet.ncols):
-            temp_list.append(signalgroups_sheet.cell_value(i, j))
+        for col_num in range(signalgroups_sheet.ncols):
+            temp_list.append(signalgroups_sheet.cell_value(row_num, col_num))
         signalgroups_data.append(temp_list)
 
     bindefinition_sheet = excel_data.sheet_by_name('BinMap')
     swbin_data = []
     hwbin_data = []
-    for i in range(1, bindefinition_sheet.nrows):
-        if bindefinition_sheet.cell_value(i, 1) in ('Unknown', 'Unknow'):
-            unknown_swbin_id = bindefinition_sheet.cell_value(i, 0)
+    for row_num in range(1, bindefinition_sheet.nrows):
+        if bindefinition_sheet.cell_value(row_num, 1) in ('Unknown', 'Unknow'):
+            unknown_swbin_id = bindefinition_sheet.cell_value(row_num, 0)
         temp_swbin_list = []
         temp_hwbin_list = []
-        for j in range(4):
-            temp_swbin_list.append(bindefinition_sheet.cell_value(i, j))
-        if len(bindefinition_sheet.cell_value(i, 5)) > 0:
+        for col_num in range(4):
+            temp_swbin_list.append(bindefinition_sheet.cell_value(row_num, col_num))
+        if len(bindefinition_sheet.cell_value(row_num, 5)) > 0:
             for m in range(5, 9):
-                temp_hwbin_list.append(bindefinition_sheet.cell_value(i, m))
+                temp_hwbin_list.append(bindefinition_sheet.cell_value(row_num, m))
             hwbin_data.append(temp_hwbin_list)
         swbin_data.append(temp_swbin_list)
     bindefinition_data = [swbin_data, hwbin_data]
@@ -791,15 +804,14 @@ def generate_project(excel_dir, project_directory):
                 temp_list.append(test_sheet.cell_value(row_num, col_num))
         test_data.append(temp_list)
 
-
     block_data = [dcmeasure_data, test_data]
 
     uservars_sheet = excel_data.sheet_by_name('UserVars')
     uservars_data = []
-    for row_num in range(1,uservars_sheet.nrows):
+    for row_num in range(1, uservars_sheet.nrows):
         temp_list = []
         for col_num in range(uservars_sheet.ncols):
-            temp_list.append(uservars_sheet.cell_value(row_num,col_num))
+            temp_list.append(uservars_sheet.cell_value(row_num, col_num))
         uservars_data.append(temp_list)
 
     levels_sheet = excel_data.sheet_by_name('Level')
