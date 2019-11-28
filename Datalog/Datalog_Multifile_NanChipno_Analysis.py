@@ -117,7 +117,7 @@ def main():
 
     Common.mkdir(analysis_folder)
     date = datetime.now().strftime("%Y%m%d%H%M")
-    result_file = join(analysis_folder, 'NanRow_Analysis' + date + '.txt')
+    result_file = join(analysis_folder, 'NanChipno_Analysis' + date + '.txt')
 
     for file in file_list:
         # parse file
