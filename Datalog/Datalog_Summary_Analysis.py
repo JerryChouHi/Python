@@ -294,7 +294,7 @@ def save_data(analysis_folder, site_data, softbin_data, hardbin_data):
                 temp_list.append([temp_total_count, 'FFA500'])
         site_swbin_percent.append(temp_list)
 
-    for i in range(len(site_swbin_percent) - 1):
+    for i in range(len(site_swbin_percent)):
         min_value = site_swbin_percent[i][0][0]
         max_value = site_swbin_percent[i][0][0]
         for m in range(1, len(site_swbin_percent[i]) - 1):
