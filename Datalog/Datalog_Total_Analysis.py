@@ -129,7 +129,7 @@ def save_data(analysis_folder, site_data):
             if y == len(site_data) - 1:
                 temp_swbin_count.append([temp_total_count, 'FFA500'])
                 site_swbin_count.append(temp_swbin_count)
-    site_total_list = [0] * 16
+    site_fail_total_list = [0] * 16
     for i in range(10, len(site_swbin_count)):
         min_value = site_swbin_count[i][0][0]
         max_value = site_swbin_count[i][0][0]
@@ -141,7 +141,7 @@ def save_data(analysis_folder, site_data):
         min_index = []
         max_index = []
         for j in range(len(site_swbin_count[i]) - 1):
-            site_total_list[j] += site_swbin_count[i][j][0]
+            site_fail_total_list[j] += site_swbin_count[i][j][0]
             if site_swbin_count[i][j][0] == min_value:
                 min_index.append(j)
             if site_swbin_count[i][j][0] == max_value:
@@ -193,10 +193,10 @@ def save_data(analysis_folder, site_data):
     sitesoftbin_sheet.cell(row=irow, column=1).font = Font(bold=True)
     sitesoftbin_sheet.cell(row=irow, column=1).alignment = alignment
     sitesoftbin_sheet.cell(row=irow, column=1).fill = PatternFill(fill_type='solid', fgColor='FFA500')
-    for i in range(len(site_total_list)):
-        sitesoftbin_sheet.cell(row=irow, column=2 + i).value = site_total_list[i]
+    for i in range(len(site_fail_total_list)):
+        sitesoftbin_sheet.cell(row=irow, column=2 + i).value = site_fail_total_list[i]
         sitesoftbin_sheet.cell(row=irow + 1, column=2 + i).value = '{:.4%}'.format(
-            site_total_list[i] / total_count)
+            site_fail_total_list[i] / total_count)
         sitesoftbin_sheet.cell(row=irow + 1, column=2 + i).fill = PatternFill(fill_type='solid', fgColor='FFA500')
 
     for row in sitesoftbin_sheet.rows:

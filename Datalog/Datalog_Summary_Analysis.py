@@ -271,12 +271,14 @@ def save_data(analysis_folder, site_data, softbin_data, hardbin_data):
     for i in range(len(site_data[0][1])):
         sitesoftbin_sheet.cell(row=irow, column=2 + i).value = 'Site' + str(site_data[0][1][i][0])
         sitesoftbin_sheet.cell(row=irow, column=2 + i).fill = PatternFill(fill_type='solid', fgColor=YELLOW)
+    sitesoftbin_sheet.merge_cells(start_row=irow, end_row=irow, start_column=3 + len(site_data[0][1]),
+                                  end_column=4 + len(site_data[0][1]))
     sitesoftbin_sheet.cell(row=irow, column=3 + len(site_data[0][1])).value = 'Summary'
     sitesoftbin_sheet.cell(row=irow, column=3 + len(site_data[0][1])).fill = PatternFill(fill_type='solid',
                                                                                          fgColor='FFA500')
     irow += 1
 
-    site_swbin_percent = []
+    site_swbin_count = []
     for x in range(len(bin_list)):
         temp_list = []
         temp_total_count = 0
@@ -284,43 +286,44 @@ def save_data(analysis_folder, site_data, softbin_data, hardbin_data):
             find_softbin = False
             for j in range(len(site_data[0][1][i][1])):
                 if bin_list[x] == int(site_data[0][1][i][1][j][0]):
-                    temp_swbin_percent = len(site_data[0][1][i][1][j][1]) / summary_data[0][-2]
+                    temp_swbin_count = len(site_data[0][1][i][1][j][1])
                     find_softbin = True
             if not find_softbin:
-                temp_swbin_percent = 0
-            temp_total_count += temp_swbin_percent
-            temp_list.append([temp_swbin_percent, WHITE])
+                temp_swbin_count = 0
+            temp_total_count += temp_swbin_count
+            temp_list.append([temp_swbin_count, WHITE])
             if i == len(site_data[0][1]) - 1:
                 temp_list.append([temp_total_count, 'FFA500'])
-        site_swbin_percent.append(temp_list)
-
-    for i in range(len(site_swbin_percent)):
-        min_value = site_swbin_percent[i][0][0]
-        max_value = site_swbin_percent[i][0][0]
-        for m in range(1, len(site_swbin_percent[i]) - 1):
-            if min_value > site_swbin_percent[i][m][0]:
-                min_value = site_swbin_percent[i][m][0]
-            if max_value < site_swbin_percent[i][m][0]:
-                max_value = site_swbin_percent[i][m][0]
+        site_swbin_count.append(temp_list)
+    site_fail_total_list = [0] * 16
+    for i in range(10, len(site_swbin_count)):
+        min_value = site_swbin_count[i][0][0]
+        max_value = site_swbin_count[i][0][0]
+        for m in range(1, len(site_swbin_count[i]) - 1):
+            if min_value > site_swbin_count[i][m][0]:
+                min_value = site_swbin_count[i][m][0]
+            if max_value < site_swbin_count[i][m][0]:
+                max_value = site_swbin_count[i][m][0]
         min_index = []
         max_index = []
-        for j in range(len(site_swbin_percent[i]) - 1):
-            if site_swbin_percent[i][j][0] == min_value:
+        for j in range(len(site_swbin_count[i]) - 1):
+            site_fail_total_list[j] += site_swbin_count[i][j][0]
+            if site_swbin_count[i][j][0] == min_value:
                 min_index.append(j)
-            if site_swbin_percent[i][j][0] == max_value:
+            if site_swbin_count[i][j][0] == max_value:
                 max_index.append(j)
         if min_value == 0 and len(min_index) == 1:
-            site_swbin_percent[i][min_index[0]][1] = GREEN
+            site_swbin_count[i][min_index[0]][1] = GREEN
             for y in range(len(max_index)):
-                site_swbin_percent[i][max_index[y]][1] = RED
+                site_swbin_count[i][max_index[y]][1] = RED
         elif min_value == 0 and max_value > 0:
             for y in range(len(max_index)):
-                site_swbin_percent[i][max_index[y]][1] = RED
+                site_swbin_count[i][max_index[y]][1] = RED
         elif min_value > 0:
             for x in range(len(min_index)):
-                site_swbin_percent[i][min_index[x]][1] = GREEN
+                site_swbin_count[i][min_index[x]][1] = GREEN
             for y in range(len(max_index)):
-                site_swbin_percent[i][max_index[y]][1] = RED
+                site_swbin_count[i][max_index[y]][1] = RED
 
     for x in range(len(bin_list)):
         sitesoftbin_sheet.cell(row=irow, column=1).value = 'SWBin' + str(bin_list[x])
@@ -336,17 +339,29 @@ def save_data(analysis_folder, site_data, softbin_data, hardbin_data):
             sitesoftbin_sheet.cell(row=irow, column=1).fill = PatternFill(fill_type='solid', fgColor='CD853F')
         else:
             sitesoftbin_sheet.cell(row=irow, column=1).fill = PatternFill(fill_type='solid', fgColor='FF6347')
-        for y in range(len(site_swbin_percent[x])):
-            if y < len(site_swbin_percent[x]) - 1:
-                if site_swbin_percent[x][y][0] > 0:
-                    sitesoftbin_sheet.cell(row=irow, column=2 + y).value = '{:.2%}'.format(site_swbin_percent[x][y][0])
+        for y in range(len(site_swbin_count[x])):
+            if y < len(site_swbin_count[x]) - 1:
+                if site_swbin_count[x][y][0] > 0:
+                    sitesoftbin_sheet.cell(row=irow, column=2 + y).value = '{:.4%}'.format(site_swbin_count[x][y][0]/summary_data[0][-2])
                 sitesoftbin_sheet.cell(row=irow, column=2 + y).fill = PatternFill(fill_type='solid',
-                                                                                  fgColor=site_swbin_percent[x][y][1])
+                                                                                  fgColor=site_swbin_count[x][y][1])
             else:
-                sitesoftbin_sheet.cell(row=irow, column=3 + y).value = '{:.2%}'.format(site_swbin_percent[x][y][0])
-                sitesoftbin_sheet.cell(row=irow, column=3 + y).fill = PatternFill(fill_type='solid',
-                                                                                  fgColor=site_swbin_percent[x][y][1])
+                sitesoftbin_sheet.cell(row=irow, column=3 + y).value = site_swbin_count[x][y][0]
+                sitesoftbin_sheet.cell(row=irow, column=4 + y).value = '{:.4%}'.format(site_swbin_count[x][y][0]/summary_data[0][-2])
+                sitesoftbin_sheet.cell(row=irow, column=4 + y).fill = PatternFill(fill_type='solid',
+                                                                                  fgColor=site_swbin_count[x][y][1])
         irow += 1
+    irow+=1
+    sitesoftbin_sheet.merge_cells(start_row=irow, end_row=irow + 1, start_column=1, end_column=1)
+    sitesoftbin_sheet.cell(row=irow, column=1).value = 'FailPercent'
+    sitesoftbin_sheet.cell(row=irow, column=1).font = Font(bold=True)
+    sitesoftbin_sheet.cell(row=irow, column=1).alignment = alignment
+    sitesoftbin_sheet.cell(row=irow, column=1).fill = PatternFill(fill_type='solid', fgColor='FFA500')
+    for i in range(len(site_fail_total_list)):
+        sitesoftbin_sheet.cell(row=irow, column=2 + i).value = site_fail_total_list[i]
+        sitesoftbin_sheet.cell(row=irow + 1, column=2 + i).value = '{:.4%}'.format(
+            site_fail_total_list[i] / summary_data[0][-2])
+        sitesoftbin_sheet.cell(row=irow + 1, column=2 + i).fill = PatternFill(fill_type='solid', fgColor='FFA500')
 
     for row in sitesoftbin_sheet.rows:
         for cell in row:
