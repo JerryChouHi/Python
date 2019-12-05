@@ -21,68 +21,88 @@ thin = Side(border_style='thin', color=BLACK)
 border = Border(top=thin, left=thin, right=thin, bottom=thin)
 
 row_offset = 5
+col_offset = 4
 
 
 def parse_file(file, group_by_id):
     """
     解析文件
     :param file: datalog csv文件
-    :param group_by_id: 列序号（1：Site，2：SW_BIN，3：hW_BIN）
-    :return: 文件名，分组index列表，分组名，lotno
+    :param group_by_id: 列序号（1：Site，2：SW_BIN，3：hW_BIN，-1：测试项Fail芯片比例）
+    :return: 
     """
     data = []
+    file_name = basename(file).split('.')[0]
     with open(file) as f:
         csv_reader = reader(f)
         for row in csv_reader:
             data.append(row)
-    for i in range(len(data)):
-        try:
-            data[i].index('ChipNo')
-            chipno_row_num = i
-            break
-        except:
-            pass
+    search_full_error = Common.search_string(data, 'Full_Error')
+    if not search_full_error:
+        exit()
+    else:
+        full_error_row_num = search_full_error[0]
+        full_error_col_num = search_full_error[1]
     first_register_row_num = len(data) - 1
-    for i in range(chipno_row_num + row_offset, len(data)):
+    for i in range(full_error_row_num + row_offset, len(data)):
         try:
             int(data[i][0])
         except:
             first_register_row_num = i
             break
-    group_list = []
-    for i in range(chipno_row_num + row_offset, first_register_row_num):
-        group_list.append(int(data[i][group_by_id]))
-    format_group_list = list(set(group_list))
-    format_group_list.sort()
+    if group_by_id == -1:
+        chip_count = first_register_row_num - full_error_row_num - row_offset
+        testitem_fail_count = []
+        for col_num in range(col_offset, full_error_col_num + 1):
+            temp_list = [data[full_error_row_num][col_num], 0]
+            high_limit = data[full_error_row_num + 2][col_num]
+            try:
+                if len(high_limit.strip()) == 0 or high_limit == 'N':
+                    continue
+                low_limit = data[full_error_row_num + 3][col_num]
+                for row_num in range(full_error_row_num + row_offset, first_register_row_num):
+                    value = data[row_num][col_num]
+                    if len(value.strip()) == 0:
+                        temp_list[1] += 1
+                    elif float(value) < float(low_limit) or float(value) > float(high_limit):
+                        temp_list[1] += 1
+                testitem_fail_count.append(temp_list)
+            except:
+                print("")
+        return file_name, chip_count, testitem_fail_count
+    else:
+        group_list = []
+        for i in range(full_error_row_num + row_offset, first_register_row_num):
+            group_list.append(int(data[i][group_by_id]))
+        format_group_list = list(set(group_list))
+        format_group_list.sort()
 
-    group_index = []
-    for i in format_group_list:
-        temp = []
-        temp.append(i)
-        data_list = Common.find_item(group_list, i)
-        if group_by_id == 1:
-            temp_list = []
-            for j in data_list:
-                temp_list.append(data[chipno_row_num + row_offset + j][2])
-            format_temp_list = list(set(temp_list))
-            temp_index = []
-            for m in format_temp_list:
-                temp_swbin = [m]
-                temp_data_list = Common.find_item(temp_list, m)
-                temp_swbin.append(temp_data_list)
-                temp_index.append(temp_swbin)
-            temp.append(temp_index)
-        else:
-            temp.append(data_list)
-        group_index.append(temp)
-
-    file_name = basename(file).split('.')[0]
-    group_name = data[chipno_row_num][group_by_id]
-    lotno = data[5][1]
-    return file_name, group_index, group_name, lotno
+        group_index = []
+        for i in format_group_list:
+            temp = []
+            temp.append(i)
+            data_list = Common.find_item(group_list, i)
+            if group_by_id == 1:
+                temp_list = []
+                for j in data_list:
+                    temp_list.append(data[full_error_row_num + row_offset + j][2])
+                format_temp_list = list(set(temp_list))
+                temp_index = []
+                for m in format_temp_list:
+                    temp_swbin = [m]
+                    temp_data_list = Common.find_item(temp_list, m)
+                    temp_swbin.append(temp_data_list)
+                    temp_index.append(temp_swbin)
+                temp.append(temp_index)
+            else:
+                temp.append(data_list)
+            group_index.append(temp)
+        group_name = data[full_error_row_num][group_by_id]
+        lotno = data[5][1]
+        return file_name, group_index, group_name, lotno
 
 
-def save_data(analysis_folder, site_data, softbin_data, hardbin_data):
+def save_data(analysis_folder, site_data, softbin_data, hardbin_data, testitem_data):
     """
     写数据
     :param analysis_folder: 保存分析文件夹路径
@@ -342,16 +362,18 @@ def save_data(analysis_folder, site_data, softbin_data, hardbin_data):
         for y in range(len(site_swbin_count[x])):
             if y < len(site_swbin_count[x]) - 1:
                 if site_swbin_count[x][y][0] > 0:
-                    sitesoftbin_sheet.cell(row=irow, column=2 + y).value = '{:.4%}'.format(site_swbin_count[x][y][0]/summary_data[0][-2])
+                    sitesoftbin_sheet.cell(row=irow, column=2 + y).value = '{:.4%}'.format(
+                        site_swbin_count[x][y][0] / summary_data[0][-2])
                 sitesoftbin_sheet.cell(row=irow, column=2 + y).fill = PatternFill(fill_type='solid',
                                                                                   fgColor=site_swbin_count[x][y][1])
             else:
                 sitesoftbin_sheet.cell(row=irow, column=3 + y).value = site_swbin_count[x][y][0]
-                sitesoftbin_sheet.cell(row=irow, column=4 + y).value = '{:.4%}'.format(site_swbin_count[x][y][0]/summary_data[0][-2])
+                sitesoftbin_sheet.cell(row=irow, column=4 + y).value = '{:.4%}'.format(
+                    site_swbin_count[x][y][0] / summary_data[0][-2])
                 sitesoftbin_sheet.cell(row=irow, column=4 + y).fill = PatternFill(fill_type='solid',
                                                                                   fgColor=site_swbin_count[x][y][1])
         irow += 1
-    irow+=1
+    irow += 1
     sitesoftbin_sheet.merge_cells(start_row=irow, end_row=irow + 1, start_column=1, end_column=1)
     sitesoftbin_sheet.cell(row=irow, column=1).value = 'FailPercent'
     sitesoftbin_sheet.cell(row=irow, column=1).font = Font(bold=True)
@@ -367,6 +389,31 @@ def save_data(analysis_folder, site_data, softbin_data, hardbin_data):
         for cell in row:
             cell.border = border
             if cell.row == 1:
+                cell.font = Font(bold=True)
+                cell.alignment = alignment
+
+    testitem_sheet = wb.create_sheet('TestItem')
+    testitem_sheet.freeze_panes = 'B2'
+    irow = 1
+    for i in range(len(testitem_data[0][2])):
+        testitem_sheet.cell(row=irow, column=i + 2).value = testitem_data[0][2][i][0]
+    irow += 1
+    for i in range(len(testitem_data)):
+        testitem_sheet.cell(row=irow, column=1).value = testitem_data[i][0]
+        testitem_sheet.cell(row=irow, column=1).fill = PatternFill(fill_type='solid', fgColor=GREEN)
+        testitem_sheet.cell(row=irow + 1, column=1).value = testitem_data[i][1]
+        for j in range(len(testitem_data[i][2])):
+            testitem_sheet.cell(row=irow + 1, column=2 + j).value = testitem_data[i][2][j][1]
+            testitem_sheet.cell(row=irow, column=2 + j).value = '{:.2%}'.format(
+                testitem_data[i][2][j][1] / testitem_data[i][1])
+            testitem_sheet.cell(row=irow, column=2 + j).fill = PatternFill(fill_type='solid', fgColor=GREEN)
+        irow += 2
+
+    for row in testitem_sheet.rows:
+        for cell in row:
+            cell.border = border
+            if cell.row == 1 and cell.column > 1:
+                cell.fill = PatternFill(fill_type='solid', fgColor=YELLOW)
                 cell.font = Font(bold=True)
                 cell.alignment = alignment
 
@@ -408,8 +455,10 @@ def main():
     hardbin_data = []
     softbin_data = []
     site_data = []
+    testitem_data = []
     for file in file_list:
         # parse file
+        testitem_data.append(parse_file(file, -1))
         site_data.append(parse_file(file, 1))
         softbin_data.append(parse_file(file, 2))
         hardbin_data.append(parse_file(file, 3))
@@ -418,7 +467,7 @@ def main():
         Common.sort_data(data[1])
 
     # save data
-    save_data(analysis_folder, site_data, softbin_data, hardbin_data)
+    save_data(analysis_folder, site_data, softbin_data, hardbin_data, testitem_data)
 
 
 if __name__ == '__main__':
