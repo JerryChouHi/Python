@@ -28,7 +28,7 @@ def parse_file(file, group_by_id):
     """
     解析文件
     :param file: datalog csv文件
-    :param group_by_id: 列序号（1：Site，2：SW_BIN，3：hW_BIN，-1：测试项Fail芯片比例）
+    :param group_by_id: 列序号（1：Site，2：SW_BIN，3：hW_BIN）
     :return: 
     """
     data = []
@@ -50,59 +50,52 @@ def parse_file(file, group_by_id):
         except:
             first_register_row_num = i
             break
-    if group_by_id == -1:
-        chip_count = first_register_row_num - full_error_row_num - row_offset
+    group_list = []
+    for i in range(full_error_row_num + row_offset, first_register_row_num):
+        group_list.append(int(data[i][group_by_id]))
+    format_group_list = list(set(group_list))
+    format_group_list.sort()
+
+    group_index = []
+    for i in format_group_list:
+        temp = [i]
+        data_list = Common.find_item(group_list, i)
+        if group_by_id == 1:
+            temp_list = []
+            for j in data_list:
+                temp_list.append(data[full_error_row_num + row_offset + j][2])
+            format_temp_list = list(set(temp_list))
+            temp_index = []
+            for m in format_temp_list:
+                temp_swbin = [m]
+                temp_data_list = Common.find_item(temp_list, m)
+                temp_swbin.append(temp_data_list)
+                temp_index.append(temp_swbin)
+            temp.append(temp_index)
+        else:
+            temp.append(data_list)
         testitem_fail_count = []
         for col_num in range(col_offset, full_error_col_num + 1):
             temp_list = [data[full_error_row_num][col_num], 0]
             high_limit = data[full_error_row_num + 2][col_num]
-            try:
-                if len(high_limit.strip()) == 0 or high_limit == 'N':
-                    continue
-                low_limit = data[full_error_row_num + 3][col_num]
-                for row_num in range(full_error_row_num + row_offset, first_register_row_num):
-                    value = data[row_num][col_num]
-                    if len(value.strip()) == 0:
-                        temp_list[1] += 1
-                    elif float(value) < float(low_limit) or float(value) > float(high_limit):
-                        temp_list[1] += 1
-                testitem_fail_count.append(temp_list)
-            except:
-                print("")
-        return file_name, chip_count, testitem_fail_count
-    else:
-        group_list = []
-        for i in range(full_error_row_num + row_offset, first_register_row_num):
-            group_list.append(int(data[i][group_by_id]))
-        format_group_list = list(set(group_list))
-        format_group_list.sort()
-
-        group_index = []
-        for i in format_group_list:
-            temp = []
-            temp.append(i)
-            data_list = Common.find_item(group_list, i)
-            if group_by_id == 1:
-                temp_list = []
-                for j in data_list:
-                    temp_list.append(data[full_error_row_num + row_offset + j][2])
-                format_temp_list = list(set(temp_list))
-                temp_index = []
-                for m in format_temp_list:
-                    temp_swbin = [m]
-                    temp_data_list = Common.find_item(temp_list, m)
-                    temp_swbin.append(temp_data_list)
-                    temp_index.append(temp_swbin)
-                temp.append(temp_index)
-            else:
-                temp.append(data_list)
-            group_index.append(temp)
-        group_name = data[full_error_row_num][group_by_id]
-        lotno = data[5][1]
-        return file_name, group_index, group_name, lotno
+            if len(high_limit.strip()) == 0 or high_limit == 'N':
+                continue
+            low_limit = data[full_error_row_num + 3][col_num]
+            for j in data_list:
+                value = data[full_error_row_num + row_offset + j][col_num]
+                if len(value.strip()) == 0:
+                    temp_list[1] += 1
+                elif float(value) < float(low_limit) or float(value) > float(high_limit):
+                    temp_list[1] += 1
+            testitem_fail_count.append(temp_list)
+        temp.append(testitem_fail_count)
+        group_index.append(temp)
+    chip_count = first_register_row_num - full_error_row_num - row_offset
+    lotno = data[5][1]
+    return file_name, group_index, chip_count, lotno
 
 
-def save_data(analysis_folder, site_data, softbin_data, hardbin_data, testitem_data):
+def save_data(analysis_folder, site_data, softbin_data, hardbin_data):
     """
     写数据
     :param analysis_folder: 保存分析文件夹路径
@@ -392,24 +385,95 @@ def save_data(analysis_folder, site_data, softbin_data, hardbin_data, testitem_d
                 cell.font = Font(bold=True)
                 cell.alignment = alignment
 
-    testitem_sheet = wb.create_sheet('TestItem')
-    testitem_sheet.freeze_panes = 'B2'
+    hwbin_testitem_sheet = wb.create_sheet('HWBin-TestItem')
+    hwbin_testitem_sheet.freeze_panes = 'B2'
     irow = 1
-    for i in range(len(testitem_data[0][2])):
-        testitem_sheet.cell(row=irow, column=i + 2).value = testitem_data[0][2][i][0]
+    hwbin_testitem_sheet.cell(row=irow, column=1).value = hardbin_data[0][2]
+    for i in range(len(hardbin_data[0][1][0][2])):
+        hwbin_testitem_sheet.cell(row=irow, column=i + 2).value = hardbin_data[0][1][0][2][i][0]
     irow += 1
-    for i in range(len(testitem_data)):
-        testitem_sheet.cell(row=irow, column=1).value = testitem_data[i][0]
-        testitem_sheet.cell(row=irow, column=1).fill = PatternFill(fill_type='solid', fgColor=GREEN)
-        testitem_sheet.cell(row=irow + 1, column=1).value = testitem_data[i][1]
-        for j in range(len(testitem_data[i][2])):
-            testitem_sheet.cell(row=irow + 1, column=2 + j).value = testitem_data[i][2][j][1]
-            testitem_sheet.cell(row=irow, column=2 + j).value = '{:.2%}'.format(
-                testitem_data[i][2][j][1] / testitem_data[i][1])
-            testitem_sheet.cell(row=irow, column=2 + j).fill = PatternFill(fill_type='solid', fgColor=GREEN)
+    for i in range(len(hardbin_data[0][1])):
+        hwbin_testitem_sheet.cell(row=irow, column=1).value = 'HWBin' + str(hardbin_data[0][1][i][0])
+        hwbin_testitem_sheet.cell(row=irow, column=1).fill = PatternFill(fill_type='solid',
+                                                                         fgColor=GREEN)
+        for j in range(len(hardbin_data[0][1][i][2])):
+            hwbin_testitem_sheet.cell(row=irow, column=2 + j).value = hardbin_data[0][1][i][2][j][1]
+            hwbin_testitem_sheet.cell(row=irow + 1, column=2 + j).value = '{:.2%}'.format(
+                hardbin_data[0][1][i][2][j][1] / hardbin_data[0][2])
+            if hardbin_data[0][1][i][2][j][1] > 0:
+                hwbin_testitem_sheet.cell(row=irow + 1, column=2 + j).fill = PatternFill(fill_type='solid',
+                                                                                         fgColor=RED)
         irow += 2
 
-    for row in testitem_sheet.rows:
+    for row in hwbin_testitem_sheet.rows:
+        for cell in row:
+            cell.border = border
+            if cell.row == 1 and cell.column > 1:
+                cell.fill = PatternFill(fill_type='solid', fgColor=YELLOW)
+                cell.font = Font(bold=True)
+                cell.alignment = alignment
+
+    swbin_testitem_sheet = wb.create_sheet('SWBin-TestItem')
+    swbin_testitem_sheet.freeze_panes = 'B2'
+    irow = 1
+    swbin_testitem_sheet.cell(row=irow, column=1).value = softbin_data[0][2]
+    for i in range(len(softbin_data[0][1][0][2])):
+        swbin_testitem_sheet.cell(row=irow, column=i + 2).value = softbin_data[0][1][0][2][i][0]
+    irow += 1
+    for x in range(len(bin_list)):
+        swbin_testitem_sheet.cell(row=irow, column=1).value = 'SWBin' + str(bin_list[x])
+        if x <= 1:
+            swbin_testitem_sheet.cell(row=irow, column=1).fill = PatternFill(fill_type='solid', fgColor='ADD8E6')
+        elif 2 <= x <= 9:
+            swbin_testitem_sheet.cell(row=irow, column=1).fill = PatternFill(fill_type='solid', fgColor='00FF7F')
+        elif 10 <= x <= 22:
+            swbin_testitem_sheet.cell(row=irow, column=1).fill = PatternFill(fill_type='solid', fgColor='EEE8AA')
+        elif 23 <= x <= 32:
+            swbin_testitem_sheet.cell(row=irow, column=1).fill = PatternFill(fill_type='solid', fgColor='FFA500')
+        elif 33 <= x <= 36:
+            swbin_testitem_sheet.cell(row=irow, column=1).fill = PatternFill(fill_type='solid', fgColor='CD853F')
+        else:
+            swbin_testitem_sheet.cell(row=irow, column=1).fill = PatternFill(fill_type='solid', fgColor='FF6347')
+        for i in range(len(softbin_data[0][1])):
+            if bin_list[x] == softbin_data[0][1][i][0]:
+                for j in range(len(softbin_data[0][1][i][2])):
+                    swbin_testitem_sheet.cell(row=irow, column=2 + j).value = softbin_data[0][1][i][2][j][1]
+                    swbin_testitem_sheet.cell(row=irow + 1, column=2 + j).value = '{:.2%}'.format(
+                        softbin_data[0][1][i][2][j][1] / softbin_data[0][2])
+                    if softbin_data[0][1][i][2][j][1] > 0:
+                        swbin_testitem_sheet.cell(row=irow + 1, column=2 + j).fill = PatternFill(fill_type='solid',
+                                                                                                 fgColor=RED)
+        irow += 2
+
+    for row in swbin_testitem_sheet.rows:
+        for cell in row:
+            cell.border = border
+            if cell.row == 1 and cell.column > 1:
+                cell.fill = PatternFill(fill_type='solid', fgColor=YELLOW)
+                cell.font = Font(bold=True)
+                cell.alignment = alignment
+
+    site_testitem_sheet = wb.create_sheet('Site-TestItem')
+    site_testitem_sheet.freeze_panes = 'B2'
+    irow = 1
+    site_testitem_sheet.cell(row=irow, column=1).value = site_data[0][2]
+    for i in range(len(site_data[0][1][0][2])):
+        site_testitem_sheet.cell(row=irow, column=i + 2).value = site_data[0][1][0][2][i][0]
+    irow += 1
+    for i in range(len(site_data[0][1])):
+        site_testitem_sheet.cell(row=irow, column=1).value = 'Site' + str(site_data[0][1][i][0])
+        site_testitem_sheet.cell(row=irow, column=1).fill = PatternFill(fill_type='solid',
+                                                                        fgColor=GREEN)
+        for j in range(len(site_data[0][1][i][2])):
+            site_testitem_sheet.cell(row=irow, column=2 + j).value = site_data[0][1][i][2][j][1]
+            site_testitem_sheet.cell(row=irow + 1, column=2 + j).value = '{:.2%}'.format(
+                site_data[0][1][i][2][j][1] / site_data[0][2])
+            if site_data[0][1][i][2][j][1] > 0:
+                site_testitem_sheet.cell(row=irow + 1, column=2 + j).fill = PatternFill(fill_type='solid',
+                                                                                        fgColor=RED)
+        irow += 2
+
+    for row in site_testitem_sheet.rows:
         for cell in row:
             cell.border = border
             if cell.row == 1 and cell.column > 1:
@@ -455,10 +519,10 @@ def main():
     hardbin_data = []
     softbin_data = []
     site_data = []
-    testitem_data = []
+    # testitem_data = []
     for file in file_list:
         # parse file
-        testitem_data.append(parse_file(file, -1))
+        # testitem_data.append(parse_file(file, -1))
         site_data.append(parse_file(file, 1))
         softbin_data.append(parse_file(file, 2))
         hardbin_data.append(parse_file(file, 3))
@@ -467,7 +531,7 @@ def main():
         Common.sort_data(data[1])
 
     # save data
-    save_data(analysis_folder, site_data, softbin_data, hardbin_data, testitem_data)
+    save_data(analysis_folder, site_data, softbin_data, hardbin_data)
 
 
 if __name__ == '__main__':
