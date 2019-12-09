@@ -10,6 +10,7 @@ from os.path import join, dirname, exists
 from xml.dom.minidom import parse
 from shutil import copy
 from xlrd import open_workbook
+from datetime import datetime
 
 
 def mkdir(path):
@@ -26,6 +27,19 @@ def mkdir(path):
         return True
     else:
         return False
+
+
+def data_convert(data):
+    """
+    如果是浮点数，去掉小数点后末尾的0；
+    如果是字符串，去掉头尾空格
+    :param data: 
+    :return: 
+    """
+    if isinstance(data, float):
+        return '{:g}'.format(data)
+    else:
+        return data.strip()
 
 
 def write_signals_file(data, file):
@@ -98,20 +112,20 @@ def write_bindefinition_file(data, file):
     file.write("		</BinGroup>\n")
     file.write("		<BinGroup name=\"HardBins\" type=\"HardBin\">\n")
     for i in range(len(data[1])):
-        file.write("			<Bin name=\"" + str(data[1][i][1]) + "\">\n")
-        file.write("				<ID>" + str(int(data[1][i][0])) + "</ID>\n")
-        file.write("				<Desc>" + str(data[1][i][3]) + "</Desc>\n")
-        file.write("				<Inherit>" + str(data[1][i][2]) + "</Inherit>\n")
+        file.write("			<Bin name=\"" + data[1][i][1] + "\">\n")
+        file.write("				<ID>" + data[1][i][0] + "</ID>\n")
+        file.write("				<Desc>" + data[1][i][3] + "</Desc>\n")
+        file.write("				<Inherit>" + data[1][i][2] + "</Inherit>\n")
         file.write("			</Bin>\n")
     file.write("		</BinGroup>\n")
     file.write("		<BinGroup name=\"SoftBins\" type=\"SoftBin\">\n")
     for i in range(len(data[0])):
-        file.write("			<Bin name=\"" + str(data[0][i][1]) + "\">\n")
-        file.write("				<ID>" + str(int(data[0][i][0])) + "</ID>\n")
-        file.write("				<Desc>" + str(data[0][i][2]) + "</Desc>\n")
+        file.write("			<Bin name=\"" + data[0][i][1] + "\">\n")
+        file.write("				<ID>" + data[0][i][0] + "</ID>\n")
+        file.write("				<Desc>" + data[0][i][2] + "</Desc>\n")
         for j in range(len(data[1])):
             if data[1][j][0] == data[0][i][3]:
-                file.write("				<Inherit>" + str(data[1][j][1]) + "</Inherit>\n")
+                file.write("				<Inherit>" + data[1][j][1] + "</Inherit>\n")
         file.write("			</Bin>\n")
     file.write("		</BinGroup>\n")
     file.write("	</BinDefs>\n")
@@ -122,17 +136,20 @@ def write_limit_file(data, file):
     file.write("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n")
     file.write("<Blocks>\n")
     for i in range(len(data)):
-        file.write("	<Limit name=\"" + data[i][0] + "\">\n")
+        file.write("	<Limit LimitName=\"" + data[i][0] + "\">\n")
+        file.write("	    <TestName>" + data[i][0] + "</TestName>\n")
         file.write("		<TestNum>" + str(i + 1) + "</TestNum>\n")
-        file.write("		<LoLimit>" + str(data[i][2]) + "</LoLimit>\n")
-        file.write("		<HiLimit>" + str(data[i][1]) + "</HiLimit>\n")
+        if data[i][2] != '':
+            file.write("		<LoLimit>" + data[i][2] + "</LoLimit>\n")
+        if data[i][1] != '':
+            file.write("		<HiLimit>" + data[i][1] + "</HiLimit>\n")
         if data[i][3] != '':
             file.write("		<Unit>" + data[i][3] + "</Unit>\n")
         if data[i][4] != '':
             file.write(
-                "		<SoftBinRef binRef=\"Default\" group=\"SoftBins\">" + str(data[i][4]) + "</SoftBinRef>\n")
+                "		<SoftBinRef binRef=\"Default\" group=\"SoftBins\">" + data[i][4] + "</SoftBinRef>\n")
         if data[i][5] != '':
-            file.write("		<Description>" + str(data[i][5]) + "</Description>\n")
+            file.write("		<Description>" + data[i][5] + "</Description>\n")
         file.write("	</Limit>\n")
     file.write("</Blocks>")
 
@@ -144,8 +161,8 @@ def write_block_file(data, file):
     for i in range(len(data[0])):
         file.write("		<DCMeasure name=\"" + data[0][i][0] + "\">\n")
         for j in range(1, len(data[0][i])):
-            file.write("			<MeasureGroup sigRef=\"" + data[0][i][j][0] + "\" minorTestNum=\"" + str(
-                int(data[0][i][j][1])) + "\">\n")
+            file.write("			<MeasureGroup sigRef=\"" + data[0][i][j][0] + "\" minorTestNum=\"" +
+                       data[0][i][j][1] + "\">\n")
             file.write("				<Mode>" + data[0][i][j][2] + "</Mode>\n")
             file.write("				<Method>" + data[0][i][j][3] + "</Method>\n")
             file.write("				<ForceValue>" + data[0][i][j][4] + "</ForceValue>\n")
@@ -157,7 +174,7 @@ def write_block_file(data, file):
             if data[0][i][j][9]:
                 file.write("				<LoClamp>" + data[0][i][j][9] + "</LoClamp>\n")
             if data[0][i][j][10]:
-                file.write("				<SampleNum>" + str(int(data[0][i][j][10])) + "</SampleNum>\n")
+                file.write("				<SampleNum>" + data[0][i][j][10] + "</SampleNum>\n")
             if data[0][i][j][11]:
                 file.write("				<Delay>" + data[0][i][j][11] + "</Delay>\n")
             file.write("			</MeasureGroup>\n")
@@ -178,7 +195,7 @@ def write_block_file(data, file):
     file.write("	</TestConditions>\n")
     file.write("	<Tests>\n")
     for i in range(len(data[1])):
-        file.write("		<Test name=\"" + data[1][i][0] + "\" testNum=\"" + str(data[1][i][1]) + "\">\n")
+        file.write("		<Test name=\"" + data[1][i][0] + "\" testNum=\"" + data[1][i][1] + "\">\n")
         file.write("			<TestCondition>" + data[1][i][0] + "</TestCondition>\n")
         file.write("			<ExecAPI>" + data[1][i][2] + "</ExecAPI>\n")
         if data[1][i][3] != '':
@@ -214,29 +231,29 @@ def write_levels_file(data, file):
         for j in range(1, len(data[i])):
             file.write("		<SigRef name=\"" + data[i][j][0] + "\">\n")
             if data[i][j][1] != '':
-                file.write("			<VPS>" + str(data[i][j][1]) + "</VPS>\n")
+                file.write("			<VPS>" + data[i][j][1] + "</VPS>\n")
             if data[i][j][2] != '':
-                file.write("			<IClamp>" + str(data[i][j][2]) + "</IClamp>\n")
+                file.write("			<IClamp>" + data[i][j][2] + "</IClamp>\n")
             if data[i][j][3] != '':
-                file.write("			<IRange>" + str(int(data[i][j][3])) + "</IRange>\n")
+                file.write("			<IRange>" + data[i][j][3] + "</IRange>\n")
             if data[i][j][4] != '':
                 file.write("			<Delay>" + data[i][j][4] + "</Delay>\n")
             if data[i][j][5] != '':
-                file.write("			<VIL>" + str(data[i][j][5]) + "</VIL>\n")
+                file.write("			<VIL>" + data[i][j][5] + "</VIL>\n")
             if data[i][j][6] != '':
-                file.write("			<VIH>" + str(data[i][j][6]) + "</VIH>\n")
+                file.write("			<VIH>" + data[i][j][6] + "</VIH>\n")
             if data[i][j][7] != '':
-                file.write("			<VTERM>" + str(data[i][j][7]) + "</VTERM>\n")
+                file.write("			<VTERM>" + data[i][j][7] + "</VTERM>\n")
             if data[i][j][8] != '':
-                file.write("			<VTERM_EN>" + str(int(data[i][j][8])) + "</VTERM_EN>\n")
+                file.write("			<VTERM_EN>" + data[i][j][8] + "</VTERM_EN>\n")
             if data[i][j][9] != '':
-                file.write("			<VOL>" + str(data[i][j][9]) + "</VOL>\n")
+                file.write("			<VOL>" + data[i][j][9] + "</VOL>\n")
             if data[i][j][10] != '':
-                file.write("			<VOH>" + str(data[i][j][10]) + "</VOH>\n")
+                file.write("			<VOH>" + data[i][j][10] + "</VOH>\n")
             if data[i][j][11] != '':
-                file.write("			<VCH>" + str(data[i][j][11]) + "</VCH>\n")
+                file.write("			<VCH>" + data[i][j][11] + "</VCH>\n")
             if data[i][j][12] != '':
-                file.write("			<VCL>" + str(data[i][j][12]) + "</VCL>\n")
+                file.write("			<VCL>" + data[i][j][12] + "</VCL>\n")
             file.write("		</SigRef>\n")
         file.write("	</Levels>\n")
     file.write("</Blocks>")
@@ -488,8 +505,8 @@ def write_flows_file(file, unknown_swbin_id):
     file.write("		<FlowItem name=\"START\">\n")
     file.write("			<Type>Entrance</Type>\n")
     file.write("			<Goto result=\"0\">\n")
-    file.write("				<SoftBinRef binRef=\"Default\" group=\"SoftBins\">" + str(
-        unknown_swbin_id) + "</SoftBinRef>\n")
+    file.write("				<SoftBinRef binRef=\"Default\" group=\"SoftBins\">" +
+               unknown_swbin_id + "</SoftBinRef>\n")
     file.write("				<FlowItemRef>END</FlowItemRef>\n")
     file.write("				<PassFail>Pass</PassFail>\n")
     file.write("			</Goto>\n")
@@ -543,8 +560,6 @@ def generate_project(excel_dir, project_directory):
                       join(project_directory, 'UserExtension\\x64\debug'),
                       join(project_directory, 'UserExtension\\x64\\release')
                       ]
-    for directory in directory_list:
-        mkdir(directory)
     source_project_path = join(dirname(excel_dir), 'Project.xml')
     target_project_path = join(project_directory, 'Project.xml')
     bindefinition_path = join(project_directory, 'XML\BinDefinition.xml')
@@ -581,18 +596,18 @@ def generate_project(excel_dir, project_directory):
         temp_list = []
         if projectsetup_row == -1:
             for i in range(datalog_row, project_sheet.nrows):
-                if len(project_sheet.cell_value(i, 2)) > 0:
-                    temp_list.append((project_sheet.cell_value(i, 1), project_sheet.cell_value(i, 2)))
+                if len(str(project_sheet.cell_value(i, 2))) > 0:
+                    temp_list.append((project_sheet.cell_value(i, 1), data_convert(project_sheet.cell_value(i, 2))))
         else:
             for i in range(datalog_row, projectsetup_row):
-                if len(project_sheet.cell_value(i, 2)) > 0:
-                    temp_list.append((project_sheet.cell_value(i, 1), project_sheet.cell_value(i, 2)))
+                if len(str(project_sheet.cell_value(i, 2))) > 0:
+                    temp_list.append((project_sheet.cell_value(i, 1), data_convert(project_sheet.cell_value(i, 2))))
         project_data.append(temp_list)
     if projectsetup_row != -1:
         temp_list = []
         for i in range(projectsetup_row, project_sheet.nrows):
             if len(project_sheet.cell_value(i, 2)) > 0:
-                temp_list.append((project_sheet.cell_value(i, 1), project_sheet.cell_value(i, 2)))
+                temp_list.append((project_sheet.cell_value(i, 1), data_convert(project_sheet.cell_value(i, 2))))
         project_data.append(temp_list)
 
     channel_id_list = [
@@ -694,18 +709,19 @@ def generate_project(excel_dir, project_directory):
     signals_data = []
     for row_num in range(1, segment_pin_num + 1):
         if len(pinmap_sheet.cell_value(row_num, 5)) > 0:
-            signals_data.append((pinmap_sheet.cell_value(row_num, 5), pinmap_sheet.cell_value(row_num, 6)))
+            signals_data.append(
+                (data_convert(pinmap_sheet.cell_value(row_num, 5)), data_convert(pinmap_sheet.cell_value(row_num, 6))))
 
     segment_list = []
     for row_num in range(1, pinmap_sheet.nrows):
         if len(pinmap_sheet.cell_value(row_num, 0)) > 0:
-            segment_list.append(pinmap_sheet.cell_value(row_num, 0))
+            segment_list.append(data_convert(pinmap_sheet.cell_value(row_num, 0)))
     pin_name_list = []
     start_num = 1
     for i in range(len(segment_list)):
         temp_list = []
         for j in range(start_num, start_num + segment_pin_num):
-            temp_list.append(pinmap_sheet.cell_value(j, 5))
+            temp_list.append(data_convert(pinmap_sheet.cell_value(j, 5)))
         pin_name_list.append(temp_list)
         start_num += (segment_pin_num + 1)
     socketmap_data = []
@@ -734,24 +750,31 @@ def generate_project(excel_dir, project_directory):
     for row_num in range(1, signalgroups_sheet.nrows):
         temp_list = []
         for col_num in range(signalgroups_sheet.ncols):
-            temp_list.append(signalgroups_sheet.cell_value(row_num, col_num))
+            temp_list.append(data_convert(signalgroups_sheet.cell_value(row_num, col_num)))
         signalgroups_data.append(temp_list)
 
     bindefinition_sheet = excel_data.sheet_by_name('BinMap')
     swbin_data = []
     hwbin_data = []
+    find_unknown_bin = False
     for row_num in range(1, bindefinition_sheet.nrows):
         if bindefinition_sheet.cell_value(row_num, 1) in ('Unknown', 'Unknow'):
-            unknown_swbin_id = bindefinition_sheet.cell_value(row_num, 0)
+            unknown_swbin_id = data_convert(bindefinition_sheet.cell_value(row_num, 0))
+            find_unknown_bin = True
         temp_swbin_list = []
         temp_hwbin_list = []
         for col_num in range(4):
-            temp_swbin_list.append(bindefinition_sheet.cell_value(row_num, col_num))
-        if len(bindefinition_sheet.cell_value(row_num, 5)) > 0:
+            temp_swbin_list.append(data_convert(bindefinition_sheet.cell_value(row_num, col_num)))
+        if len(str(bindefinition_sheet.cell_value(row_num, 5))) > 0:
             for m in range(5, 9):
-                temp_hwbin_list.append(bindefinition_sheet.cell_value(row_num, m))
+                temp_hwbin_list.append(data_convert(bindefinition_sheet.cell_value(row_num, m)))
             hwbin_data.append(temp_hwbin_list)
         swbin_data.append(temp_swbin_list)
+    if not find_unknown_bin:
+        with open(join(project_directory, 'error.log'), 'a', encoding='utf-8-sig') as error_file:
+            time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            error_file.write(time + " Error：BinMap中不存在SWBinName为'Unknown'或'Unknow'，请核查！\n")
+        exit()
     bindefinition_data = [swbin_data, hwbin_data]
 
     limits_sheet = excel_data.sheet_by_name('Limits')
@@ -761,15 +784,15 @@ def generate_project(excel_dir, project_directory):
             for row_num in range(1, segment_pin_num + 1):
                 if len(pinmap_sheet.cell_value(row_num, col_num)) > 0:
                     limit_name = pinmap_sheet.cell_value(row_num, 5) + '_' + pinmap_sheet.cell_value(0, col_num)
-                    high_limit = pinmap_sheet.cell_value(row_num, col_num)
-                    low_limit = pinmap_sheet.cell_value(row_num, col_num + 1)
-                    unit = pinmap_sheet.cell_value(row_num, col_num + 2)
+                    high_limit = data_convert(pinmap_sheet.cell_value(row_num, col_num))
+                    low_limit = data_convert(pinmap_sheet.cell_value(row_num, col_num + 1))
+                    unit = data_convert(pinmap_sheet.cell_value(row_num, col_num + 2))
                     limits_data.append([limit_name, high_limit, low_limit, unit, '', ''])
 
     for row_num in range(1, limits_sheet.nrows):
         temp_list = []
         for col_num in range(limits_sheet.ncols):
-            temp_list.append(limits_sheet.cell_value(row_num, col_num))
+            temp_list.append(data_convert(limits_sheet.cell_value(row_num, col_num)))
         limits_data.append(temp_list)
 
     dcmeasure_sheet = excel_data.sheet_by_name('DCMeasure')
@@ -781,10 +804,10 @@ def generate_project(excel_dir, project_directory):
             if row_num > 1:
                 dcmeasure_data.append(temp_list1)
                 temp_list1 = []
-            temp_list1.append(dcmeasure_sheet.cell_value(row_num, 0))
+            temp_list1.append(data_convert(dcmeasure_sheet.cell_value(row_num, 0)))
         if len(dcmeasure_sheet.cell_value(row_num, 1)) > 0:
             for col_num in range(1, dcmeasure_sheet.ncols):
-                temp_list2.append(dcmeasure_sheet.cell_value(row_num, col_num))
+                temp_list2.append(data_convert(dcmeasure_sheet.cell_value(row_num, col_num)))
             temp_list1.append(temp_list2)
     dcmeasure_data.append(temp_list1)
 
@@ -801,7 +824,7 @@ def generate_project(excel_dir, project_directory):
                     temp_list.append('')
                     temp_list.append('')
             else:
-                temp_list.append(test_sheet.cell_value(row_num, col_num))
+                temp_list.append(data_convert(test_sheet.cell_value(row_num, col_num)))
         test_data.append(temp_list)
 
     block_data = [dcmeasure_data, test_data]
@@ -811,7 +834,7 @@ def generate_project(excel_dir, project_directory):
     for row_num in range(1, uservars_sheet.nrows):
         temp_list = []
         for col_num in range(uservars_sheet.ncols):
-            temp_list.append(uservars_sheet.cell_value(row_num, col_num))
+            temp_list.append(data_convert(uservars_sheet.cell_value(row_num, col_num)))
         uservars_data.append(temp_list)
 
     levels_sheet = excel_data.sheet_by_name('Level')
@@ -823,13 +846,15 @@ def generate_project(excel_dir, project_directory):
             if row_num > 1:
                 levels_data.append(temp_list1)
                 temp_list1 = []
-            temp_list1.append(levels_sheet.cell_value(row_num, 0))
+            temp_list1.append(data_convert(levels_sheet.cell_value(row_num, 0)))
         if len(levels_sheet.cell_value(row_num, 1)) > 0:
             for col_num in range(1, levels_sheet.ncols):
-                temp_list2.append(levels_sheet.cell_value(row_num, col_num))
+                temp_list2.append(data_convert(levels_sheet.cell_value(row_num, col_num)))
             temp_list1.append(temp_list2)
     levels_data.append(temp_list1)
 
+    for directory in directory_list:
+        mkdir(directory)
     if exists(source_project_path):
         copy(source_project_path, target_project_path)
         DOMTree = parse(source_project_path)
@@ -838,45 +863,45 @@ def generate_project(excel_dir, project_directory):
             collection.getElementsByTagName("Project")[0].getElementsByTagName("SocketMap")[0].getElementsByTagName(
                 "Ref")[0].childNodes[0].data
     else:
-        with open(target_project_path, 'w') as project_file:
+        with open(target_project_path, 'w', encoding='utf-8-sig') as project_file:
             write_project_file(project_data, project_file)
         socketmap_name = project_data[0]
-    with open(signal_path, 'w') as signal_file:
+    with open(signal_path, 'w', encoding='utf-8-sig') as signal_file:
         write_signals_file(signals_data, signal_file)
-    with open(socketmap_path, 'w') as socketmap_file:
+    with open(socketmap_path, 'w', encoding='utf-8-sig') as socketmap_file:
         write_socketmap_file(socketmap_data, socketmap_file, socketmap_name)
-    with open(signalgroups_path, 'w') as signalgroups_file:
+    with open(signalgroups_path, 'w', encoding='utf-8-sig') as signalgroups_file:
         write_signalgroups_file(signalgroups_data, signalgroups_file)
-    with open(bindefinition_path, 'w') as bindefinition_file:
+    with open(bindefinition_path, 'w', encoding='utf-8-sig') as bindefinition_file:
         write_bindefinition_file(bindefinition_data, bindefinition_file)
-    with open(limit_path, 'w') as limit_file:
+    with open(limit_path, 'w', encoding='utf-8-sig') as limit_file:
         write_limit_file(limits_data, limit_file)
-    with open(testblock_path, 'w') as testblock_file:
+    with open(testblock_path, 'w', encoding='utf-8-sig') as testblock_file:
         write_block_file(block_data, testblock_file)
-    with open(uservars_path, 'w') as uservars_file:
+    with open(uservars_path, 'w', encoding='utf-8-sig') as uservars_file:
         write_uservars_file(uservars_data, uservars_file)
-    with open(levels_path, 'w') as levels_file:
+    with open(levels_path, 'w', encoding='utf-8-sig') as levels_file:
         write_levels_file(levels_data, levels_file)
-    with open(testerconfig_path, 'w') as testerconfig_file:
+    with open(testerconfig_path, 'w', encoding='utf-8-sig') as testerconfig_file:
         write_config_file(testerconfig_file)
-    with open(testprogram_path, 'w') as testprogram_file:
+    with open(testprogram_path, 'w', encoding='utf-8-sig') as testprogram_file:
         write_program_file(testprogram_file)
-    with open(shmoo_path, 'w') as shmoo_file:
+    with open(shmoo_path, 'w', encoding='utf-8-sig') as shmoo_file:
         write_shmoo_file(shmoo_file)
-    with open(runresultmap_path, 'w') as runresultmap_file:
+    with open(runresultmap_path, 'w', encoding='utf-8-sig') as runresultmap_file:
         write_runresultmap_file(runresultmap_file)
-    with open(specset_path, 'w') as specset_file:
+    with open(specset_path, 'w', encoding='utf-8-sig') as specset_file:
         write_empty_file(specset_file)
-    with open(timing_path, 'w') as timing_file:
+    with open(timing_path, 'w', encoding='utf-8-sig') as timing_file:
         write_empty_file(timing_file)
-    with open(timingmap_path, 'w') as timingmap_file:
+    with open(timingmap_path, 'w', encoding='utf-8-sig') as timingmap_file:
         write_empty_file(timingmap_file)
-    with open(patternburst_path, 'w') as patternburst_file:
+    with open(patternburst_path, 'w', encoding='utf-8-sig') as patternburst_file:
         write_empty_file(patternburst_file)
     if exists(source_flows_path):
         copy(source_flows_path, target_flows_path)
     else:
-        with open(target_flows_path, 'w') as flows_file:
+        with open(target_flows_path, 'w', encoding='utf-8-sig') as flows_file:
             write_flows_file(flows_file, unknown_swbin_id)
 
 
@@ -887,6 +912,11 @@ def main():
         exit()
     else:
         project_directory = argv[argv.index('-d') + 1]
+        for i in range(argv.index('-d') + 2, len(argv)):
+            if not argv[i].startswith('-'):
+                project_directory += (' ' + argv[i])
+            else:
+                break
         if project_directory[:2] == '.\\':
             project_directory = getcwd() + project_directory[1:]
 
@@ -896,6 +926,11 @@ def main():
         exit()
     else:
         excel_dir = argv[argv.index('-f') + 1]
+        for i in range(argv.index('-f') + 2, len(argv)):
+            if not argv[i].startswith('-'):
+                excel_dir += (' ' + argv[i])
+            else:
+                break
 
     # 生成文件
     generate_project(excel_dir, project_directory)
