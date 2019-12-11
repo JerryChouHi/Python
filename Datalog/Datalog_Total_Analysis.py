@@ -5,7 +5,7 @@
 # @Function : 所有FT分析
 
 from csv import reader
-from os.path import basename, abspath, join, isdir
+from os.path import basename, dirname, abspath, join, isdir
 from os import getcwd, listdir
 from datetime import datetime
 from sys import argv, path
@@ -232,15 +232,13 @@ def save_data(analysis_folder, site_data, softbin_data):
                 cell.alignment = alignment
 
     softbinlotno_sheet = wb.create_sheet('LotNo-SWBin')
-    softbinlotno_sheet.freeze_panes = 'B2'
-    irow = 1
-    softbinlotno_sheet.cell(row=irow, column=1).value = total_count
+    softbinlotno_sheet.freeze_panes = 'C2'
+    softbinlotno_sheet.cell(row=1, column=1).value = len(softbin_data)
+    softbinlotno_sheet.cell(row=1, column=2).value = total_count
     for i in range(len(softbin_data)):
-        softbinlotno_sheet.merge_cells(start_row=irow, end_row=irow, start_column=2 + 2 * i, end_column=3 + 2 * i)
-        softbinlotno_sheet.cell(row=irow, column=2 + 2 * i).value = softbin_data[i][0]
-        softbinlotno_sheet.cell(row=irow, column=2 + 2 * i).fill = PatternFill(fill_type='solid', fgColor=YELLOW)
-
-    irow += 1
+        softbinlotno_sheet.cell(row=2 + i, column=1).value = softbin_data[i][2]
+        softbinlotno_sheet.cell(row=2 + i, column=2).value = softbin_data[i][0]
+        softbinlotno_sheet.cell(row=2 + i, column=2).fill = PatternFill(fill_type='solid', fgColor=YELLOW)
 
     lotno_swbin_count = []
 
@@ -264,47 +262,47 @@ def save_data(analysis_folder, site_data, softbin_data):
         lotno_swbin_count.append(lotno_temp_list)
 
     for x in range(len(bin_list)):
-        softbinlotno_sheet.cell(row=irow, column=1).value = 'SWBin' + str(bin_list[x])
+        softbinlotno_sheet.merge_cells(start_row=1, end_row=1, start_column=3 + 2 * x, end_column=4 + 2 * x)
+        softbinlotno_sheet.cell(row=1, column=3 + 2 * x).value = 'SWBin' + str(bin_list[x])
         if x <= 1:
-            softbinlotno_sheet.cell(row=irow, column=1).fill = PatternFill(fill_type='solid', fgColor='ADD8E6')
+            softbinlotno_sheet.cell(row=1, column=3 + 2 * x).fill = PatternFill(fill_type='solid', fgColor='ADD8E6')
         elif 2 <= x <= 9:
-            softbinlotno_sheet.cell(row=irow, column=1).fill = PatternFill(fill_type='solid', fgColor='00FF7F')
+            softbinlotno_sheet.cell(row=1, column=3 + 2 * x).fill = PatternFill(fill_type='solid', fgColor='00FF7F')
         elif 10 <= x <= 22:
-            softbinlotno_sheet.cell(row=irow, column=1).fill = PatternFill(fill_type='solid', fgColor='EEE8AA')
+            softbinlotno_sheet.cell(row=1, column=3 + 2 * x).fill = PatternFill(fill_type='solid', fgColor='EEE8AA')
         elif 23 <= x <= 32:
-            softbinlotno_sheet.cell(row=irow, column=1).fill = PatternFill(fill_type='solid', fgColor='FFA500')
+            softbinlotno_sheet.cell(row=1, column=3 + 2 * x).fill = PatternFill(fill_type='solid', fgColor='FFA500')
         elif 33 <= x <= 36:
-            softbinlotno_sheet.cell(row=irow, column=1).fill = PatternFill(fill_type='solid', fgColor='CD853F')
+            softbinlotno_sheet.cell(row=1, column=3 + 2 * x).fill = PatternFill(fill_type='solid', fgColor='CD853F')
         else:
-            softbinlotno_sheet.cell(row=irow, column=1).fill = PatternFill(fill_type='solid', fgColor='FF6347')
+            softbinlotno_sheet.cell(row=1, column=3 + 2 * x).fill = PatternFill(fill_type='solid', fgColor='FF6347')
         for i in range(len(lotno_swbin_count)):
-            softbinlotno_sheet.cell(row=irow, column=2 + 2 * i).value = lotno_swbin_count[i][x][1]
-            softbinlotno_sheet.cell(row=irow, column=3 + 2 * i).value = '{:.2%}'.format(
+            softbinlotno_sheet.cell(row=2 + i, column=3 + 2 * x).value = lotno_swbin_count[i][x][1]
+            softbinlotno_sheet.cell(row=2 + i, column=4 + 2 * x).value = '{:.2%}'.format(
                 lotno_swbin_count[i][x][1] / softbin_data[i][1][0][2])
             if x <= 1:
-                softbinlotno_sheet.cell(row=irow, column=3 + 2 * i).fill = PatternFill(fill_type='solid',
-                                                                                       fgColor='ADD8E6')
+                softbinlotno_sheet.cell(row=2 + i, column=4 + 2 * x).fill = PatternFill(fill_type='solid',
+                                                                                        fgColor='ADD8E6')
             elif 2 <= x <= 9:
-                softbinlotno_sheet.cell(row=irow, column=3 + 2 * i).fill = PatternFill(fill_type='solid',
-                                                                                       fgColor='00FF7F')
+                softbinlotno_sheet.cell(row=2 + i, column=4 + 2 * x).fill = PatternFill(fill_type='solid',
+                                                                                        fgColor='00FF7F')
             elif 10 <= x <= 22:
-                softbinlotno_sheet.cell(row=irow, column=3 + 2 * i).fill = PatternFill(fill_type='solid',
-                                                                                       fgColor='EEE8AA')
+                softbinlotno_sheet.cell(row=2 + i, column=4 + 2 * x).fill = PatternFill(fill_type='solid',
+                                                                                        fgColor='EEE8AA')
             elif 23 <= x <= 32:
-                softbinlotno_sheet.cell(row=irow, column=3 + 2 * i).fill = PatternFill(fill_type='solid',
-                                                                                       fgColor='FFA500')
+                softbinlotno_sheet.cell(row=2 + i, column=4 + 2 * x).fill = PatternFill(fill_type='solid',
+                                                                                        fgColor='FFA500')
             elif 33 <= x <= 36:
-                softbinlotno_sheet.cell(row=irow, column=3 + 2 * i).fill = PatternFill(fill_type='solid',
-                                                                                       fgColor='CD853F')
+                softbinlotno_sheet.cell(row=2 + i, column=4 + 2 * x).fill = PatternFill(fill_type='solid',
+                                                                                        fgColor='CD853F')
             else:
-                softbinlotno_sheet.cell(row=irow, column=3 + 2 * i).fill = PatternFill(fill_type='solid',
-                                                                                       fgColor='FF6347')
-        irow += 1
+                softbinlotno_sheet.cell(row=2 + i, column=4 + 2 * x).fill = PatternFill(fill_type='solid',
+                                                                                        fgColor='FF6347')
 
     for row in softbinlotno_sheet.rows:
         for cell in row:
             cell.border = border
-            if cell.row == 1:
+            if cell.row == 1 or cell.column in (1,2):
                 cell.font = Font(bold=True)
                 cell.alignment = alignment
 
@@ -353,9 +351,10 @@ def main():
             # parse file
             temp_site_data.append(parse_file(file, 1))
             temp_softbin_data.append(parse_file(file, 2))
+        date = basename(dirname(dirname(file_list[i][0])))
         lotno = basename(lotno_folder[i])
-        site_data.append([lotno, temp_site_data])
-        softbin_data.append([lotno, temp_softbin_data])
+        site_data.append([lotno, temp_site_data, date])
+        softbin_data.append([lotno, temp_softbin_data, date])
 
     # save data
     save_data(analysis_folder, site_data, softbin_data)
