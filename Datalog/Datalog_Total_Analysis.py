@@ -5,8 +5,8 @@
 # @Function : 所有FT分析
 
 from csv import reader
-from os.path import basename, dirname, abspath, join
-from os import getcwd
+from os.path import basename, abspath, join, isdir
+from os import getcwd, listdir
 from datetime import datetime
 from sys import argv, path
 from openpyxl import Workbook
@@ -77,12 +77,11 @@ def parse_file(file, group_by_id):
         group_index.append(temp)
 
     file_name = basename(file).split('.')[0]
-    lotno = data[5][1]
     chip_count = first_register_row_num - chipno_row_num - row_offset
-    return file_name, group_index, lotno, chip_count
+    return file_name, group_index, chip_count
 
 
-def save_data(analysis_folder, site_data):
+def save_data(analysis_folder, site_data, softbin_data):
     """
     写数据
     :param analysis_folder: 保存分析文件夹路径
@@ -100,35 +99,61 @@ def save_data(analysis_folder, site_data):
     irow = 1
     total_count = 0
     for i in range(len(site_data)):
-        total_count += site_data[i][3]
-    sitesoftbin_sheet.cell(row=1, column=1).value = total_count
-    for i in range(len(site_data[0][1])):
-        sitesoftbin_sheet.cell(row=irow, column=2 + i).value = 'Site' + str(site_data[0][1][i][0])
+        total_count += site_data[i][1][0][2]
+    sitesoftbin_sheet.cell(row=irow, column=1).value = total_count
+    for i in range(len(site_data[0][1][0][1])):
+        sitesoftbin_sheet.cell(row=irow, column=2 + i).value = 'Site' + str(site_data[0][1][0][1][i][0])
         sitesoftbin_sheet.cell(row=irow, column=2 + i).fill = PatternFill(fill_type='solid', fgColor=YELLOW)
-    sitesoftbin_sheet.merge_cells(start_row=irow, end_row=irow, start_column=3 + len(site_data[0][1]),
-                                  end_column=4 + len(site_data[0][1]))
-    sitesoftbin_sheet.cell(row=irow, column=3 + len(site_data[0][1])).value = 'Summary'
-    sitesoftbin_sheet.cell(row=irow, column=3 + len(site_data[0][1])).fill = PatternFill(fill_type='solid',
-                                                                                         fgColor='FFA500')
+    sitesoftbin_sheet.merge_cells(start_row=irow, end_row=irow, start_column=3 + len(site_data[0][1][0][1]),
+                                  end_column=4 + len(site_data[0][1][0][1]))
+    sitesoftbin_sheet.cell(row=irow, column=3 + len(site_data[0][1][0][1])).value = 'Summary'
+    sitesoftbin_sheet.cell(row=irow, column=3 + len(site_data[0][1][0][1])).fill = PatternFill(fill_type='solid',
+                                                                                               fgColor='FFA500')
     irow += 1
+
+    lotno_site_swbin_count = []
+
+    for i in range(len(site_data)):
+        lotno_temp_list = [site_data[i][0]]
+        for x in range(10):
+            file_temp_list = [bin_list[x]]
+            site_count_list = [[0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [5, 0], [6, 0], [7, 0], [8, 0], [9, 0], [10, 0],
+                               [11, 0], [12, 0], [13, 0], [14, 0], [15, 0]]
+            for m in range(len(site_data[i][1])):
+                for n in range(len(site_data[i][1][m][1])):
+                    for j in range(len(site_data[i][1][m][1][n][1])):
+                        if site_data[i][1][m][1][n][1][j][0] == str(bin_list[x]):
+                            site_count_list[n][1] += len(site_data[i][1][m][1][n][1][j][1])
+                            break
+            file_temp_list.append(site_count_list)
+            lotno_temp_list.append(file_temp_list)
+        for x in range(10, len(bin_list)):
+            file_temp_list = [bin_list[x]]
+            site_count_list = [[0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [5, 0], [6, 0], [7, 0], [8, 0], [9, 0], [10, 0],
+                               [11, 0], [12, 0], [13, 0], [14, 0], [15, 0]]
+            for n in range(len(site_data[i][1][-1][1])):
+                for j in range(len(site_data[i][1][-1][1][n][1])):
+                    if site_data[i][1][-1][1][n][1][j][0] == str(bin_list[x]):
+                        site_count_list[n][1] += len(site_data[i][1][-1][1][n][1][j][1])
+                        break
+            file_temp_list.append(site_count_list)
+            lotno_temp_list.append(file_temp_list)
+        lotno_site_swbin_count.append(lotno_temp_list)
 
     site_swbin_count = []
     for x in range(len(bin_list)):
         temp_total_count = 0
         temp_list = [0] * 16
         temp_swbin_count = []
-        for y in range(len(site_data)):
-            for i in range(len(site_data[y][1])):
-                for j in range(len(site_data[y][1][i][1])):
-                    if bin_list[x] == int(site_data[y][1][i][1][j][0]):
-                        temp_list[i] += len(site_data[y][1][i][1][j][1])
-                        break
-                if y == len(site_data) - 1:
+        for i in range(len(temp_list)):
+            for y in range(len(lotno_site_swbin_count)):
+                temp_list[i] += lotno_site_swbin_count[y][x + 1][1][i][1]
+                if y == len(lotno_site_swbin_count) - 1:
                     temp_swbin_count.append([temp_list[i], WHITE])
                     temp_total_count += temp_list[i]
-            if y == len(site_data) - 1:
+            if i == len(temp_list) - 1:
                 temp_swbin_count.append([temp_total_count, 'FFA500'])
-                site_swbin_count.append(temp_swbin_count)
+        site_swbin_count.append(temp_swbin_count)
     site_fail_total_list = [0] * 16
     for i in range(10, len(site_swbin_count)):
         min_value = site_swbin_count[i][0][0]
@@ -187,7 +212,7 @@ def save_data(analysis_folder, site_data):
                 sitesoftbin_sheet.cell(row=irow, column=4 + y).fill = PatternFill(fill_type='solid',
                                                                                   fgColor=site_swbin_count[x][y][1])
         irow += 1
-    irow+=1
+    irow += 1
     sitesoftbin_sheet.merge_cells(start_row=irow, end_row=irow + 1, start_column=1, end_column=1)
     sitesoftbin_sheet.cell(row=irow, column=1).value = 'FailPercent'
     sitesoftbin_sheet.cell(row=irow, column=1).font = Font(bold=True)
@@ -206,6 +231,83 @@ def save_data(analysis_folder, site_data):
                 cell.font = Font(bold=True)
                 cell.alignment = alignment
 
+    softbinlotno_sheet = wb.create_sheet('LotNo-SWBin')
+    softbinlotno_sheet.freeze_panes = 'B2'
+    irow = 1
+    softbinlotno_sheet.cell(row=irow, column=1).value = total_count
+    for i in range(len(softbin_data)):
+        softbinlotno_sheet.merge_cells(start_row=irow, end_row=irow, start_column=2 + 2 * i, end_column=3 + 2 * i)
+        softbinlotno_sheet.cell(row=irow, column=2 + 2 * i).value = softbin_data[i][0]
+        softbinlotno_sheet.cell(row=irow, column=2 + 2 * i).fill = PatternFill(fill_type='solid', fgColor=YELLOW)
+
+    irow += 1
+
+    lotno_swbin_count = []
+
+    for i in range(len(softbin_data)):
+        lotno_temp_list = []
+        for x in range(10):
+            file_temp_list = [bin_list[x], 0]
+            for m in range(len(softbin_data[i][1])):
+                for n in range(len(softbin_data[i][1][m][1])):
+                    if softbin_data[i][1][m][1][n][0] == bin_list[x]:
+                        file_temp_list[1] += len(softbin_data[i][1][m][1][n][1])
+                        break
+            lotno_temp_list.append(file_temp_list)
+        for x in range(10, len(bin_list)):
+            file_temp_list = [bin_list[x], 0]
+            for n in range(len(softbin_data[i][1][-1][1])):
+                if softbin_data[i][1][-1][1][n][0] == bin_list[x]:
+                    file_temp_list[1] += len(softbin_data[i][1][-1][1][n][1])
+                    break
+            lotno_temp_list.append(file_temp_list)
+        lotno_swbin_count.append(lotno_temp_list)
+
+    for x in range(len(bin_list)):
+        softbinlotno_sheet.cell(row=irow, column=1).value = 'SWBin' + str(bin_list[x])
+        if x <= 1:
+            softbinlotno_sheet.cell(row=irow, column=1).fill = PatternFill(fill_type='solid', fgColor='ADD8E6')
+        elif 2 <= x <= 9:
+            softbinlotno_sheet.cell(row=irow, column=1).fill = PatternFill(fill_type='solid', fgColor='00FF7F')
+        elif 10 <= x <= 22:
+            softbinlotno_sheet.cell(row=irow, column=1).fill = PatternFill(fill_type='solid', fgColor='EEE8AA')
+        elif 23 <= x <= 32:
+            softbinlotno_sheet.cell(row=irow, column=1).fill = PatternFill(fill_type='solid', fgColor='FFA500')
+        elif 33 <= x <= 36:
+            softbinlotno_sheet.cell(row=irow, column=1).fill = PatternFill(fill_type='solid', fgColor='CD853F')
+        else:
+            softbinlotno_sheet.cell(row=irow, column=1).fill = PatternFill(fill_type='solid', fgColor='FF6347')
+        for i in range(len(lotno_swbin_count)):
+            softbinlotno_sheet.cell(row=irow, column=2 + 2 * i).value = lotno_swbin_count[i][x][1]
+            softbinlotno_sheet.cell(row=irow, column=3 + 2 * i).value = '{:.2%}'.format(
+                lotno_swbin_count[i][x][1] / softbin_data[i][1][0][2])
+            if x <= 1:
+                softbinlotno_sheet.cell(row=irow, column=3 + 2 * i).fill = PatternFill(fill_type='solid',
+                                                                                       fgColor='ADD8E6')
+            elif 2 <= x <= 9:
+                softbinlotno_sheet.cell(row=irow, column=3 + 2 * i).fill = PatternFill(fill_type='solid',
+                                                                                       fgColor='00FF7F')
+            elif 10 <= x <= 22:
+                softbinlotno_sheet.cell(row=irow, column=3 + 2 * i).fill = PatternFill(fill_type='solid',
+                                                                                       fgColor='EEE8AA')
+            elif 23 <= x <= 32:
+                softbinlotno_sheet.cell(row=irow, column=3 + 2 * i).fill = PatternFill(fill_type='solid',
+                                                                                       fgColor='FFA500')
+            elif 33 <= x <= 36:
+                softbinlotno_sheet.cell(row=irow, column=3 + 2 * i).fill = PatternFill(fill_type='solid',
+                                                                                       fgColor='CD853F')
+            else:
+                softbinlotno_sheet.cell(row=irow, column=3 + 2 * i).fill = PatternFill(fill_type='solid',
+                                                                                       fgColor='FF6347')
+        irow += 1
+
+    for row in softbinlotno_sheet.rows:
+        for cell in row:
+            cell.border = border
+            if cell.row == 1:
+                cell.font = Font(bold=True)
+                cell.alignment = alignment
+
     for sheet_name in wb.sheetnames:
         if sheet_name == 'Sheet':
             del wb[sheet_name]
@@ -216,22 +318,23 @@ def save_data(analysis_folder, site_data):
 
 
 def main():
-    # Sourcefile folder path
-    if argv.count('-s') == 0 and argv.count('-f') == 0:
-        print(
-            "Error：Sourcefile folder path 或 single file path为必填项，格式：“-s D:\sourcefile” 或 “-f D:\sourcefile\ST5-440mm-out1.csv”。")
-        exit()
-
-    if argv.count('-s') != 0:
-        sourcefile_folder = argv[argv.index('-s') + 1]
-        file_list = Common.get_filelist(sourcefile_folder, '.csv')
+    sourcefile_folder = 'D:\PythonStudy\in_use\Datalog\\F28'
+    names = listdir(sourcefile_folder)
+    date_folder = []
+    for name in names:
+        if name != 'Analysis' and isdir(join(sourcefile_folder, name)):
+            date_folder.append(join(sourcefile_folder, name))
+    lotno_folder = []
+    for folder in date_folder:
+        names = listdir(folder)
+        for name in names:
+            if isdir(join(folder, name)):
+                lotno_folder.append(join(folder, name))
+    file_list = []
+    for folder in lotno_folder:
+        file_list.append(Common.get_filelist(folder, '.csv'))
         if not file_list:
             exit()
-
-    if argv.count('-f') != 0:
-        single_file = argv[argv.index('-f') + 1]
-        sourcefile_folder = dirname(single_file)
-        file_list = [single_file]
 
     # Analysis folder path
     if argv.count('-a') == 0:
@@ -242,12 +345,20 @@ def main():
     Common.mkdir(analysis_folder)
 
     site_data = []
-    for file in file_list:
-        # parse file
-        site_data.append(parse_file(file, 1))
+    softbin_data = []
+    for i in range(len(file_list)):
+        temp_site_data = []
+        temp_softbin_data = []
+        for file in file_list[i]:
+            # parse file
+            temp_site_data.append(parse_file(file, 1))
+            temp_softbin_data.append(parse_file(file, 2))
+        lotno = basename(lotno_folder[i])
+        site_data.append([lotno, temp_site_data])
+        softbin_data.append([lotno, temp_softbin_data])
 
     # save data
-    save_data(analysis_folder, site_data)
+    save_data(analysis_folder, site_data, softbin_data)
 
 
 if __name__ == '__main__':

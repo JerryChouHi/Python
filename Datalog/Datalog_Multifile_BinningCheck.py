@@ -386,12 +386,22 @@ def main():
 
     if argv.count('-s') != 0:
         sourcefile_folder = argv[argv.index('-s') + 1]
+        for i in range(argv.index('-s') + 2, len(argv)):
+            if not argv[i].startswith('-'):
+                sourcefile_folder += (' ' + argv[i])
+            else:
+                break
         file_list = Common.get_filelist(sourcefile_folder, '.csv')
         if not file_list:
             exit()
 
     if argv.count('-f') != 0:
         single_file = argv[argv.index('-f') + 1]
+        for i in range(argv.index('-s') + 2, len(argv)):
+            if not argv[i].startswith('-'):
+                single_file += (' ' + argv[i])
+            else:
+                break
         sourcefile_folder = dirname(single_file)
         file_list = [single_file]
 

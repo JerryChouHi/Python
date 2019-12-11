@@ -126,7 +126,6 @@ def save_data(analysis_folder, site_data, softbin_data, hardbin_data):
         else:
             temp_list.append('RT' + str(i))
         test_count = 0
-        pass_count = len(hardbin_data[i][1][0][1]) + len(hardbin_data[i][1][1][1])
         for hw_bin in bin_list:
             for j in range(len(hardbin_data[i][1])):
                 if hw_bin[0] == hardbin_data[i][1][j][0]:
@@ -137,7 +136,7 @@ def save_data(analysis_folder, site_data, softbin_data, hardbin_data):
             test_count += bin_count
             temp_list.append(bin_count)
         temp_list.append(test_count)
-        pass_percent = '{:.2%}'.format(pass_count / test_count)
+        pass_percent = '{:.2%}'.format((temp_list[1] + temp_list[2]) / test_count)
         temp_list.append(pass_percent)
         summary_data.append(temp_list)
     irow = 1
@@ -156,10 +155,15 @@ def save_data(analysis_folder, site_data, softbin_data, hardbin_data):
             hardbin_sheet.cell(row=irow, column=(j + 1)).value = summary_data[i][j]
             if j == 0:
                 hardbin_sheet.cell(row=irow, column=(j + 1)).fill = PatternFill(fill_type='solid', fgColor=GREEN)
-            if 1 <= j < len(summary_data[i]) - 2:
+            elif 1 <= j < len(summary_data[i]) - 2:
                 hardbin_sheet.cell(row=irow + 1, column=(j + 1)).value = '{:.2%}'.format(
                     summary_data[i][j] / summary_data[i][-2])
                 hardbin_sheet.cell(row=irow + 1, column=(j + 1)).fill = PatternFill(fill_type='solid', fgColor=GREEN)
+            elif j == len(summary_data[i]) - 2 and i > 0:
+                compare_count = summary_data[i - 1][3] + summary_data[i - 1][4] + summary_data[i - 1][5] + \
+                                summary_data[i - 1][6]
+                if summary_data[i][j] != compare_count:
+                    hardbin_sheet.cell(row=irow, column=(j + 1)).fill = PatternFill(fill_type='solid', fgColor=RED)
         irow += 2
     hardbin_sheet.cell(row=irow, column=1).value = 'Summary'
     hardbin_sheet.cell(row=irow, column=1).fill = PatternFill(fill_type='solid', fgColor=GREEN)
@@ -499,12 +503,22 @@ def main():
 
     if argv.count('-s') != 0:
         sourcefile_folder = argv[argv.index('-s') + 1]
+        for i in range(argv.index('-s') + 2, len(argv)):
+            if not argv[i].startswith('-'):
+                sourcefile_folder += (' ' + argv[i])
+            else:
+                break
         file_list = Common.get_filelist(sourcefile_folder, '.csv')
         if not file_list:
             exit()
 
     if argv.count('-f') != 0:
         single_file = argv[argv.index('-f') + 1]
+        for i in range(argv.index('-f') + 2, len(argv)):
+            if not argv[i].startswith('-'):
+                single_file += (' ' + argv[i])
+            else:
+                break
         sourcefile_folder = dirname(single_file)
         file_list = [single_file]
 
@@ -519,10 +533,8 @@ def main():
     hardbin_data = []
     softbin_data = []
     site_data = []
-    # testitem_data = []
     for file in file_list:
         # parse file
-        # testitem_data.append(parse_file(file, -1))
         site_data.append(parse_file(file, 1))
         softbin_data.append(parse_file(file, 2))
         hardbin_data.append(parse_file(file, 3))
