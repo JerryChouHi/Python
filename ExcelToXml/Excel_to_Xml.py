@@ -167,16 +167,14 @@ def write_block_file(data, file):
             file.write("				<Method>" + data[0][i][j][3] + "</Method>\n")
             file.write("				<ForceValue>" + data[0][i][j][4] + "</ForceValue>\n")
             file.write("				<Range>" + data[0][i][j][5] + "</Range>\n")
-            file.write("				<HiLimit>" + data[0][i][j][6] + "</HiLimit>\n")
-            file.write("				<LoLimit>" + data[0][i][j][7] + "</LoLimit>\n")
+            if data[0][i][j][6]:
+                file.write("				<HiClamp>" + data[0][i][j][6] + "</HiClamp>\n")
+            if data[0][i][j][7]:
+                file.write("				<LoClamp>" + data[0][i][j][7] + "</LoClamp>\n")
             if data[0][i][j][8]:
-                file.write("				<HiClamp>" + data[0][i][j][8] + "</HiClamp>\n")
+                file.write("				<SampleNum>" + data[0][i][j][8] + "</SampleNum>\n")
             if data[0][i][j][9]:
-                file.write("				<LoClamp>" + data[0][i][j][9] + "</LoClamp>\n")
-            if data[0][i][j][10]:
-                file.write("				<SampleNum>" + data[0][i][j][10] + "</SampleNum>\n")
-            if data[0][i][j][11]:
-                file.write("				<Delay>" + data[0][i][j][11] + "</Delay>\n")
+                file.write("				<Delay>" + data[0][i][j][9] + "</Delay>\n")
             file.write("			</MeasureGroup>\n")
         file.write("		</DCMeasure>\n")
     file.write("	</DCMeasures>\n")
