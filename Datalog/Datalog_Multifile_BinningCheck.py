@@ -343,11 +343,20 @@ def parse_file(file):
                                 if row_softbin_index > i - 1:
                                     row_softbin_index = i - 1
             except:
-                if data[binning_row_num][col_num] == 'iic_test' and data[row_num][col_num] == '0':
+                try:
+                    value = data[row_num][col_num]
+                    float(value)
+                    if data[binning_row_num][col_num] == 'iic_test' and value == '0':
+                        for i in range(len(bin_definition)):
+                            if bin_definition[i][0] == 'iic_test':
+                                if row_softbin_index > i:
+                                    row_softbin_index = i
+                except:
                     for i in range(len(bin_definition)):
-                        if bin_definition[i][0] == 'iic_test':
-                            if row_softbin_index > i:
+                        if bin_definition[i][0] == data[binning_row_num][col_num].strip():
+                            if row_softbin_index > i - 1:
                                 row_softbin_index = i
+
         if bin_definition[row_softbin_index][1] != int(data[row_num][2]):
             error_message.append("              ChipNo " + data[row_num][0] + " 的SB_BIN错误：根据优先级计算出来的swbin为 " + str(
                 bin_definition[row_softbin_index][1]) + " ,CSV中为 " + data[row_num][2] + "\n")
