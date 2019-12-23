@@ -24,9 +24,10 @@ row_offset = 5
 col_offset = 4
 
 
-def parse_file(file, group_by_id):
+def parse_file(file, group_by_id, project_id):
     """
     解析文件
+    :param project_id: 项目id
     :param file: datalog csv文件
     :param group_by_id: 列序号（1：Site，2：SW_BIN，3：hW_BIN）
     :return: 
@@ -37,21 +38,25 @@ def parse_file(file, group_by_id):
         csv_reader = reader(f)
         for row in csv_reader:
             data.append(row)
-    search_full_error = Common.search_string(data, 'Full_Error')
-    if not search_full_error:
+    if project_id == 0:
+        search_last_test_item = Common.search_string(data, 'Full_Error')
+    elif project_id == 1:
+        search_last_test_item = Common.search_string(data, 'ChipVer')
+    if not search_last_test_item:
         exit()
     else:
-        full_error_row_num = search_full_error[0]
-        full_error_col_num = search_full_error[1]
+        last_test_item_row_num = search_last_test_item[0]
+        last_test_item_col_num = search_last_test_item[1]
+
     first_register_row_num = len(data) - 1
-    for i in range(full_error_row_num + row_offset, len(data)):
+    for i in range(last_test_item_row_num + row_offset, len(data)):
         try:
             int(data[i][0])
         except:
             first_register_row_num = i
             break
     group_list = []
-    for i in range(full_error_row_num + row_offset, first_register_row_num):
+    for i in range(last_test_item_row_num + row_offset, first_register_row_num):
         group_list.append(int(data[i][group_by_id]))
     format_group_list = list(set(group_list))
     format_group_list.sort()
@@ -63,7 +68,7 @@ def parse_file(file, group_by_id):
         if group_by_id == 1:
             temp_list = []
             for j in data_list:
-                temp_list.append(data[full_error_row_num + row_offset + j][2])
+                temp_list.append(data[last_test_item_row_num + row_offset + j][2])
             format_temp_list = list(set(temp_list))
             temp_index = []
             for m in format_temp_list:
@@ -75,14 +80,14 @@ def parse_file(file, group_by_id):
         else:
             temp.append(data_list)
         testitem_fail_count = []
-        for col_num in range(col_offset, full_error_col_num + 1):
-            temp_list = [data[full_error_row_num][col_num], 0]
-            high_limit = data[full_error_row_num + 2][col_num]
+        for col_num in range(col_offset, last_test_item_col_num + 1):
+            temp_list = [data[last_test_item_row_num][col_num], 0]
+            high_limit = data[last_test_item_row_num + 2][col_num]
             if len(high_limit.strip()) == 0 or high_limit == 'N':
                 continue
-            low_limit = data[full_error_row_num + 3][col_num]
+            low_limit = data[last_test_item_row_num + 3][col_num]
             for j in data_list:
-                value = data[full_error_row_num + row_offset + j][col_num]
+                value = data[last_test_item_row_num + row_offset + j][col_num]
                 if len(value.strip()) == 0:
                     temp_list[1] += 1
                 elif float(value) < float(low_limit) or float(value) > float(high_limit):
@@ -90,12 +95,12 @@ def parse_file(file, group_by_id):
             testitem_fail_count.append(temp_list)
         temp.append(testitem_fail_count)
         group_index.append(temp)
-    chip_count = first_register_row_num - full_error_row_num - row_offset
+    chip_count = first_register_row_num - last_test_item_row_num - row_offset
     lotno = data[5][1]
     return file_name, group_index, chip_count, lotno
 
 
-def save_data(analysis_folder, site_data, softbin_data, hardbin_data):
+def save_data(analysis_folder, site_data, softbin_data, hardbin_data, project_id):
     """
     写数据
     :param analysis_folder: 保存分析文件夹路径
@@ -108,14 +113,32 @@ def save_data(analysis_folder, site_data, softbin_data, hardbin_data):
     test_file_name = analysis_folder + '/Summary_Analysis_' + date + '.xlsx'
     wb = Workbook()
 
-    bin_list = [
-        [1, [1, 2]],
-        [2, [41, 42, 43, 44, 45, 53, 54, 55]],
-        [4, [23, 24, 25, 29, 30, 33, 34, 36, 39, 40, 70, 71, 72]],
-        [5, [5, 6, 7, 8, 9, 12, 96, 97, 98, 99]],
-        [6, [13, 14, 15, 35]],
-        [8, [26, 27, 31, 32]]  # 专门分出来测试良率
+    hwbin_to_swbin_list = [
+        [
+            [1, [1, 2]],
+            [2, [41, 42, 43, 44, 45, 53, 54, 55]],
+            [4, [23, 24, 25, 29, 30, 33, 34, 36, 39, 40, 70, 71, 72]],
+            [5, [5, 6, 7, 8, 9, 12, 96, 97, 98, 99]],
+            [6, [13, 14, 15, 35]],
+            [8, [26, 27, 31, 32]]  # 专门分出来测试良率
+        ],
+        [
+            [3, [1, 2, 3]],
+            [1, [63, 64, 65, 89, 90, 94]],
+            [2, [53, 54, 73, 74]],
+            [4, [23, 24, 25, 26, 27, 31, 32, 36, 56, 57, 58, 75]],
+            [5, [5, 6, 7, 8, 9, 12, 93, 96, 98, 99]],
+            [6, [13, 14, 15, 46, 47, 48, 51, 60]],
+            [8, [29, 30, 33, 34, 36, 39, 40]]
+        ]
     ]
+    swbin_list = []
+    for i in range(hwbin_to_swbin_list):
+        temp_list = []
+        for j in range(hwbin_to_swbin_list[i]):
+            temp_list.append(hwbin_to_swbin_list[i][j][1])
+        swbin_list.append(temp_list)
+
     hardbin_sheet = wb.create_sheet('HWBin')
     hardbin_sheet.freeze_panes = 'B2'
     summary_data = []
@@ -126,7 +149,7 @@ def save_data(analysis_folder, site_data, softbin_data, hardbin_data):
         else:
             temp_list.append('RT' + str(i))
         test_count = 0
-        for hw_bin in bin_list:
+        for hw_bin in hwbin_to_swbin_list[project_id]:
             for j in range(len(hardbin_data[i][1])):
                 if hw_bin[0] == hardbin_data[i][1][j][0]:
                     bin_count = len(hardbin_data[i][1][j][1])
@@ -143,8 +166,8 @@ def save_data(analysis_folder, site_data, softbin_data, hardbin_data):
     icol = 1
     hardbin_sheet.cell(row=irow, column=icol).value = softbin_data[0][3]
     icol += 1
-    for i in range(len(bin_list)):
-        hardbin_sheet.cell(row=irow, column=icol).value = 'HWBin' + str(bin_list[i][0])
+    for i in range(len(hwbin_to_swbin_list[project_id])):
+        hardbin_sheet.cell(row=irow, column=icol).value = 'HWBin' + str(hwbin_to_swbin_list[project_id][i][0])
         icol += 1
     hardbin_sheet.cell(row=irow, column=icol).value = 'TestCount'
     icol += 1
@@ -207,12 +230,12 @@ def save_data(analysis_folder, site_data, softbin_data, hardbin_data):
     irow += 1
 
     swbin_sort_by_FT_list = []
-    for i in range(len(bin_list)):
+    for i in range(len(hwbin_to_swbin_list[project_id])):
         temp_list = []
-        for j in range(len(bin_list[i][1])):
+        for j in range(len(hwbin_to_swbin_list[project_id][i][1])):
             find_softbin = False
             for x in range(len(softbin_data[0][1])):
-                if bin_list[i][1][j] == softbin_data[0][1][x][0]:
+                if hwbin_to_swbin_list[project_id][i][1][j] == softbin_data[0][1][x][0]:
                     find_softbin = True
                     len1 = len(softbin_data[0][1][x][1])
                     temp_list.append((j, len1))
@@ -222,9 +245,9 @@ def save_data(analysis_folder, site_data, softbin_data, hardbin_data):
             for n in range(m + 1, len(temp_list)):
                 if temp_list[m][1] < temp_list[n][1]:
                     temp_list[m], temp_list[n] = temp_list[n], temp_list[m]
-        temp_count_list = [bin_list[i][0]]
+        temp_count_list = [hwbin_to_swbin_list[project_id][i][0]]
         for y in range(len(temp_list)):
-            temp_count_list.append(bin_list[i][1][temp_list[y][0]])
+            temp_count_list.append(hwbin_to_swbin_list[project_id][i][1][temp_list[y][0]])
         swbin_sort_by_FT_list.append(temp_count_list)
 
     summary_soft_count = []
@@ -278,8 +301,8 @@ def save_data(analysis_folder, site_data, softbin_data, hardbin_data):
                 cell.font = Font(bold=True)
                 cell.alignment = alignment
 
-    bin_list = [1, 2, 41, 42, 43, 44, 45, 53, 54, 55, 23, 24, 25, 29, 30, 33, 34, 36, 39, 40, 70, 71,
-                72, 5, 6, 7, 8, 9, 12, 96, 97, 98, 99, 13, 14, 15, 35, 26, 27, 31, 32]
+    # bin_list = [1, 2, 41, 42, 43, 44, 45, 53, 54, 55, 23, 24, 25, 29, 30, 33, 34, 36, 39, 40, 70, 71,
+    #             72, 5, 6, 7, 8, 9, 12, 96, 97, 98, 99, 13, 14, 15, 35, 26, 27, 31, 32]
     sitesoftbin_sheet = wb.create_sheet('Site-SWBin')
     sitesoftbin_sheet.freeze_panes = 'B2'
     irow = 1
@@ -296,13 +319,13 @@ def save_data(analysis_folder, site_data, softbin_data, hardbin_data):
     irow += 1
 
     site_swbin_count = []
-    for x in range(len(bin_list)):
+    for x in range(len(swbin_list[project_id])):
         temp_list = []
         temp_total_count = 0
         for i in range(len(site_data[0][1])):
             find_softbin = False
             for j in range(len(site_data[0][1][i][1])):
-                if bin_list[x] == int(site_data[0][1][i][1][j][0]):
+                if swbin_list[project_id][x] == int(site_data[0][1][i][1][j][0]):
                     temp_swbin_count = len(site_data[0][1][i][1][j][1])
                     find_softbin = True
             if not find_softbin:
@@ -342,7 +365,7 @@ def save_data(analysis_folder, site_data, softbin_data, hardbin_data):
             for y in range(len(max_index)):
                 site_swbin_count[i][max_index[y]][1] = RED
 
-    for x in range(len(bin_list)):
+    for x in range(len(swbin_list[project_id])):
         sitesoftbin_sheet.cell(row=irow, column=1).value = 'SWBin' + str(bin_list[x])
         if x <= 1:
             sitesoftbin_sheet.cell(row=irow, column=1).fill = PatternFill(fill_type='solid', fgColor='ADD8E6')
@@ -530,14 +553,20 @@ def main():
 
     Common.mkdir(analysis_folder)
 
+    # 项目 0:F28,1:JX828
+    if argv.count('-p') != 0:
+        project_id = int(argv[argv.index('-p') + 1])
+    else:
+        project_id = 0  # 默认F28项目
+
     hardbin_data = []
     softbin_data = []
     site_data = []
     for file in file_list:
         # parse file
-        site_data.append(parse_file(file, 1))
-        softbin_data.append(parse_file(file, 2))
-        hardbin_data.append(parse_file(file, 3))
+        site_data.append(parse_file(file, 1, project_id))
+        softbin_data.append(parse_file(file, 2, project_id))
+        hardbin_data.append(parse_file(file, 3, project_id))
 
     for data in softbin_data:
         Common.sort_data(data[1])
