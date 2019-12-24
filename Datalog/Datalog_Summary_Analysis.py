@@ -81,18 +81,31 @@ def parse_file(file, group_by_id, project_id):
             temp.append(data_list)
         testitem_fail_count = []
         for col_num in range(col_offset, last_test_item_col_num + 1):
+            test_item_name = data[last_test_item_row_num][col_num].strip()
+            if test_item_name == 'AVDD_O/S':  # JX828测试项特殊处理
+                high_limit_data = -0.2
+                low_limit_data = -0.6
+            else:
+                high_limit_data = data[last_test_item_row_num + 2][col_num]
+                low_limit_data = data[last_test_item_row_num + 3][col_num]
             temp_list = [data[last_test_item_row_num][col_num], 0]
-            high_limit = data[last_test_item_row_num + 2][col_num]
-            if len(high_limit.strip()) == 0 or high_limit == 'N':
+            try:
+                high_limit = float(high_limit_data)
+                low_limit = float(low_limit_data)
+                for j in data_list:
+                    try:
+                        value = data[last_test_item_row_num + row_offset + j][col_num]
+                        value_convert = float(value)
+                        if value_convert == int(value_convert):
+                            value_convert = int(value_convert)
+                        if value_convert < low_limit or high_limit < value_convert:
+                            temp_list[1] += 1
+                    except:
+                        temp_list[1] += 1
+            except:
                 continue
-            low_limit = data[last_test_item_row_num + 3][col_num]
-            for j in data_list:
-                value = data[last_test_item_row_num + row_offset + j][col_num]
-                if len(value.strip()) == 0:
-                    temp_list[1] += 1
-                elif float(value) < float(low_limit) or float(value) > float(high_limit):
-                    temp_list[1] += 1
             testitem_fail_count.append(temp_list)
+
         temp.append(testitem_fail_count)
         group_index.append(temp)
     chip_count = first_register_row_num - last_test_item_row_num - row_offset
@@ -103,6 +116,7 @@ def parse_file(file, group_by_id, project_id):
 def save_data(analysis_folder, site_data, softbin_data, hardbin_data, project_id):
     """
     写数据
+    :param project_id: 项目id
     :param analysis_folder: 保存分析文件夹路径
     :param site_data: site数据
     :param softbin_data: softbin数据
@@ -133,10 +147,11 @@ def save_data(analysis_folder, site_data, softbin_data, hardbin_data, project_id
         ]
     ]
     swbin_list = []
-    for i in range(hwbin_to_swbin_list):
+    for i in range(len(hwbin_to_swbin_list)):
         temp_list = []
-        for j in range(hwbin_to_swbin_list[i]):
-            temp_list.append(hwbin_to_swbin_list[i][j][1])
+        for j in range(len(hwbin_to_swbin_list[i])):
+            for x in range(len(hwbin_to_swbin_list[i][j][1])):
+                temp_list.append(hwbin_to_swbin_list[i][j][1][x])
         swbin_list.append(temp_list)
 
     hardbin_sheet = wb.create_sheet('HWBin')
@@ -301,8 +316,6 @@ def save_data(analysis_folder, site_data, softbin_data, hardbin_data, project_id
                 cell.font = Font(bold=True)
                 cell.alignment = alignment
 
-    # bin_list = [1, 2, 41, 42, 43, 44, 45, 53, 54, 55, 23, 24, 25, 29, 30, 33, 34, 36, 39, 40, 70, 71,
-    #             72, 5, 6, 7, 8, 9, 12, 96, 97, 98, 99, 13, 14, 15, 35, 26, 27, 31, 32]
     sitesoftbin_sheet = wb.create_sheet('Site-SWBin')
     sitesoftbin_sheet.freeze_panes = 'B2'
     irow = 1
@@ -366,7 +379,7 @@ def save_data(analysis_folder, site_data, softbin_data, hardbin_data, project_id
                 site_swbin_count[i][max_index[y]][1] = RED
 
     for x in range(len(swbin_list[project_id])):
-        sitesoftbin_sheet.cell(row=irow, column=1).value = 'SWBin' + str(bin_list[x])
+        sitesoftbin_sheet.cell(row=irow, column=1).value = 'SWBin' + str(swbin_list[project_id][x])
         if x <= 1:
             sitesoftbin_sheet.cell(row=irow, column=1).fill = PatternFill(fill_type='solid', fgColor='ADD8E6')
         elif 2 <= x <= 9:
@@ -447,8 +460,8 @@ def save_data(analysis_folder, site_data, softbin_data, hardbin_data, project_id
     for i in range(len(softbin_data[0][1][0][2])):
         swbin_testitem_sheet.cell(row=irow, column=i + 2).value = softbin_data[0][1][0][2][i][0]
     irow += 1
-    for x in range(len(bin_list)):
-        swbin_testitem_sheet.cell(row=irow, column=1).value = 'SWBin' + str(bin_list[x])
+    for x in range(len(swbin_list[project_id])):
+        swbin_testitem_sheet.cell(row=irow, column=1).value = 'SWBin' + str(swbin_list[project_id][x])
         if x <= 1:
             swbin_testitem_sheet.cell(row=irow, column=1).fill = PatternFill(fill_type='solid', fgColor='ADD8E6')
         elif 2 <= x <= 9:
@@ -462,7 +475,7 @@ def save_data(analysis_folder, site_data, softbin_data, hardbin_data, project_id
         else:
             swbin_testitem_sheet.cell(row=irow, column=1).fill = PatternFill(fill_type='solid', fgColor='FF6347')
         for i in range(len(softbin_data[0][1])):
-            if bin_list[x] == softbin_data[0][1][i][0]:
+            if swbin_list[project_id][x] == softbin_data[0][1][i][0]:
                 for j in range(len(softbin_data[0][1][i][2])):
                     swbin_testitem_sheet.cell(row=irow, column=2 + j).value = softbin_data[0][1][i][2][j][1]
                     swbin_testitem_sheet.cell(row=irow + 1, column=2 + j).value = '{:.2%}'.format(
@@ -572,7 +585,7 @@ def main():
         Common.sort_data(data[1])
 
     # save data
-    save_data(analysis_folder, site_data, softbin_data, hardbin_data)
+    save_data(analysis_folder, site_data, softbin_data, hardbin_data, project_id)
 
 
 if __name__ == '__main__':
