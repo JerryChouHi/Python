@@ -146,13 +146,7 @@ def save_data(analysis_folder, site_data, softbin_data, hardbin_data, project_id
             [8, [29, 30, 33, 34, 36, 39, 40]]
         ]
     ]
-    swbin_list = []
-    for i in range(len(hwbin_to_swbin_list)):
-        temp_list = []
-        for j in range(len(hwbin_to_swbin_list[i])):
-            for x in range(len(hwbin_to_swbin_list[i][j][1])):
-                temp_list.append(hwbin_to_swbin_list[i][j][1][x])
-        swbin_list.append(temp_list)
+    color_list = ['99FFFF', '33FF00', 'FFFFCC', 'FFFF33', 'FF9900', '9900CC', 'FF0000']
 
     hardbin_sheet = wb.create_sheet('HWBin')
     hardbin_sheet.freeze_panes = 'B2'
@@ -332,24 +326,29 @@ def save_data(analysis_folder, site_data, softbin_data, hardbin_data, project_id
     irow += 1
 
     site_swbin_count = []
-    for x in range(len(swbin_list[project_id])):
-        temp_list = []
-        temp_total_count = 0
-        for i in range(len(site_data[0][1])):
-            find_softbin = False
-            for j in range(len(site_data[0][1][i][1])):
-                if swbin_list[project_id][x] == int(site_data[0][1][i][1][j][0]):
-                    temp_swbin_count = len(site_data[0][1][i][1][j][1])
-                    find_softbin = True
-            if not find_softbin:
-                temp_swbin_count = 0
-            temp_total_count += temp_swbin_count
-            temp_list.append([temp_swbin_count, WHITE])
-            if i == len(site_data[0][1]) - 1:
-                temp_list.append([temp_total_count, 'FFA500'])
-        site_swbin_count.append(temp_list)
+    for x in range(len(hwbin_to_swbin_list[project_id])):
+        for y in range(len(hwbin_to_swbin_list[project_id][x][1])):
+            temp_total_count = 0
+            temp_list = []
+            for i in range(len(site_data[0][1])):
+                find_softbin = False
+                for j in range(len(site_data[0][1][i][1])):
+                    if hwbin_to_swbin_list[project_id][x][1][y] == int(site_data[0][1][i][1][j][0]):
+                        temp_swbin_count = len(site_data[0][1][i][1][j][1])
+                        find_softbin = True
+                if not find_softbin:
+                    temp_swbin_count = 0
+                temp_total_count += temp_swbin_count
+                temp_list.append([temp_swbin_count, WHITE])
+                if i == len(site_data[0][1]) - 1:
+                    temp_list.append([temp_total_count, 'FFA500'])
+            site_swbin_count.append(temp_list)
     site_fail_total_list = [0] * 16
-    for i in range(10, len(site_swbin_count)):
+    if project_id == 0:
+        begin_fail_swbin = len(hwbin_to_swbin_list[project_id][0][1]) + len(hwbin_to_swbin_list[project_id][1][1])
+    elif project_id == 1:
+        begin_fail_swbin = len(hwbin_to_swbin_list[project_id][0][1])
+    for i in range(begin_fail_swbin, len(site_swbin_count)):
         min_value = site_swbin_count[i][0][0]
         max_value = site_swbin_count[i][0][0]
         for m in range(1, len(site_swbin_count[i]) - 1):
@@ -378,34 +377,28 @@ def save_data(analysis_folder, site_data, softbin_data, hardbin_data, project_id
             for y in range(len(max_index)):
                 site_swbin_count[i][max_index[y]][1] = RED
 
-    for x in range(len(swbin_list[project_id])):
-        sitesoftbin_sheet.cell(row=irow, column=1).value = 'SWBin' + str(swbin_list[project_id][x])
-        if x <= 1:
-            sitesoftbin_sheet.cell(row=irow, column=1).fill = PatternFill(fill_type='solid', fgColor='ADD8E6')
-        elif 2 <= x <= 9:
-            sitesoftbin_sheet.cell(row=irow, column=1).fill = PatternFill(fill_type='solid', fgColor='00FF7F')
-        elif 10 <= x <= 22:
-            sitesoftbin_sheet.cell(row=irow, column=1).fill = PatternFill(fill_type='solid', fgColor='EEE8AA')
-        elif 23 <= x <= 32:
-            sitesoftbin_sheet.cell(row=irow, column=1).fill = PatternFill(fill_type='solid', fgColor='FFA500')
-        elif 33 <= x <= 36:
-            sitesoftbin_sheet.cell(row=irow, column=1).fill = PatternFill(fill_type='solid', fgColor='CD853F')
-        else:
-            sitesoftbin_sheet.cell(row=irow, column=1).fill = PatternFill(fill_type='solid', fgColor='FF6347')
-        for y in range(len(site_swbin_count[x])):
-            if y < len(site_swbin_count[x]) - 1:
-                if site_swbin_count[x][y][0] > 0:
-                    sitesoftbin_sheet.cell(row=irow, column=2 + y).value = '{:.4%}'.format(
-                        site_swbin_count[x][y][0] / summary_data[0][-2])
-                sitesoftbin_sheet.cell(row=irow, column=2 + y).fill = PatternFill(fill_type='solid',
-                                                                                  fgColor=site_swbin_count[x][y][1])
-            else:
-                sitesoftbin_sheet.cell(row=irow, column=3 + y).value = site_swbin_count[x][y][0]
-                sitesoftbin_sheet.cell(row=irow, column=4 + y).value = '{:.4%}'.format(
-                    site_swbin_count[x][y][0] / summary_data[0][-2])
-                sitesoftbin_sheet.cell(row=irow, column=4 + y).fill = PatternFill(fill_type='solid',
-                                                                                  fgColor=site_swbin_count[x][y][1])
-        irow += 1
+    index = 0
+    for x in range(len(hwbin_to_swbin_list[project_id])):
+        for y in range(len(hwbin_to_swbin_list[project_id][x][1])):
+            sitesoftbin_sheet.cell(row=irow, column=1).value = 'SWBin' + str(hwbin_to_swbin_list[project_id][x][1][y])
+            sitesoftbin_sheet.cell(row=irow, column=1).fill = PatternFill(fill_type='solid', fgColor=color_list[x])
+            for z in range(len(site_swbin_count[index])):
+                if z < len(site_swbin_count[index]) - 1:
+                    if site_swbin_count[index][z][0] > 0:
+                        sitesoftbin_sheet.cell(row=irow, column=2 + z).value = '{:.4%}'.format(
+                            site_swbin_count[index][z][0] / summary_data[0][-2])
+                    sitesoftbin_sheet.cell(row=irow, column=2 + z).fill = PatternFill(fill_type='solid',
+                                                                                      fgColor=
+                                                                                      site_swbin_count[index][z][1])
+                else:
+                    sitesoftbin_sheet.cell(row=irow, column=3 + z).value = site_swbin_count[index][z][0]
+                    sitesoftbin_sheet.cell(row=irow, column=4 + z).value = '{:.4%}'.format(
+                        site_swbin_count[index][z][0] / summary_data[0][-2])
+                    sitesoftbin_sheet.cell(row=irow, column=4 + z).fill = PatternFill(fill_type='solid',
+                                                                                      fgColor=
+                                                                                      site_swbin_count[index][z][1])
+            index += 1
+            irow += 1
     irow += 1
     sitesoftbin_sheet.merge_cells(start_row=irow, end_row=irow + 1, start_column=1, end_column=1)
     sitesoftbin_sheet.cell(row=irow, column=1).value = 'FailPercent'
@@ -434,8 +427,7 @@ def save_data(analysis_folder, site_data, softbin_data, hardbin_data, project_id
     irow += 1
     for i in range(len(hardbin_data[0][1])):
         hwbin_testitem_sheet.cell(row=irow, column=1).value = 'HWBin' + str(hardbin_data[0][1][i][0])
-        hwbin_testitem_sheet.cell(row=irow, column=1).fill = PatternFill(fill_type='solid',
-                                                                         fgColor=GREEN)
+        hwbin_testitem_sheet.cell(row=irow, column=1).fill = PatternFill(fill_type='solid', fgColor=GREEN)
         for j in range(len(hardbin_data[0][1][i][2])):
             hwbin_testitem_sheet.cell(row=irow, column=2 + j).value = hardbin_data[0][1][i][2][j][1]
             hwbin_testitem_sheet.cell(row=irow + 1, column=2 + j).value = '{:.2%}'.format(
@@ -460,30 +452,21 @@ def save_data(analysis_folder, site_data, softbin_data, hardbin_data, project_id
     for i in range(len(softbin_data[0][1][0][2])):
         swbin_testitem_sheet.cell(row=irow, column=i + 2).value = softbin_data[0][1][0][2][i][0]
     irow += 1
-    for x in range(len(swbin_list[project_id])):
-        swbin_testitem_sheet.cell(row=irow, column=1).value = 'SWBin' + str(swbin_list[project_id][x])
-        if x <= 1:
-            swbin_testitem_sheet.cell(row=irow, column=1).fill = PatternFill(fill_type='solid', fgColor='ADD8E6')
-        elif 2 <= x <= 9:
-            swbin_testitem_sheet.cell(row=irow, column=1).fill = PatternFill(fill_type='solid', fgColor='00FF7F')
-        elif 10 <= x <= 22:
-            swbin_testitem_sheet.cell(row=irow, column=1).fill = PatternFill(fill_type='solid', fgColor='EEE8AA')
-        elif 23 <= x <= 32:
-            swbin_testitem_sheet.cell(row=irow, column=1).fill = PatternFill(fill_type='solid', fgColor='FFA500')
-        elif 33 <= x <= 36:
-            swbin_testitem_sheet.cell(row=irow, column=1).fill = PatternFill(fill_type='solid', fgColor='CD853F')
-        else:
-            swbin_testitem_sheet.cell(row=irow, column=1).fill = PatternFill(fill_type='solid', fgColor='FF6347')
-        for i in range(len(softbin_data[0][1])):
-            if swbin_list[project_id][x] == softbin_data[0][1][i][0]:
-                for j in range(len(softbin_data[0][1][i][2])):
-                    swbin_testitem_sheet.cell(row=irow, column=2 + j).value = softbin_data[0][1][i][2][j][1]
-                    swbin_testitem_sheet.cell(row=irow + 1, column=2 + j).value = '{:.2%}'.format(
-                        softbin_data[0][1][i][2][j][1] / softbin_data[0][2])
-                    if softbin_data[0][1][i][2][j][1] > 0:
-                        swbin_testitem_sheet.cell(row=irow + 1, column=2 + j).fill = PatternFill(fill_type='solid',
-                                                                                                 fgColor=RED)
-        irow += 2
+    for x in range(len(hwbin_to_swbin_list[project_id])):
+        for y in range(len(hwbin_to_swbin_list[project_id][x][1])):
+            swbin_testitem_sheet.cell(row=irow, column=1).value = 'SWBin' + str(
+                hwbin_to_swbin_list[project_id][x][1][y])
+            swbin_testitem_sheet.cell(row=irow, column=1).fill = PatternFill(fill_type='solid', fgColor=color_list[x])
+            for i in range(len(softbin_data[0][1])):
+                if hwbin_to_swbin_list[project_id][x][1][y] == softbin_data[0][1][i][0]:
+                    for j in range(len(softbin_data[0][1][i][2])):
+                        swbin_testitem_sheet.cell(row=irow, column=2 + j).value = softbin_data[0][1][i][2][j][1]
+                        swbin_testitem_sheet.cell(row=irow + 1, column=2 + j).value = '{:.2%}'.format(
+                            softbin_data[0][1][i][2][j][1] / softbin_data[0][2])
+                        if softbin_data[0][1][i][2][j][1] > 0:
+                            swbin_testitem_sheet.cell(row=irow + 1, column=2 + j).fill = PatternFill(fill_type='solid',
+                                                                                                     fgColor=RED)
+            irow += 2
 
     for row in swbin_testitem_sheet.rows:
         for cell in row:
