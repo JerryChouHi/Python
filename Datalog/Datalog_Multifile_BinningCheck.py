@@ -9,6 +9,7 @@ from datetime import datetime
 from os.path import join, basename, dirname, abspath
 from os import getcwd
 from sys import argv, path
+from progressbar import *
 
 path.append(abspath(join(getcwd(), '..')))
 import Common
@@ -758,6 +759,9 @@ def parse_file(file, bin_definition):
             break
 
     error_message = []
+    parse_file_widgets = ['ParseFile: ', Percentage(), ' ', Bar('#'), ' ', Timer(), ' ', ETA(), ' ',
+                          FileTransferSpeed()]
+    parse_file_pbar = ProgressBar(widgets=parse_file_widgets, maxval=first_register_row_num).start()
     for row_num in range(binning_row_num + row_offset, first_register_row_num):
         row_softbin_index = len(bin_definition) - 1
         for col_num in range(col_offset, col_count):
@@ -808,7 +812,8 @@ def parse_file(file, bin_definition):
             error_message.append("              ChipNo " + data[row_num][0] + " 的hW_BIN错误：根据优先级计算出来的hwbin为 " + str(
                 bin_definition[row_softbin_index][2]) + " ,CSV中为 " + data[row_num][3] + "\n")
         if row_num % 1000 == 0 or row_num == first_register_row_num - 1:
-            print("解析文件：第 " + str(row_num + 1) + " 行")
+            parse_file_pbar.update(row_num + 1)
+    parse_file_pbar.finish()
     return error_message
 
 

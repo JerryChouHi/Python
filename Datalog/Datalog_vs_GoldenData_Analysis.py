@@ -13,6 +13,7 @@ from sys import argv, path
 from openpyxl import Workbook
 from openpyxl.styles import PatternFill, Border, Side, Alignment
 from openpyxl.styles.colors import BLACK
+from progressbar import *
 
 path.append(abspath(join(getcwd(), '..')))
 import Common
@@ -844,6 +845,9 @@ def parse_file(file, golden_data, project_id):
 
     result = []
 
+    parse_file_widgets = ['ParseFile: ', Percentage(), ' ', Bar('#'), ' ', Timer(), ' ', ETA(), ' ',
+                          FileTransferSpeed()]
+    parse_file_pbar = ProgressBar(widgets=parse_file_widgets, maxval=row_count).start()
     for row_num in range(row_count):
         row_data = []
         for col_num in range(col_count):
@@ -885,8 +889,9 @@ def parse_file(file, golden_data, project_id):
                     value = ''
                 row_data.append((value, 'FFFFFF'))
         result.append(row_data)
-        if row_num % 100 == 0 or row_num == row_count - 1:
-            print("解析文件：第 " + str(row_num + 1) + " 行")
+        if row_num % 1000 == 0 or row_num == row_count - 1:
+            parse_file_pbar.update(row_num + 1)
+    parse_file_pbar.finish()
     return result
 
 
@@ -910,6 +915,9 @@ def save_data(analysis_folder, file, parse_data, golden_data):
     ws.freeze_panes = 'E19'
 
     irow = 1
+    gather_data_widgets = ['GatherData: ', Percentage(), ' ', Bar('#'), ' ', Timer(), ' ', ETA(), ' ',
+                           FileTransferSpeed()]
+    gather_data_pbar = ProgressBar(widgets=gather_data_widgets, maxval=len(parse_data)).start()
     for i in range(len(parse_data)):
         if i == 14:
             for m in range(len(golden_data[0])):
@@ -933,12 +941,10 @@ def save_data(analysis_folder, file, parse_data, golden_data):
             ws.cell(row=irow, column=j + 1).fill = PatternFill(fill_type='solid', fgColor=parse_data[i][j][1])
             ws.cell(row=irow, column=j + 1).border = border
         if i % 100 == 0 or i == len(parse_data) - 1:
-            print("组装Excel数据：第 " + str(i + 1) + " 行")
+            gather_data_pbar.update(i + 1)
         irow += 1
-
-    print("保存数据开始-----------------")
+    gather_data_pbar.finish()
     wb.save(test_file_name)
-    print("保存数据结束-----------------")
 
 
 def main():
