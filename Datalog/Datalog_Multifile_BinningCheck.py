@@ -767,8 +767,7 @@ def parse_file(file, bin_definition):
         for col_num in range(col_offset, col_count):
             test_item_name = data[binning_row_num][col_num].strip()
             if test_item_name == 'AVDD_O/S':  # JX828测试项特殊处理
-                high_limit_data = -0.2
-                low_limit_data = -0.6
+                continue
             else:
                 high_limit_data = data[binning_row_num + 2][col_num]
                 low_limit_data = data[binning_row_num + 3][col_num]

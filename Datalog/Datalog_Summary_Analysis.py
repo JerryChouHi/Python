@@ -147,6 +147,14 @@ def save_data(analysis_folder, site_data, softbin_data, hardbin_data, project_id
             [8, [29, 30, 33, 34, 36, 39, 40]]
         ]
     ]
+    if project_id == 0:
+        ok_hwbin_count = 2
+    elif project_id == 1:
+        ok_hwbin_count = 3
+    begin_fail_swbin = 0
+    for i in range(ok_hwbin_count):
+        begin_fail_swbin += len(hwbin_to_swbin_list[project_id][i][1])
+
     color_list = ['99FFFF', '33FF00', 'FFFFCC', 'FFFF33', 'FF9900', '9900CC', 'FF0000']
     swbin_list = []
     for i in range(len(hwbin_to_swbin_list[project_id])):
@@ -173,7 +181,10 @@ def save_data(analysis_folder, site_data, softbin_data, hardbin_data, project_id
             test_count += bin_count
             temp_list.append(bin_count)
         temp_list.append(test_count)
-        pass_percent = '{:.2%}'.format((temp_list[1] + temp_list[2]) / test_count)
+        pass_count = 0
+        for m in range(ok_hwbin_count):
+            pass_count += temp_list[1 + m]
+        pass_percent = '{:.2%}'.format(pass_count / test_count)
         temp_list.append(pass_percent)
         summary_data.append(temp_list)
     irow = 1
@@ -197,25 +208,26 @@ def save_data(analysis_folder, site_data, softbin_data, hardbin_data, project_id
                     summary_data[i][j] / summary_data[i][-2])
                 hardbin_sheet.cell(row=irow + 1, column=(j + 1)).fill = PatternFill(fill_type='solid', fgColor=GREEN)
             elif j == len(summary_data[i]) - 2 and i > 0:
-                compare_count = summary_data[i - 1][3] + summary_data[i - 1][4] + summary_data[i - 1][5] + \
-                                summary_data[i - 1][6]
+                compare_count = 0
+                for m in range(ok_hwbin_count + 1, len(summary_data[i]) - 2):
+                    compare_count += summary_data[i - 1][m]
                 if summary_data[i][j] != compare_count:
                     hardbin_sheet.cell(row=irow, column=(j + 1)).fill = PatternFill(fill_type='solid', fgColor=RED)
         irow += 2
     hardbin_sheet.cell(row=irow, column=1).value = 'Summary'
     hardbin_sheet.cell(row=irow, column=1).fill = PatternFill(fill_type='solid', fgColor=GREEN)
-    summary_bin1_count = 0
-    summary_bin2_count = 0
+    summary_bin_count = [0] * ok_hwbin_count
     for i in range(len(summary_data)):
-        summary_bin1_count += summary_data[i][1]
-        summary_bin2_count += summary_data[i][2]
-    ok_bin_count = summary_bin1_count + summary_bin2_count
-    hardbin_sheet.cell(row=irow, column=2).value = summary_bin1_count
-    hardbin_sheet.cell(row=irow, column=3).value = summary_bin2_count
-    for i in range(3, len(summary_data[-1]) - 2):
+        for j in range(len(summary_bin_count)):
+            summary_bin_count[j] += summary_data[i][j + 1]
+    pass_bin_count = 0
+    for i in range(len(summary_bin_count)):
+        hardbin_sheet.cell(row=irow, column=2 + i).value = summary_bin_count[i]
+        pass_bin_count += summary_bin_count[i]
+    for i in range(len(summary_bin_count) + 1, len(summary_data[-1]) - 2):
         hardbin_sheet.cell(row=irow, column=(i + 1)).value = summary_data[-1][i]
     hardbin_sheet.cell(row=irow, column=icol - 1).value = summary_data[0][-2]
-    hardbin_sheet.cell(row=irow, column=icol).value = '{:.2%}'.format(ok_bin_count / summary_data[0][-2])
+    hardbin_sheet.cell(row=irow, column=icol).value = '{:.2%}'.format(pass_bin_count / summary_data[0][-2])
 
     for row in hardbin_sheet.rows:
         for cell in row:
@@ -348,10 +360,6 @@ def save_data(analysis_folder, site_data, softbin_data, hardbin_data, project_id
                 temp_list.append([temp_total_count, 'FFA500'])
         site_swbin_count.append(temp_list)
     site_fail_total_list = [0] * 16
-    if project_id == 0:
-        begin_fail_swbin = len(hwbin_to_swbin_list[project_id][0][1]) + len(hwbin_to_swbin_list[project_id][1][1])
-    elif project_id == 1:
-        begin_fail_swbin = len(hwbin_to_swbin_list[project_id][0][1])
     for i in range(begin_fail_swbin, len(site_swbin_count)):
         min_value = site_swbin_count[i][0][0]
         max_value = site_swbin_count[i][0][0]

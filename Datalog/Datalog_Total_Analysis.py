@@ -110,16 +110,20 @@ def save_data(analysis_folder, site_data, softbin_data, project_id):
             [8, [29, 30, 33, 34, 36, 39, 40]]
         ]
     ]
+    if project_id == 0:
+        ok_hwbin_count = 2
+    elif project_id == 1:
+        ok_hwbin_count = 3
+
+    begin_fail_swbin = 0
+    for i in range(ok_hwbin_count):
+        begin_fail_swbin += len(hwbin_to_swbin_list[project_id][i][1])
+
     color_list = ['99FFFF', '33FF00', 'FFFFCC', 'FFFF33', 'FF9900', '9900CC', 'FF0000']
     swbin_list = []
     for i in range(len(hwbin_to_swbin_list[project_id])):
         for j in range(len(hwbin_to_swbin_list[project_id][i][1])):
             swbin_list.append([hwbin_to_swbin_list[project_id][i][1][j], color_list[i]])
-
-    if project_id == 0:
-        begin_fail_swbin = len(hwbin_to_swbin_list[project_id][0][1]) + len(hwbin_to_swbin_list[project_id][1][1])
-    elif project_id == 1:
-        begin_fail_swbin = len(hwbin_to_swbin_list[project_id][0][1])
 
     sitesoftbin_sheet = wb.create_sheet('Site-SWBin')
     sitesoftbin_sheet.freeze_panes = 'B2'
@@ -140,7 +144,8 @@ def save_data(analysis_folder, site_data, softbin_data, project_id):
 
     lotno_site_swbin_count = []
 
-    site_swbin_widgets = ['Site-SWBin: ', Percentage(), ' ', Bar('#'), ' ', Timer(), ' ', ETA(), ' ', FileTransferSpeed()]
+    site_swbin_widgets = ['Site-SWBin: ', Percentage(), ' ', Bar('#'), ' ', Timer(), ' ', ETA(), ' ',
+                          FileTransferSpeed()]
     site_swbin_pbar = ProgressBar(widgets=site_swbin_widgets, maxval=len(site_data)).start()
     for i in range(len(site_data)):
         lotno_temp_list = [site_data[i][0]]
@@ -261,7 +266,8 @@ def save_data(analysis_folder, site_data, softbin_data, project_id):
 
     lotno_swbin_count = []
 
-    lotno_swbin_widgets = ['LotNo_SWBin: ', Percentage(), ' ', Bar('#'), ' ', Timer(), ' ', ETA(), ' ', FileTransferSpeed()]
+    lotno_swbin_widgets = ['LotNo_SWBin: ', Percentage(), ' ', Bar('#'), ' ', Timer(), ' ', ETA(), ' ',
+                           FileTransferSpeed()]
     lotno_swbin_pbar = ProgressBar(widgets=lotno_swbin_widgets, maxval=len(softbin_data)).start()
     for i in range(len(softbin_data)):
         lotno_temp_list = []
@@ -311,7 +317,24 @@ def save_data(analysis_folder, site_data, softbin_data, project_id):
 
 
 def main():
-    sourcefile_folder = 'D:\PythonStudy\in_use\Datalog\\F28'
+    # Sourcefile folder path
+    if argv.count('-s') == 0:
+        print("Error：Sourcefile folder path 为必填项，格式：“-s D:\sourcefile”")
+        exit()
+    else:
+        sourcefile_folder = argv[argv.index('-s') + 1]
+        for i in range(argv.index('-s') + 2, len(argv)):
+            if not argv[i].startswith('-'):
+                sourcefile_folder += (' ' + argv[i])
+            else:
+                break
+
+    # 项目 0:F28,1:JX828
+    if argv.count('-p') != 0:
+        project_id = int(argv[argv.index('-p') + 1])
+    else:
+        project_id = 0  # 默认F28项目
+
     names = listdir(sourcefile_folder)
     date_folder = []
     for name in names:
@@ -335,18 +358,13 @@ def main():
     else:
         analysis_folder = argv[argv.index('-a') + 1]
 
-    # 项目 0:F28,1:JX828
-    if argv.count('-p') != 0:
-        project_id = int(argv[argv.index('-p') + 1])
-    else:
-        project_id = 0  # 默认F28项目
-
     Common.mkdir(analysis_folder)
 
     site_data = []
     softbin_data = []
 
-    parse_file_widgets = ['ParseFile: ', Percentage(), ' ', Bar('#'), ' ', Timer(), ' ', ETA(), ' ', FileTransferSpeed()]
+    parse_file_widgets = ['ParseFile: ', Percentage(), ' ', Bar('#'), ' ', Timer(), ' ', ETA(), ' ',
+                          FileTransferSpeed()]
     parse_file_pbar = ProgressBar(widgets=parse_file_widgets, maxval=len(file_list)).start()
     for i in range(len(file_list)):
         temp_site_data = []
