@@ -6,8 +6,8 @@
 
 from csv import reader
 from datetime import datetime
-from os.path import dirname, basename, join, abspath
-from os import getcwd
+from os.path import isdir, basename, join, abspath
+from os import getcwd, listdir
 from sys import argv, path
 
 path.append(abspath(join(getcwd(), '..')))
@@ -92,48 +92,38 @@ def save_data(file, result_file, nan_chipno):
 
 
 def main():
-    # Sourcefile folder path
-    if argv.count('-s') == 0 and argv.count('-f') == 0:
-        print(
-            "Error：Sourcefile folder path 或 single file path为必填项，格式：“-s D:\sourcefile” 或 “-f D:\sourcefile\ST5-440mm-out1.csv”。")
+    # Date folder path
+    if argv.count('-d') == 0:
+        print("Error：Date folder path为必填项，格式：“-d D:\date folder”。")
         exit()
-
-    if argv.count('-s') != 0:
-        sourcefile_folder = argv[argv.index('-s') + 1]
-        for i in range(argv.index('-s') + 2, len(argv)):
-            if not argv[i].startswith('-'):
-                sourcefile_folder += (' ' + argv[i])
-            else:
-                break
-        file_list = Common.get_filelist(sourcefile_folder, '.csv')
-        if not file_list:
-            exit()
-
-    if argv.count('-f') != 0:
-        single_file = argv[argv.index('-f') + 1]
-        for i in range(argv.index('-f') + 2, len(argv)):
-            if not argv[i].startswith('-'):
-                single_file += (' ' + argv[i])
-            else:
-                break
-        sourcefile_folder = dirname(single_file)
-        file_list = [single_file]
-
-    # Analysis folder path
-    if argv.count('-a') == 0:
-        analysis_folder = sourcefile_folder + '\Analysis'
     else:
-        analysis_folder = argv[argv.index('-a') + 1]
+        date_folder = argv[argv.index('-d') + 1]
+        for i in range(argv.index('-d') + 2, len(argv)):
+            if not argv[i].startswith('-'):
+                date_folder += (' ' + argv[i])
+            else:
+                break
 
-    Common.mkdir(analysis_folder)
-    date = datetime.now().strftime("%Y%m%d%H%M")
-    result_file = join(analysis_folder, 'NanChipno_Analysis' + date + '.txt')
+    lotno_names = listdir(date_folder)
+    for name in lotno_names:
+        folder = join(date_folder, name)
+        if isdir(folder):
+            file_list = Common.get_filelist(folder, '.csv')
+            if not file_list:
+                exit()
+            # Analysis folder path
+            if argv.count('-a') == 0:
+                analysis_folder = folder + '\Analysis'
+            else:
+                analysis_folder = argv[argv.index('-a') + 1]
+            date = datetime.now().strftime("%Y%m%d%H%M")
+            result_file = join(analysis_folder, 'NanChipno_Analysis' + date + '.txt')
 
-    for file in file_list:
-        # parse file
-        nan_chipno = parse_file(file)
-        # save data
-        save_data(file, result_file, nan_chipno)
+            for file in file_list:
+                # parse file
+                nan_chipno = parse_file(file)
+                # save data
+                save_data(file, result_file, nan_chipno)
 
 
 if __name__ == '__main__':

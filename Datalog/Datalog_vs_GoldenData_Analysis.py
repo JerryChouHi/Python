@@ -5,8 +5,8 @@
 # @Function :
 
 from csv import reader
-from os.path import basename, dirname, join, abspath
-from os import getcwd
+from os.path import basename, isdir, join, abspath
+from os import getcwd, listdir
 from datetime import datetime
 from math import isnan
 from sys import argv, path
@@ -948,54 +948,46 @@ def save_data(analysis_folder, file, parse_data, golden_data):
 
 
 def main():
-    # Sourcefile folder path
-    if argv.count('-s') == 0 and argv.count('-f') == 0:
-        print(
-            "Error：Sourcefile folder path 或 single file path为必填项，格式：“-s D:\sourcefile” 或 “-f D:\sourcefile\ST5-440mm-out1.csv”。")
+    # Date folder path
+    if argv.count('-d') == 0:
+        print("Error：Date folder path为必填项，格式：“-d D:\date folder”。")
         exit()
-
-    if argv.count('-s') != 0:
-        sourcefile_folder = argv[argv.index('-s') + 1]
-        for i in range(argv.index('-s') + 2, len(argv)):
-            if not argv[i].startswith('-'):
-                sourcefile_folder += (' ' + argv[i])
-            else:
-                break
-        file_list = Common.get_filelist(sourcefile_folder, '.csv')
-        if not file_list:
-            exit()
-
-    if argv.count('-f') != 0:
-        single_file = argv[argv.index('-f') + 1]
-        for i in range(argv.index('-f') + 2, len(argv)):
-            if not argv[i].startswith('-'):
-                single_file += (' ' + argv[i])
-            else:
-                break
-        sourcefile_folder = dirname(single_file)
-        file_list = [single_file]
-
-    # Analysis folder path
-    if argv.count('-a') == 0:
-        analysis_folder = sourcefile_folder + '\Analysis'
     else:
-        analysis_folder = argv[argv.index('-a') + 1]
+        date_folder = argv[argv.index('-d') + 1]
+        for i in range(argv.index('-d') + 2, len(argv)):
+            if not argv[i].startswith('-'):
+                date_folder += (' ' + argv[i])
+            else:
+                break
 
     # 项目 0:F28,1:JX828
     if argv.count('-p') != 0:
         project_id = int(argv[argv.index('-p') + 1])
     else:
         project_id = 0  # 默认F28项目
-
     golden_data = get_golden_data(project_id)
-    Common.mkdir(analysis_folder)
 
-    for file in file_list:
-        print(file)
-        # parse file
-        parse_data = parse_file(file, golden_data, project_id)
-        # save data
-        save_data(analysis_folder, file, parse_data, golden_data)
+    lotno_names = listdir(date_folder)
+    for name in lotno_names:
+        folder = join(date_folder, name)
+        if isdir(folder):
+            file_list = Common.get_filelist(folder, '.csv')
+            if not file_list:
+                exit()
+            # Analysis folder path
+            if argv.count('-a') == 0:
+                analysis_folder = folder + '\Analysis'
+            else:
+                analysis_folder = argv[argv.index('-a') + 1]
+
+            Common.mkdir(analysis_folder)
+
+            for file in file_list:
+                print(file)
+                # parse file
+                parse_data = parse_file(file, golden_data, project_id)
+                # save data
+                save_data(analysis_folder, file, parse_data, golden_data)
 
 
 if __name__ == '__main__':

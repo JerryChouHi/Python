@@ -6,8 +6,8 @@
 
 from csv import reader
 from datetime import datetime
-from os.path import join, basename, dirname, abspath
-from os import getcwd
+from os.path import join, basename, abspath, isdir
+from os import getcwd, listdir
 from sys import argv, path
 from progressbar import *
 
@@ -835,32 +835,17 @@ def save_data(file, result_file, error_message):
 
 
 def main():
-    # Sourcefile folder path
-    if argv.count('-s') == 0 and argv.count('-f') == 0:
-        print(
-            "Error：Sourcefile folder path 或 single file path为必填项，格式：“-s D:\sourcefile” 或 “-f D:\sourcefile\ST5-440mm-out1.csv”。")
+    # Date folder path
+    if argv.count('-d') == 0:
+        print("Error：Date folder path为必填项，格式：“-d D:\date folder”。")
         exit()
-
-    if argv.count('-s') != 0:
-        sourcefile_folder = argv[argv.index('-s') + 1]
-        for i in range(argv.index('-s') + 2, len(argv)):
+    else:
+        date_folder = argv[argv.index('-d') + 1]
+        for i in range(argv.index('-d') + 2, len(argv)):
             if not argv[i].startswith('-'):
-                sourcefile_folder += (' ' + argv[i])
+                date_folder += (' ' + argv[i])
             else:
                 break
-        file_list = Common.get_filelist(sourcefile_folder, '.csv')
-        if not file_list:
-            exit()
-
-    if argv.count('-f') != 0:
-        single_file = argv[argv.index('-f') + 1]
-        for i in range(argv.index('-f') + 2, len(argv)):
-            if not argv[i].startswith('-'):
-                single_file += (' ' + argv[i])
-            else:
-                break
-        sourcefile_folder = dirname(single_file)
-        file_list = [single_file]
 
     # 项目 0:F28,1:JX828
     if argv.count('-p') != 0:
@@ -868,22 +853,29 @@ def main():
     else:
         project_id = 0  # 默认F28项目
 
-    # Analysis folder path
-    if argv.count('-a') == 0:
-        analysis_folder = sourcefile_folder + '\Analysis'
-    else:
-        analysis_folder = argv[argv.index('-a') + 1]
+    lotno_names = listdir(date_folder)
+    for name in lotno_names:
+        folder = join(date_folder, name)
+        if isdir(folder):
+            file_list = Common.get_filelist(folder, '.csv')
+            if not file_list:
+                exit()
+            # Analysis folder path
+            if argv.count('-a') == 0:
+                analysis_folder = folder + '\Analysis'
+            else:
+                analysis_folder = argv[argv.index('-a') + 1]
 
-    Common.mkdir(analysis_folder)
-    date = datetime.now().strftime("%Y%m%d%H%M")
-    result_file = join(analysis_folder, 'BinningCheck' + date + '.txt')
+            Common.mkdir(analysis_folder)
+            date = datetime.now().strftime("%Y%m%d%H%M")
+            result_file = join(analysis_folder, 'BinningCheck' + date + '.txt')
 
-    for file in file_list:
-        print(file)
-        # parse file
-        error_message = parse_file(file, bin_definition[project_id])
-        # save data
-        save_data(file, result_file, error_message)
+            for file in file_list:
+                print(file)
+                # parse file
+                error_message = parse_file(file, bin_definition[project_id])
+                # save data
+                save_data(file, result_file, error_message)
 
 
 if __name__ == '__main__':
