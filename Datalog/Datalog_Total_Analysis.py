@@ -176,6 +176,7 @@ def save_data(analysis_folder, site_data, softbin_data, project_id):
         site_swbin_pbar.update(i + 1)
     site_swbin_pbar.finish()
     site_swbin_count = []
+    actual_total_count = 0
     for x in range(len(swbin_list)):
         temp_total_count = 0
         temp_list = [0] * 16
@@ -186,9 +187,14 @@ def save_data(analysis_folder, site_data, softbin_data, project_id):
                 if y == len(lotno_site_swbin_count) - 1:
                     temp_swbin_count.append([temp_list[i], WHITE])
                     temp_total_count += temp_list[i]
+                    actual_total_count += temp_list[i]
             if i == len(temp_list) - 1:
                 temp_swbin_count.append([temp_total_count, 'FFA500'])
         site_swbin_count.append(temp_swbin_count)
+    site_pass_total_list = [0] * 16
+    for i in range(begin_fail_swbin):
+        for j in range(len(site_swbin_count[i]) - 1):
+            site_pass_total_list[j] += site_swbin_count[i][j][0]
     site_fail_total_list = [0] * 16
     for i in range(begin_fail_swbin, len(site_swbin_count)):
         min_value = site_swbin_count[i][0][0]
@@ -241,12 +247,37 @@ def save_data(analysis_folder, site_data, softbin_data, project_id):
     sitesoftbin_sheet.cell(row=irow, column=1).value = 'FailPercent'
     sitesoftbin_sheet.cell(row=irow, column=1).font = Font(bold=True)
     sitesoftbin_sheet.cell(row=irow, column=1).alignment = alignment
-    sitesoftbin_sheet.cell(row=irow, column=1).fill = PatternFill(fill_type='solid', fgColor='FFA500')
+    sitesoftbin_sheet.cell(row=irow, column=1).fill = PatternFill(fill_type='solid', fgColor=RED)
     for i in range(len(site_fail_total_list)):
         sitesoftbin_sheet.cell(row=irow, column=2 + i).value = site_fail_total_list[i]
         sitesoftbin_sheet.cell(row=irow + 1, column=2 + i).value = '{:.4%}'.format(
             site_fail_total_list[i] / total_count)
-        sitesoftbin_sheet.cell(row=irow + 1, column=2 + i).fill = PatternFill(fill_type='solid', fgColor='FFA500')
+        sitesoftbin_sheet.cell(row=irow + 1, column=2 + i).fill = PatternFill(fill_type='solid', fgColor=RED)
+    sitesoftbin_sheet.cell(row=irow, column=3 + len(site_fail_total_list)).value = sum(site_fail_total_list)
+    sitesoftbin_sheet.cell(row=irow, column=3 + len(site_fail_total_list)).fill = PatternFill(fill_type='solid',
+                                                                                              fgColor=RED)
+    sitesoftbin_sheet.cell(row=irow + 1, column=3 + len(site_fail_total_list)).value = '{:.4%}'.format(
+        sum(site_fail_total_list) / total_count)
+    sitesoftbin_sheet.cell(row=irow + 1, column=3 + len(site_fail_total_list)).fill = PatternFill(fill_type='solid',
+                                                                                                  fgColor=RED)
+    irow += 2
+    sitesoftbin_sheet.merge_cells(start_row=irow, end_row=irow + 1, start_column=1, end_column=1)
+    sitesoftbin_sheet.cell(row=irow, column=1).value = 'PassPercent'
+    sitesoftbin_sheet.cell(row=irow, column=1).font = Font(bold=True)
+    sitesoftbin_sheet.cell(row=irow, column=1).alignment = alignment
+    sitesoftbin_sheet.cell(row=irow, column=1).fill = PatternFill(fill_type='solid', fgColor=GREEN)
+    for i in range(len(site_pass_total_list)):
+        sitesoftbin_sheet.cell(row=irow, column=2 + i).value = site_pass_total_list[i]
+        sitesoftbin_sheet.cell(row=irow + 1, column=2 + i).value = '{:.4%}'.format(
+            site_pass_total_list[i] / total_count)
+        sitesoftbin_sheet.cell(row=irow + 1, column=2 + i).fill = PatternFill(fill_type='solid', fgColor=GREEN)
+    sitesoftbin_sheet.cell(row=irow, column=3 + len(site_pass_total_list)).value = sum(site_pass_total_list)
+    sitesoftbin_sheet.cell(row=irow, column=3 + len(site_pass_total_list)).fill = PatternFill(fill_type='solid',
+                                                                                              fgColor=GREEN)
+    sitesoftbin_sheet.cell(row=irow + 1, column=3 + len(site_pass_total_list)).value = '{:.4%}'.format(
+        sum(site_pass_total_list) / total_count)
+    sitesoftbin_sheet.cell(row=irow + 1, column=3 + len(site_pass_total_list)).fill = PatternFill(fill_type='solid',
+                                                                                                  fgColor=GREEN)
 
     for row in sitesoftbin_sheet.rows:
         for cell in row:
