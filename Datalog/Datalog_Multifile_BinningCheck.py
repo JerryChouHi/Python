@@ -22,6 +22,7 @@ bin_definition = [[('PCLK_O/S', 5, 5),
                    ('VSYNC_O/S', 5, 5),
                    ('D9_O/S', 5, 5),
                    ('D8_O/S', 5, 5),
+                   
                    ('D7_O/S', 5, 5),
                    ('D6_O/S', 5, 5),
                    ('D5_O/S', 5, 5),
@@ -541,15 +542,15 @@ bin_definition = [[('PCLK_O/S', 5, 5),
                        ('LT_Blemish', 31, 4),
                        ('LT_LineStripe', 27, 4),
                        ('LT_Particle', 32, 4),
-                       ('BK_Cluster2', 30, 8),  # 4
-                       ('LT_Cluster2', 30, 8),  # 4
-                       ('BK_Cluster1', 29, 8),  # 4
-                       ('LT_Cluster1', 29, 8),  # 4
-                       ('BK_Cluster3GrGb', 39, 8),  # 4
-                       ('LT_Cluster3GrGb', 40, 8),  # 4
-                       ('BK_Cluster3SubtractGrGb', 33, 8),  # 4
-                       ('LT_Cluster3SubtractGrGb', 34, 8),  # 4
-                       ('WP_Count', 35, 8),  # 6
+                       ('BK_Cluster2', 30, 4),  # 4/8
+                       ('LT_Cluster2', 30, 4),  # 4/8
+                       ('BK_Cluster1', 29, 4),  # 4/8
+                       ('LT_Cluster1', 29, 4),  # 4/8
+                       ('BK_Cluster3GrGb', 39, 4),  # 4/8
+                       ('LT_Cluster3GrGb', 40, 4),  # 4/8
+                       ('BK_Cluster3SubtractGrGb', 33, 4),  # 4/8
+                       ('LT_Cluster3SubtractGrGb', 34, 4),  # 4/8
+                       ('WP_Count', 35, 4),  # 6/8
 
                        ('BK_Z1_BT_DP_R', 60, 6),
                        ('BK_Z1_BT_DP_Gr', 60, 6),
