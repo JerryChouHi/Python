@@ -1688,7 +1688,7 @@ def parse_file(file):
                     for i in range(len(bin_definition)):
                         if bin_definition[i][0] == test_item_name:
                             if row_softbin_index > i - 1:
-                                # set row_softbin_index is test_item_name's index -1 when test_item_name's index less than row_softbin_index
+                                # set row_softbin_index is test_item_name's index-1 when test_item_name's index less than row_softbin_index
                                 row_softbin_index = i - 1
             except:
                 # limit is N or nan
@@ -1706,19 +1706,21 @@ def parse_file(file):
                     for i in range(len(bin_definition)):
                         if bin_definition[i][0] == test_item_name:
                             if row_softbin_index > i:
-                                # set row_softbin_index is test_item_name's index when test_item_name's index less than row_softbin_index
-                                row_softbin_index = i
+                                # set row_softbin_index is test_item_name's index-1 when test_item_name's index less than row_softbin_index
+                                row_softbin_index = i -1
 
         if bin_definition[row_softbin_index][1] != int(data[row_num][2]):
             # caculated value is not equal to SW_BIN value
             binning_check_result.append(
-                "              ChipNo " + data[row_num][0] + " 的SB_BIN错误：根据优先级计算出来的swbin为 " + str(
-                    bin_definition[row_softbin_index][1]) + " ,CSV中为 " + data[row_num][2] + "\n")
+                "              SB_BIN error of chipNo " + data[row_num][
+                    0] + " : according to the priority,swbin should be " + str(
+                    bin_definition[row_softbin_index][1]) + " ,but in CSV it's " + data[row_num][2] + "\n")
         if bin_definition[row_softbin_index][2] != int(data[row_num][3]):
             # caculated value is not equal to hW_BIN value
             binning_check_result.append(
-                "              ChipNo " + data[row_num][0] + " 的hW_BIN错误：根据优先级计算出来的hwbin为 " + str(
-                    bin_definition[row_softbin_index][2]) + " ,CSV中为 " + data[row_num][3] + "\n")
+                "              hW_BIN error of chipNo " + data[row_num][
+                    0] + " : according to the priority,hwbin should be " + str(
+                    bin_definition[row_softbin_index][2]) + " ,but in CSV it's " + data[row_num][3] + "\n")
         if row_num % 1000 == 0 or row_num == first_register_row_num - 1:
             # update bar when row num divisible by 1000 or is last chipno row
             binning_check_pbar.update(row_num + 1)
@@ -1930,7 +1932,7 @@ def save_data(analysis_folder, parse_data):
     for i in range(ok_hwbin_count):
         begin_fail_swbin += len(hwbin_to_swbin_list[project_id][i][1])
 
-    color_list = ['99FFFF', '33FF00', 'FFFFCC', 'FFFF33', 'FF9900', '9900CC', 'FF0000']
+    color_list = ['99FFFF', '33FF00', 'FFFFCC', 'FFFF33', 'FF9900', 'FF0099', 'FF0000']
     swbin_list = []
     for i in range(len(hwbin_to_swbin_list[project_id])):
         for j in range(len(hwbin_to_swbin_list[project_id][i][1])):
