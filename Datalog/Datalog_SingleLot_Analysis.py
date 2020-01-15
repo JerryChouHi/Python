@@ -5,18 +5,108 @@
 # @Function :
 
 from csv import reader
-from os.path import basename, isdir, join, abspath
-from os import getcwd, listdir
+from os.path import basename, isdir, join, exists
+from os import listdir, makedirs
 from datetime import datetime
 from math import isnan
-from sys import argv, path
+from sys import argv
 from openpyxl import Workbook
 from openpyxl.styles import PatternFill, Border, Side, Alignment, Font
 from openpyxl.styles.colors import YELLOW, GREEN, BLACK, WHITE, RED
 from progressbar import *
+from openpyxl.utils import get_column_letter
 
-path.append(abspath(join(getcwd(), '..')))
-import Common
+
+def find_item(item_list, value):
+    """
+    find value in item list
+    """
+    return [i for i, v in enumerate(item_list) if v == value]
+
+
+def search_string(data, target):
+    """
+    find out if target exists in data
+    """
+    for i in range(len(data)):
+        try:
+            col_num = data[i].index(target)
+            row_num = i
+            return row_num, col_num
+        except:
+            pass
+    print("Can't find " + target + " !")
+    return False
+
+
+def set_column_width(sheet):
+    """
+    set column width
+    """
+    # get the maximum width of each column
+    col_width = [0.5] * sheet.max_column
+    for row in range(sheet.max_row):
+        for col in range(sheet.max_column):
+            value = sheet.cell(row=row + 1, column=col + 1).value
+            if value:
+                width = len(str(value))
+                if width > col_width[col]:
+                    col_width[col] = width
+    # set column width
+    for i in range(len(col_width)):
+        col_lettert = get_column_letter(i + 1)
+        if col_width[i] > 100:
+            # set to 100 if col_width greater than 100
+            sheet.column_dimensions[col_lettert].width = 100
+        else:
+            sheet.column_dimensions[col_lettert].width = col_width[i] + 4
+
+
+def get_filelist(folder, postfix=None):
+    """
+    find a list of files with a postfix
+    """
+    fullname_list = []
+    if isdir(folder):
+        files = listdir(folder)
+        for filename in files:
+            fullname_list.append(join(folder, filename))
+        if postfix:
+            target_file_list = []
+            for fullname in fullname_list:
+                if fullname.endswith(postfix):
+                    target_file_list.append(fullname)
+            return target_file_list
+        else:
+            return fullname_list
+    else:
+        print("Error：Not a folder!")
+        return False
+
+
+def mkdir(path):
+    """
+    create a folder
+    """
+    path = path.strip()
+    path = path.rstrip("\\")
+    is_exists = exists(path)
+    if not is_exists:
+        makedirs(path)
+        return True
+    else:
+        return False
+
+
+def sort_data(data):
+    """
+    sort from more to less according to the number of child node elements
+    """
+    for i in range(len(data) - 1):
+        for j in range(i + 1, len(data)):
+            if len(data[i][1]) < len(data[j][1]):
+                data[i], data[j] = data[j], data[i]
+
 
 row_offset = 5
 col_offset = 4
@@ -1531,9 +1621,9 @@ def parse_file(file):
 
     # get row and column of last test item
     if project_id == 0:
-        search_last_test_item = Common.search_string(data, 'Full_Error')
+        search_last_test_item = search_string(data, 'Full_Error')
     elif project_id == 1:
-        search_last_test_item = Common.search_string(data, 'ChipVer')
+        search_last_test_item = search_string(data, 'ChipVer')
     if not search_last_test_item:
         exit()
     else:
@@ -1543,21 +1633,21 @@ def parse_file(file):
     low_limit_row_num = test_item_row_num + 3
 
     # get row and column of last DC test item
-    search_pwdn_total = Common.search_string(data, 'PWDN_Total')
+    search_pwdn_total = search_string(data, 'PWDN_Total')
     if not search_pwdn_total:
         exit()
     else:
         pwdn_total_col_num = search_pwdn_total[1]
 
     # get row and column of Binning
-    search_binning = Common.search_string(data, 'Binning')
+    search_binning = search_string(data, 'Binning')
     if not search_binning:
         exit()
     else:
         binning_col_num = search_binning[1]
 
     # get column of iic_test
-    search_iic_test = Common.search_string(data, 'iic_test')
+    search_iic_test = search_string(data, 'iic_test')
     if not search_iic_test:
         exit()
     else:
@@ -1707,7 +1797,7 @@ def parse_file(file):
                         if bin_definition[i][0] == test_item_name:
                             if row_softbin_index > i:
                                 # set row_softbin_index is test_item_name's index-1 when test_item_name's index less than row_softbin_index
-                                row_softbin_index = i -1
+                                row_softbin_index = i - 1
 
         if bin_definition[row_softbin_index][1] != int(data[row_num][2]):
             # caculated value is not equal to SW_BIN value
@@ -1760,7 +1850,7 @@ def parse_file(file):
         for i in format_group_list:
             temp = [i]
             # find i in group_list
-            data_list = Common.find_item(group_list, i)
+            data_list = find_item(group_list, i)
             if group_by_id == 1:
                 temp_list = []
                 for j in data_list:
@@ -1772,7 +1862,7 @@ def parse_file(file):
                 for m in format_temp_list:
                     temp_swbin = [m]
                     # find m in temp_list
-                    temp_data_list = Common.find_item(temp_list, m)
+                    temp_data_list = find_item(temp_list, m)
                     temp_swbin.append(temp_data_list)
                     temp_index.append(temp_swbin)
                 temp.append(temp_index)
@@ -1835,7 +1925,7 @@ def save_data(analysis_folder, parse_data):
         nan_chipno_parse_data = data[5]
         site_data.append(data[6][0])
         # sort softbin
-        Common.sort_data(data[6][1])
+        sort_data(data[6][1])
         softbin_data.append(data[6][1])
         hardbin_data.append(data[6][2])
 
@@ -2310,7 +2400,7 @@ def save_data(analysis_folder, parse_data):
         if sheet_name == 'Sheet':
             del summary_wb[sheet_name]
         else:
-            Common.set_column_width(summary_wb[sheet_name])
+            set_column_width(summary_wb[sheet_name])
     print("save summary data begin>>>>>>")
     summary_wb.save(summary_file)
     print("save summary data finished<<<<<<")
@@ -2346,7 +2436,7 @@ def main():
         folder = join(date_folder, name)
         if isdir(folder):
             # get CSV file under the folder
-            file_list = Common.get_filelist(folder, '.csv')
+            file_list = get_filelist(folder, '.csv')
             if not file_list:
                 exit()
 
@@ -2358,7 +2448,7 @@ def main():
                 analysis_folder = argv[argv.index('-a') + 1]
 
             # create analysis folder
-            Common.mkdir(analysis_folder)
+            mkdir(analysis_folder)
 
             parse_data = []
             for file in file_list:

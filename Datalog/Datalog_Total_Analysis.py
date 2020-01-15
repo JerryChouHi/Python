@@ -2,45 +2,148 @@
 # @Time     : 2019/12/2
 # @Author   : Jerry Chou
 # @File     :
-# @Function : 所有FT分析
+# @Function : analysis all data
 
 from csv import reader
-from os.path import basename, dirname, abspath, join, isdir
-from os import getcwd, listdir
+from os.path import basename, dirname, exists, join, isdir
+from os import listdir, makedirs
 from datetime import datetime
-from sys import argv, path
+from sys import argv
 from openpyxl import Workbook
 from openpyxl.styles import PatternFill, Border, Side, Font, Alignment
 from openpyxl.styles.colors import YELLOW, GREEN, BLACK, WHITE, RED
 from progressbar import *
+from openpyxl.utils import get_column_letter
 
-path.append(abspath(join(getcwd(), '..')))
-import Common
+
+def find_item(item_list, value):
+    """
+    find value in item list
+    """
+    return [i for i, v in enumerate(item_list) if v == value]
+
+
+def search_string(data, target):
+    """
+    find out if target exists in data
+    """
+    for i in range(len(data)):
+        try:
+            col_num = data[i].index(target)
+            row_num = i
+            return row_num, col_num
+        except:
+            pass
+    print("Can't find " + target + " !")
+    return False
+
+
+def set_column_width(sheet):
+    """
+    set column width
+    """
+    # get the maximum width of each column
+    col_width = [0.5] * sheet.max_column
+    for row in range(sheet.max_row):
+        for col in range(sheet.max_column):
+            value = sheet.cell(row=row + 1, column=col + 1).value
+            if value:
+                width = len(str(value))
+                if width > col_width[col]:
+                    col_width[col] = width
+    # set column width
+    for i in range(len(col_width)):
+        col_lettert = get_column_letter(i + 1)
+        if col_width[i] > 100:
+            # set to 100 if col_width greater than 100
+            sheet.column_dimensions[col_lettert].width = 100
+        else:
+            sheet.column_dimensions[col_lettert].width = col_width[i] + 4
+
+
+def get_filelist(folder, postfix=None):
+    """
+    find a list of files with a postfix
+    """
+    fullname_list = []
+    if isdir(folder):
+        files = listdir(folder)
+        for filename in files:
+            fullname_list.append(join(folder, filename))
+        if postfix:
+            target_file_list = []
+            for fullname in fullname_list:
+                if fullname.endswith(postfix):
+                    target_file_list.append(fullname)
+            return target_file_list
+        else:
+            return fullname_list
+    else:
+        print("Error：Not a folder!")
+        return False
+
+
+def mkdir(path):
+    """
+    create a folder
+    """
+    path = path.strip()
+    path = path.rstrip("\\")
+    is_exists = exists(path)
+    if not is_exists:
+        makedirs(path)
+        return True
+    else:
+        return False
+
 
 alignment = Alignment(horizontal='center', vertical='center')
 thin = Side(border_style='thin', color=BLACK)
 border = Border(top=thin, left=thin, right=thin, bottom=thin)
 
 row_offset = 5
+project_id = 0
+
+hwbin_to_swbin_list = [
+    [
+        [1, [1, 2]],
+        [2, [41, 42, 43, 44, 45, 53, 54, 55]],
+        [4, [23, 24, 25, 29, 30, 33, 34, 36, 39, 40, 70, 71, 72]],
+        [5, [5, 6, 7, 8, 9, 12, 96, 97, 98, 99]],
+        [6, [13, 14, 15, 35]],
+        [8, [26, 27, 31, 32]]  # separate them out from HWBin4
+    ],
+    [
+        [3, [1, 2, 3]],
+        [1, [63, 64, 65, 89, 90, 94]],
+        [2, [53, 54, 73, 74]],
+        [4, [23, 24, 25, 26, 27, 31, 32, 36, 56, 57, 58, 75, 29, 30, 33, 34, 36, 39, 40]],
+        [5, [5, 6, 7, 8, 9, 12, 93, 96, 98, 99]],
+        [6, [13, 14, 15, 46, 47, 48, 51, 60]]
+        # ,[8, [29, 30, 33, 34, 36, 39, 40]] # put them back to HWBin4
+    ]
+]
 
 
 def parse_file(file, group_by_id):
     """
-    解析文件
-    :param file: datalog csv文件
-    :param group_by_id: 列序号（1：Site，2：SW_BIN，3：hW_BIN）
-    :return: 文件名，分组index列表，分组名，lotno
+    get basic information and group data
     """
     data = []
+    # get file data
     with open(file) as f:
         csv_reader = reader(f)
         for row in csv_reader:
             data.append(row)
-    search_chipno = Common.search_string(data, 'ChipNo')
+
+    # get row of ChipNo
+    search_chipno = search_string(data, 'ChipNo')
     if not search_chipno:
         exit()
     else:
         chipno_row_num = search_chipno[0]
+
+    # get row of first register
     first_register_row_num = len(data) - 1
     for i in range(chipno_row_num + row_offset, len(data)):
         try:
@@ -48,6 +151,7 @@ def parse_file(file, group_by_id):
         except:
             first_register_row_num = i
             break
+
     group_list = []
     for i in range(chipno_row_num + row_offset, first_register_row_num):
         group_list.append(int(data[i][group_by_id]))
@@ -58,58 +162,40 @@ def parse_file(file, group_by_id):
     for i in format_group_list:
         temp = []
         temp.append(i)
-        data_list = Common.find_item(group_list, i)
+        data_list = find_item(group_list, i)
         if group_by_id == 1:
             temp_list = []
             for j in data_list:
+                # get the corresponding SW_BIN of Site
                 temp_list.append(data[chipno_row_num + row_offset + j][2])
+            # remove duplicate value
             format_temp_list = list(set(temp_list))
             temp_index = []
             for m in format_temp_list:
                 temp_swbin = [m]
-                temp_data_list = Common.find_item(temp_list, m)
+                # find m in temp_list
+                temp_data_list = find_item(temp_list, m)
                 temp_swbin.append(temp_data_list)
                 temp_index.append(temp_swbin)
             temp.append(temp_index)
         else:
             temp.append(data_list)
         group_index.append(temp)
-
+    # parse file name
     file_name = basename(file).split('.')[0]
+    # calculate chip count
     chip_count = first_register_row_num - chipno_row_num - row_offset
     return file_name, group_index, chip_count
 
 
 def save_data(analysis_folder, site_data, softbin_data, project_id):
     """
-    写数据
-    :param analysis_folder: 保存分析文件夹路径
-    :param site_data: site数据
-    :return: 
+    save data to file
     """
     date = datetime.now().strftime("%Y%m%d%H%M")
-    test_file_name = analysis_folder + '/Total_Analysis_' + date + '.xlsx'
+    analysis_file = analysis_folder + '/Total_Analysis_' + date + '.xlsx'
     wb = Workbook()
 
-    hwbin_to_swbin_list = [
-        [
-            [1, [1, 2]],
-            [2, [41, 42, 43, 44, 45, 53, 54, 55]],
-            [4, [23, 24, 25, 29, 30, 33, 34, 36, 39, 40, 70, 71, 72]],
-            [5, [5, 6, 7, 8, 9, 12, 96, 97, 98, 99]],
-            [6, [13, 14, 15, 35]],
-            [8, [26, 27, 31, 32]]  # 专门分出来测试良率
-        ],
-        [
-            [3, [1, 2, 3]],
-            [1, [63, 64, 65, 89, 90, 94]],
-            [2, [53, 54, 73, 74]],
-            [4, [23, 24, 25, 26, 27, 31, 32, 36, 56, 57, 58, 75, 29, 30, 33, 34, 36, 39, 40]],
-            [5, [5, 6, 7, 8, 9, 12, 93, 96, 98, 99]],
-            [6, [13, 14, 15, 46, 47, 48, 51, 60]]
-            # ,[8, [29, 30, 33, 34, 36, 39, 40]] # 放回HWBin4
-        ]
-    ]
     if project_id == 0:
         ok_hwbin_count = 2
     elif project_id == 1:
@@ -119,7 +205,7 @@ def save_data(analysis_folder, site_data, softbin_data, project_id):
     for i in range(ok_hwbin_count):
         begin_fail_swbin += len(hwbin_to_swbin_list[project_id][i][1])
 
-    color_list = ['99FFFF', '33FF00', 'FFFFCC', 'FFFF33', 'FF9900', '9900CC', 'FF0000']
+    color_list = ['99FFFF', '33FF00', 'FFFFCC', 'FFFF33', 'FF9900', 'FF0099', 'FF0000']
     swbin_list = []
     for i in range(len(hwbin_to_swbin_list[project_id])):
         for j in range(len(hwbin_to_swbin_list[project_id][i][1])):
@@ -191,6 +277,9 @@ def save_data(analysis_folder, site_data, softbin_data, project_id):
             if i == len(temp_list) - 1:
                 temp_swbin_count.append([temp_total_count, 'FFA500'])
         site_swbin_count.append(temp_swbin_count)
+    # add the number of fail swbin by all site
+    # fill color of max value in fail swbin is green(all values are 0 do not fill green)
+    # fill color of min value in fail swbin is red(multiple values of 0 do not fill red)
     site_pass_total_list = [0] * 16
     for i in range(begin_fail_swbin):
         for j in range(len(site_swbin_count[i]) - 1):
@@ -342,15 +431,16 @@ def save_data(analysis_folder, site_data, softbin_data, project_id):
         if sheet_name == 'Sheet':
             del wb[sheet_name]
         else:
-            Common.set_column_width(wb[sheet_name])
+            set_column_width(wb[sheet_name])
 
-    wb.save(test_file_name)
+    wb.save(analysis_file)
 
 
 def main():
-    # Sourcefile folder path
+    global project_id
+    # source folder path
     if argv.count('-s') == 0:
-        print("Error：Sourcefile folder path 为必填项，格式：“-s D:\sourcefile”")
+        print("Error：Source folder path is required.Format:-s D:\Source folder.")
         exit()
     else:
         sourcefile_folder = argv[argv.index('-s') + 1]
@@ -360,11 +450,9 @@ def main():
             else:
                 break
 
-    # 项目 0:F28,1:JX828
+    # project 0:F28,1:JX828
     if argv.count('-p') != 0:
         project_id = int(argv[argv.index('-p') + 1])
-    else:
-        project_id = 0  # 默认F28项目
 
     names = listdir(sourcefile_folder)
     date_folder = []
@@ -379,17 +467,18 @@ def main():
                 lotno_folder.append(join(folder, name))
     file_list = []
     for folder in lotno_folder:
-        file_list.append(Common.get_filelist(folder, '.csv'))
+        # get CSV file under the folder
+        file_list.append(get_filelist(folder, '.csv'))
         if not file_list:
             exit()
 
-    # Analysis folder path
+    # analysis folder path
     if argv.count('-a') == 0:
         analysis_folder = sourcefile_folder + '\Analysis'
     else:
         analysis_folder = argv[argv.index('-a') + 1]
 
-    Common.mkdir(analysis_folder)
+    mkdir(analysis_folder)
 
     site_data = []
     softbin_data = []
@@ -404,7 +493,9 @@ def main():
             # parse file
             temp_site_data.append(parse_file(file, 1))
             temp_softbin_data.append(parse_file(file, 2))
+        # get Date
         date = basename(dirname(dirname(file_list[i][0])))
+        # get lotno
         lotno = basename(lotno_folder[i])
         site_data.append([lotno, temp_site_data, date])
         softbin_data.append([lotno, temp_softbin_data, date])
@@ -412,7 +503,7 @@ def main():
     parse_file_pbar.finish()
 
     # save data
-    save_data(analysis_folder, site_data, softbin_data, project_id)
+    save_data(analysis_folder, site_data, softbin_data)
 
 
 if __name__ == '__main__':
