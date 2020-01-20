@@ -188,12 +188,10 @@ def parse_file(file, group_by_id):
     return file_name, group_index, chip_count
 
 
-def save_data(analysis_folder, site_data, softbin_data, project_id):
+def save_data(analysis_file, site_data, softbin_data):
     """
     save data to file
     """
-    date = datetime.now().strftime("%Y%m%d%H%M")
-    analysis_file = analysis_folder + '/Total_Analysis_' + date + '.xlsx'
     wb = Workbook()
 
     if project_id == 0:
@@ -376,9 +374,10 @@ def save_data(analysis_folder, site_data, softbin_data, project_id):
                 cell.alignment = alignment
 
     softbinlotno_sheet = wb.create_sheet('LotNo-SWBin')
-    softbinlotno_sheet.freeze_panes = 'C2'
+    softbinlotno_sheet.freeze_panes = 'D2'
     softbinlotno_sheet.cell(row=1, column=1).value = len(softbin_data)
     softbinlotno_sheet.cell(row=1, column=2).value = total_count
+    softbinlotno_sheet.cell(row=1, column=3).value = 'PassPercent'
     for i in range(len(softbin_data)):
         softbinlotno_sheet.cell(row=2 + i, column=1).value = softbin_data[i][2]
         softbinlotno_sheet.cell(row=2 + i, column=2).value = softbin_data[i][0]
@@ -410,14 +409,19 @@ def save_data(analysis_folder, site_data, softbin_data, project_id):
         lotno_swbin_pbar.update(i + 1)
     lotno_swbin_pbar.finish()
     for x in range(len(swbin_list)):
-        softbinlotno_sheet.merge_cells(start_row=1, end_row=1, start_column=3 + 2 * x, end_column=4 + 2 * x)
-        softbinlotno_sheet.cell(row=1, column=3 + 2 * x).value = 'SWBin' + str(swbin_list[x][0])
-        softbinlotno_sheet.cell(row=1, column=3 + 2 * x).fill = PatternFill(fill_type='solid', fgColor=swbin_list[x][1])
+        softbinlotno_sheet.merge_cells(start_row=1, end_row=1, start_column=4 + 2 * x, end_column=5 + 2 * x)
+        softbinlotno_sheet.cell(row=1, column=4 + 2 * x).value = 'SWBin' + str(swbin_list[x][0])
+        softbinlotno_sheet.cell(row=1, column=4 + 2 * x).fill = PatternFill(fill_type='solid', fgColor=swbin_list[x][1])
         for i in range(len(lotno_swbin_count)):
-            softbinlotno_sheet.cell(row=2 + i, column=3 + 2 * x).value = lotno_swbin_count[i][x][1]
-            softbinlotno_sheet.cell(row=2 + i, column=4 + 2 * x).value = '{:.2%}'.format(
+            pass_count = 0
+            for j in range(begin_fail_swbin):
+                pass_count += lotno_swbin_count[i][j][1]
+            softbinlotno_sheet.cell(row=2 + i, column=3).value = '{:.2%}'.format(
+                pass_count / softbin_data[i][1][0][2])
+            softbinlotno_sheet.cell(row=2 + i, column=4 + 2 * x).value = lotno_swbin_count[i][x][1]
+            softbinlotno_sheet.cell(row=2 + i, column=5 + 2 * x).value = '{:.2%}'.format(
                 lotno_swbin_count[i][x][1] / softbin_data[i][1][0][2])
-            softbinlotno_sheet.cell(row=2 + i, column=4 + 2 * x).fill = PatternFill(fill_type='solid',
+            softbinlotno_sheet.cell(row=2 + i, column=5 + 2 * x).fill = PatternFill(fill_type='solid',
                                                                                     fgColor=swbin_list[x][1])
 
     for row in softbinlotno_sheet.rows:
@@ -438,15 +442,15 @@ def save_data(analysis_folder, site_data, softbin_data, project_id):
 
 def main():
     global project_id
-    # source folder path
-    if argv.count('-s') == 0:
-        print("Error：Source folder path is required.Format:-s D:\Source folder.")
+    # project folder path
+    if argv.count('-d') == 0:
+        print("Error：Project folder path is required.Format:-d D:\Project folder.")
         exit()
     else:
-        sourcefile_folder = argv[argv.index('-s') + 1]
-        for i in range(argv.index('-s') + 2, len(argv)):
+        project_folder = argv[argv.index('-d') + 1]
+        for i in range(argv.index('-d') + 2, len(argv)):
             if not argv[i].startswith('-'):
-                sourcefile_folder += (' ' + argv[i])
+                project_folder += (' ' + argv[i])
             else:
                 break
 
@@ -454,56 +458,68 @@ def main():
     if argv.count('-p') != 0:
         project_id = int(argv[argv.index('-p') + 1])
 
-    names = listdir(sourcefile_folder)
-    date_folder = []
-    for name in names:
-        if name != 'Analysis' and isdir(join(sourcefile_folder, name)):
-            date_folder.append(join(sourcefile_folder, name))
-    lotno_folder = []
-    for folder in date_folder:
-        names = listdir(folder)
-        for name in names:
-            if isdir(join(folder, name)):
-                lotno_folder.append(join(folder, name))
-    file_list = []
-    for folder in lotno_folder:
-        # get CSV file under the folder
-        file_list.append(get_filelist(folder, '.csv'))
-        if not file_list:
-            exit()
+    handler_names = listdir(project_folder)
+    handler_folders = []
+    for handler_name in handler_names:
+        if isdir(join(project_folder, handler_name)):
+            handler_folders.append(join(project_folder, handler_name))
 
-    # analysis folder path
-    if argv.count('-a') == 0:
-        analysis_folder = sourcefile_folder + '\Analysis'
-    else:
-        analysis_folder = argv[argv.index('-a') + 1]
+    for handler_folder in handler_folders:
+        print(handler_folder)
+        date_folders = []
+        date_names = listdir(handler_folder)
+        for date_name in date_names:
+            if date_name != 'Analysis' and isdir(join(handler_folder, date_name)):
+                date_folders.append(join(handler_folder, date_name))
 
-    mkdir(analysis_folder)
+        lotno_folders = []
+        for date_folder in date_folders:
+            lot_names = listdir(date_folder)
+            for lot_name in lot_names:
+                if isdir(join(date_folder, lot_name)):
+                    lotno_folders.append(join(date_folder, lot_name))
+        file_list = []
+        for lot_folder in lotno_folders:
+            # get CSV file under the folder
+            file_list.append(get_filelist(lot_folder, '.csv'))
+            if not file_list:
+                exit()
 
-    site_data = []
-    softbin_data = []
+        # analysis folder path
+        if argv.count('-a') == 0:
+            analysis_folder = handler_folder + '\Analysis'
+        else:
+            analysis_folder = argv[argv.index('-a') + 1]
 
-    parse_file_widgets = ['ParseFile: ', Percentage(), ' ', Bar('#'), ' ', Timer(), ' ', ETA(), ' ',
-                          FileTransferSpeed()]
-    parse_file_pbar = ProgressBar(widgets=parse_file_widgets, maxval=len(file_list)).start()
-    for i in range(len(file_list)):
-        temp_site_data = []
-        temp_softbin_data = []
-        for file in file_list[i]:
-            # parse file
-            temp_site_data.append(parse_file(file, 1))
-            temp_softbin_data.append(parse_file(file, 2))
-        # get Date
-        date = basename(dirname(dirname(file_list[i][0])))
-        # get lotno
-        lotno = basename(lotno_folder[i])
-        site_data.append([lotno, temp_site_data, date])
-        softbin_data.append([lotno, temp_softbin_data, date])
-        parse_file_pbar.update(i + 1)
-    parse_file_pbar.finish()
+        mkdir(analysis_folder)
 
-    # save data
-    save_data(analysis_folder, site_data, softbin_data)
+        site_data = []
+        softbin_data = []
+
+        parse_file_widgets = ['ParseFile: ', Percentage(), ' ', Bar('#'), ' ', Timer(), ' ', ETA(), ' ',
+                              FileTransferSpeed()]
+        parse_file_pbar = ProgressBar(widgets=parse_file_widgets, maxval=len(file_list)).start()
+        for i in range(len(file_list)):
+            temp_site_data = []
+            temp_softbin_data = []
+            for file in file_list[i]:
+                # parse file
+                temp_site_data.append(parse_file(file, 1))
+                temp_softbin_data.append(parse_file(file, 2))
+            # get Date
+            date = basename(dirname(dirname(file_list[i][0])))
+            # get lotno
+            lotno = basename(lotno_folders[i])
+            site_data.append([lotno, temp_site_data, date])
+            softbin_data.append([lotno, temp_softbin_data, date])
+            parse_file_pbar.update(i + 1)
+        parse_file_pbar.finish()
+
+        now_time = datetime.now().strftime("%Y%m%d%H%M")
+        handler = basename(handler_folder)
+        analysis_file = join(analysis_folder, handler + '_Total_Analysis' + now_time + '.xlsx')
+        # save data
+        save_data(analysis_file, site_data, softbin_data)
 
 
 if __name__ == '__main__':
