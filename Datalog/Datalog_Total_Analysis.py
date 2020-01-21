@@ -121,6 +121,13 @@ hwbin_to_swbin_list = [
         [5, [5, 6, 7, 8, 9, 12, 93, 96, 98, 99]],
         [6, [13, 14, 15, 46, 47, 48, 51, 60]]
         # ,[8, [29, 30, 33, 34, 36, 39, 40]] # put them back to HWBin4
+    ],
+    [
+        [3, [2, 255]],
+        [4, [23, 24, 25, 26, 27, 29, 30, 31, 32, 33, 34, 36, 39, 40, 63, 64, 65]],
+        [5, [5, 6, 7, 8, 9, 12, 89]],
+        [6, [13, 14, 15, 35, 46, 48, 53, 54, 60]],
+        [8, [94, 96, 97, 98, 99]]
     ]
 ]
 
@@ -198,6 +205,8 @@ def save_data(analysis_file, site_data, softbin_data):
         ok_hwbin_count = 2
     elif project_id == 1:
         ok_hwbin_count = 3
+    elif project_id == 2:
+        ok_hwbin_count = 1
 
     begin_fail_swbin = 0
     for i in range(ok_hwbin_count):
@@ -454,7 +463,7 @@ def main():
             else:
                 break
 
-    # project 0:F28,1:JX828
+    # project 0:F28,1:JX828,2:JX825
     if argv.count('-p') != 0:
         project_id = int(argv[argv.index('-p') + 1])
 
