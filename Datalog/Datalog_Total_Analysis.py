@@ -102,40 +102,41 @@ thin = Side(border_style='thin', color=BLACK)
 border = Border(top=thin, left=thin, right=thin, bottom=thin)
 
 row_offset = 5
-project_id = 0
+# default project
+project = 'F28'
 
-hwbin_to_swbin_list = [
-    [
-        [1, [1, 2]],
-        [2, [41, 42, 43, 44, 45, 53, 54, 55]],
-        [4, [23, 24, 25, 29, 30, 33, 34, 36, 39, 40, 70, 71, 72]],
-        [5, [5, 6, 7, 8, 9, 12, 96, 97, 98, 99]],
-        [6, [13, 14, 15, 35]],
-        [8, [26, 27, 31, 32]]  # separate them out from HWBin4
-    ],
-    [
-        [3, [1, 2, 3]],
-        [1, [63, 64, 65, 89, 90, 94]],
-        [2, [53, 54, 73, 74]],
-        [4, [23, 24, 25, 26, 27, 31, 32, 36, 56, 57, 58, 75, 29, 30, 33, 34, 36, 39, 40]],
-        [5, [5, 6, 7, 8, 9, 12, 93, 96, 98, 99]],
-        [6, [13, 14, 15, 46, 47, 48, 51, 60]]
-        # ,[8, [29, 30, 33, 34, 36, 39, 40]] # put them back to HWBin4
-    ],
-    [
-        [3, [2, 255]],
-        [4, [23, 24, 25, 26, 27, 29, 30, 31, 32, 33, 34, 36, 39, 40, 63, 64, 65]],
-        [5, [5, 6, 7, 8, 9, 12, 89]],
-        [6, [13, 14, 15, 35, 46, 48, 53, 54, 60]],
-        [8, [94, 96, 97, 98, 99]]
-    ]
-]
+hwbin_to_swbin = {
+    'F28': {
+        1: {'SWBin': (1, 2), 'isPassBin': True},
+        2: {'SWBin': (41, 42, 43, 44, 45, 53, 54, 55), 'isPassBin': True},
+        4: {'SWBin': (23, 24, 25, 29, 30, 33, 34, 36, 39, 40, 70, 71, 72), 'isPassBin': True},
+        5: {'SWBin': (5, 6, 7, 8, 9, 12, 96, 97, 98, 99), 'isPassBin': False},
+        6: {'SWBin': (13, 14, 15, 35), 'isPassBin': False},
+        8: {'SWBin': (26, 27, 31, 32), 'isPassBin': False}  # separate them out from HWBin4
+    },
+    'JX828': {
+        3: {'SWBin': (1, 2, 3), 'isPassBin': True},
+        1: {'SWBin': (63, 64, 65, 89, 90, 94), 'isPassBin': True},
+        2: {'SWBin': (53, 54, 73, 74), 'isPassBin': True},
+        4: {'SWBin': (23, 24, 25, 26, 27, 29, 30, 31, 32, 33, 34, 36, 39, 40, 56, 57, 58, 75), 'isPassBin': False},
+        5: {'SWBin': (5, 6, 7, 8, 9, 12, 93, 96, 98, 99), 'isPassBin': False},
+        6: {'SWBin': (13, 14, 15, 35, 46, 47, 48, 51, 60), 'isPassBin': False}
+    },
+    'JX825': {
+        3: {'SWBin': (2, 255), 'isPassBin': True},
+        4: {'SWBin': (23, 24, 25, 26, 27, 29, 30, 31, 32, 33, 34, 36, 39, 40, 63, 64, 65), 'isPassBin': False},
+        5: {'SWBin': (5, 6, 7, 8, 9, 12, 89), 'isPassBin': False},
+        6: {'SWBin': (13, 14, 15, 35, 46, 48, 53, 54, 60), 'isPassBin': False},
+        8: {'SWBin': (94, 96, 97, 98, 99), 'isPassBin': False}
+    }
+}
 
 
 def parse_file(file, group_by_id):
     """
     get basic information and group data
     """
+    parse_result = {}
     data = []
     # get file data
     with open(file) as f:
@@ -165,10 +166,9 @@ def parse_file(file, group_by_id):
     format_group_list = list(set(group_list))
     format_group_list.sort()
 
-    group_index = []
+    group_index = {}
     for i in format_group_list:
         temp = []
-        temp.append(i)
         data_list = find_item(group_list, i)
         if group_by_id == 1:
             temp_list = []
@@ -177,97 +177,92 @@ def parse_file(file, group_by_id):
                 temp_list.append(data[chipno_row_num + row_offset + j][2])
             # remove duplicate value
             format_temp_list = list(set(temp_list))
-            temp_index = []
+            temp_index = {}
             for m in format_temp_list:
-                temp_swbin = [m]
                 # find m in temp_list
                 temp_data_list = find_item(temp_list, m)
-                temp_swbin.append(temp_data_list)
-                temp_index.append(temp_swbin)
+                temp_index[m] = temp_data_list
             temp.append(temp_index)
         else:
             temp.append(data_list)
-        group_index.append(temp)
-    # parse file name
-    file_name = basename(file).split('.')[0]
+        group_index[i] = temp
     # calculate chip count
     chip_count = first_register_row_num - chipno_row_num - row_offset
-    return file_name, group_index, chip_count
+    parse_result['group index'] = group_index
+    parse_result['chip count'] = chip_count
+    return parse_result
 
+def get_lotno(file):
+    """
+    get lotno
+    """
+    data = []
+    # get file data
+    with open(file) as f:
+        csv_reader = reader(f)
+        for row in csv_reader:
+            data.append(row)
+    # get lotno
+    lotno = data[5][1]
+    return lotno
 
-def save_data(analysis_file, site_data, softbin_data):
+def save_data(analysis_file, parse_data):
     """
     save data to file
     """
     wb = Workbook()
 
-    if project_id == 0:
-        ok_hwbin_count = 2
-    elif project_id == 1:
-        ok_hwbin_count = 3
-    elif project_id == 2:
-        ok_hwbin_count = 1
-
+    ok_hwbin_count = 0
     begin_fail_swbin = 0
-    for i in range(ok_hwbin_count):
-        begin_fail_swbin += len(hwbin_to_swbin_list[project_id][i][1])
+    for hw_bin_key in hwbin_to_swbin[project].keys():
+        if hwbin_to_swbin[project][hw_bin_key]['isPassBin']:
+            ok_hwbin_count += 1
+            begin_fail_swbin += len(hwbin_to_swbin[project][hw_bin_key]['SWBin'])
 
     color_list = ['99FFFF', '33FF00', 'FFFFCC', 'FFFF33', 'FF9900', 'FF0099', 'FF0000']
     swbin_list = []
-    for i in range(len(hwbin_to_swbin_list[project_id])):
-        for j in range(len(hwbin_to_swbin_list[project_id][i][1])):
-            swbin_list.append([hwbin_to_swbin_list[project_id][i][1][j], color_list[i]])
+    key_index = 0
+    for hwbin_key in hwbin_to_swbin[project].keys():
+        for swbin in hwbin_to_swbin[project][hwbin_key]['SWBin']:
+            swbin_list.append([swbin, color_list[key_index]])
+        key_index += 1
 
     sitesoftbin_sheet = wb.create_sheet('Site-SWBin')
     sitesoftbin_sheet.freeze_panes = 'B2'
     irow = 1
     total_count = 0
-    for i in range(len(site_data)):
-        total_count += site_data[i][1][0][2]
+    for i in range(len(parse_data)):
+        total_count += parse_data[i]['site data'][0]['chip count']
     sitesoftbin_sheet.cell(row=irow, column=1).value = total_count
-    for i in range(len(site_data[0][1][0][1])):
-        sitesoftbin_sheet.cell(row=irow, column=2 + i).value = 'Site' + str(site_data[0][1][0][1][i][0])
+    for i in range(16):
+        sitesoftbin_sheet.cell(row=irow, column=2 + i).value = 'Site' + str(i)
         sitesoftbin_sheet.cell(row=irow, column=2 + i).fill = PatternFill(fill_type='solid', fgColor=YELLOW)
-    sitesoftbin_sheet.merge_cells(start_row=irow, end_row=irow, start_column=3 + len(site_data[0][1][0][1]),
-                                  end_column=4 + len(site_data[0][1][0][1]))
-    sitesoftbin_sheet.cell(row=irow, column=3 + len(site_data[0][1][0][1])).value = 'Summary'
-    sitesoftbin_sheet.cell(row=irow, column=3 + len(site_data[0][1][0][1])).fill = PatternFill(fill_type='solid',
-                                                                                               fgColor='FFA500')
+    sitesoftbin_sheet.merge_cells(start_row=irow, end_row=irow, start_column=19, end_column=20)
+    sitesoftbin_sheet.cell(row=irow, column=19).value = 'Summary'
+    sitesoftbin_sheet.cell(row=irow, column=19).fill = PatternFill(fill_type='solid', fgColor='FFA500')
     irow += 1
 
     lotno_site_swbin_count = []
-
-    site_swbin_widgets = ['Site-SWBin: ', Percentage(), ' ', Bar('#'), ' ', Timer(), ' ', ETA(), ' ',
-                          FileTransferSpeed()]
-    site_swbin_pbar = ProgressBar(widgets=site_swbin_widgets, maxval=len(site_data)).start()
-    for i in range(len(site_data)):
-        lotno_temp_list = [site_data[i][0]]
-        for x in range(begin_fail_swbin):
+    for i in range(len(parse_data)):
+        lotno_temp_list = [parse_data[i]['lotno']]
+        for x in range(len(swbin_list)):
+            swbin = str(swbin_list[x][0])
             file_temp_list = [swbin_list[x][0]]
             site_count_list = [[0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [5, 0], [6, 0], [7, 0], [8, 0], [9, 0], [10, 0],
                                [11, 0], [12, 0], [13, 0], [14, 0], [15, 0]]
-            for m in range(len(site_data[i][1])):
-                for n in range(len(site_data[i][1][m][1])):
-                    for j in range(len(site_data[i][1][m][1][n][1])):
-                        if site_data[i][1][m][1][n][1][j][0] == str(swbin_list[x][0]):
-                            site_count_list[n][1] += len(site_data[i][1][m][1][n][1][j][1])
-                            break
-            file_temp_list.append(site_count_list)
-            lotno_temp_list.append(file_temp_list)
-        for x in range(begin_fail_swbin, len(swbin_list)):
-            file_temp_list = [swbin_list[x][0]]
-            site_count_list = [[0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [5, 0], [6, 0], [7, 0], [8, 0], [9, 0], [10, 0],
-                               [11, 0], [12, 0], [13, 0], [14, 0], [15, 0]]
-            for n in range(len(site_data[i][1][-1][1])):
-                for j in range(len(site_data[i][1][-1][1][n][1])):
-                    if site_data[i][1][-1][1][n][1][j][0] == str(swbin_list[x][0]):
-                        site_count_list[n][1] += len(site_data[i][1][-1][1][n][1][j][1])
-                        break
+            for site in range(16):
+                if x<begin_fail_swbin:
+                    for m in range(len(parse_data[i]['site data'])):
+                        if (site in parse_data[i]['site data'][m]['group index'].keys()) and (
+                            swbin in parse_data[i]['site data'][m]['group index'][site][0].keys()):
+                            site_count_list[site][1] += len(parse_data[i]['site data'][m]['group index'][site][0][swbin])
+                else:
+                    if (site in parse_data[i]['site data'][-1]['group index'].keys()) and (
+                                swbin in parse_data[i]['site data'][-1]['group index'][site][0].keys()):
+                        site_count_list[site][1] += len(parse_data[i]['site data'][-1]['group index'][site][0][swbin])
             file_temp_list.append(site_count_list)
             lotno_temp_list.append(file_temp_list)
         lotno_site_swbin_count.append(lotno_temp_list)
-        site_swbin_pbar.update(i + 1)
-    site_swbin_pbar.finish()
     site_swbin_count = []
     actual_total_count = 0
     for x in range(len(swbin_list)):
@@ -384,39 +379,30 @@ def save_data(analysis_file, site_data, softbin_data):
 
     softbinlotno_sheet = wb.create_sheet('LotNo-SWBin')
     softbinlotno_sheet.freeze_panes = 'D2'
-    softbinlotno_sheet.cell(row=1, column=1).value = len(softbin_data)
+    softbinlotno_sheet.cell(row=1, column=1).value = len(parse_data)
     softbinlotno_sheet.cell(row=1, column=2).value = total_count
     softbinlotno_sheet.cell(row=1, column=3).value = 'PassPercent'
-    for i in range(len(softbin_data)):
-        softbinlotno_sheet.cell(row=2 + i, column=1).value = softbin_data[i][2]
-        softbinlotno_sheet.cell(row=2 + i, column=2).value = softbin_data[i][0]
+    for i in range(len(parse_data)):
+        softbinlotno_sheet.cell(row=2 + i, column=1).value = parse_data[i]['date']
+        softbinlotno_sheet.cell(row=2 + i, column=2).value = parse_data[i]['lotno']
         softbinlotno_sheet.cell(row=2 + i, column=2).fill = PatternFill(fill_type='solid', fgColor=YELLOW)
 
     lotno_swbin_count = []
 
-    lotno_swbin_widgets = ['LotNo_SWBin: ', Percentage(), ' ', Bar('#'), ' ', Timer(), ' ', ETA(), ' ',
-                           FileTransferSpeed()]
-    lotno_swbin_pbar = ProgressBar(widgets=lotno_swbin_widgets, maxval=len(softbin_data)).start()
-    for i in range(len(softbin_data)):
+    for i in range(len(parse_data)):
         lotno_temp_list = []
-        for x in range(begin_fail_swbin):
-            file_temp_list = [swbin_list[x][0], 0]
-            for m in range(len(softbin_data[i][1])):
-                for n in range(len(softbin_data[i][1][m][1])):
-                    if softbin_data[i][1][m][1][n][0] == swbin_list[x][0]:
-                        file_temp_list[1] += len(softbin_data[i][1][m][1][n][1])
-                        break
-            lotno_temp_list.append(file_temp_list)
-        for x in range(begin_fail_swbin, len(swbin_list)):
-            file_temp_list = [swbin_list[x][0], 0]
-            for n in range(len(softbin_data[i][1][-1][1])):
-                if softbin_data[i][1][-1][1][n][0] == swbin_list[x][0]:
-                    file_temp_list[1] += len(softbin_data[i][1][-1][1][n][1])
-                    break
+        for x in range(len(swbin_list)):
+            swbin = swbin_list[x][0]
+            file_temp_list = [swbin, 0]
+            if x < begin_fail_swbin:
+                for m in range(len(parse_data[i]['swbin data'])):
+                    if swbin in parse_data[i]['swbin data'][m]['group index'].keys():
+                        file_temp_list[1] += len(parse_data[i]['swbin data'][m]['group index'][swbin][0])
+            else:
+                if swbin in parse_data[i]['swbin data'][-1]['group index'].keys():
+                    file_temp_list[1] += len(parse_data[i]['swbin data'][-1]['group index'][swbin][0])
             lotno_temp_list.append(file_temp_list)
         lotno_swbin_count.append(lotno_temp_list)
-        lotno_swbin_pbar.update(i + 1)
-    lotno_swbin_pbar.finish()
     for x in range(len(swbin_list)):
         softbinlotno_sheet.merge_cells(start_row=1, end_row=1, start_column=4 + 2 * x, end_column=5 + 2 * x)
         softbinlotno_sheet.cell(row=1, column=4 + 2 * x).value = 'SWBin' + str(swbin_list[x][0])
@@ -426,10 +412,10 @@ def save_data(analysis_file, site_data, softbin_data):
             for j in range(begin_fail_swbin):
                 pass_count += lotno_swbin_count[i][j][1]
             softbinlotno_sheet.cell(row=2 + i, column=3).value = '{:.2%}'.format(
-                pass_count / softbin_data[i][1][0][2])
+                pass_count / parse_data[i]['swbin data'][0]['chip count'])
             softbinlotno_sheet.cell(row=2 + i, column=4 + 2 * x).value = lotno_swbin_count[i][x][1]
             softbinlotno_sheet.cell(row=2 + i, column=5 + 2 * x).value = '{:.2%}'.format(
-                lotno_swbin_count[i][x][1] / softbin_data[i][1][0][2])
+                lotno_swbin_count[i][x][1] / parse_data[i]['swbin data'][0]['chip count'])
             softbinlotno_sheet.cell(row=2 + i, column=5 + 2 * x).fill = PatternFill(fill_type='solid',
                                                                                     fgColor=swbin_list[x][1])
 
@@ -450,7 +436,8 @@ def save_data(analysis_file, site_data, softbin_data):
 
 
 def main():
-    global project_id
+    global project
+
     # project folder path
     if argv.count('-d') == 0:
         print("Error：Project folder path is required.Format:-d D:\Project folder.")
@@ -463,9 +450,9 @@ def main():
             else:
                 break
 
-    # project 0:F28,1:JX828,2:JX825
+    # project F28,JX828,JX825
     if argv.count('-p') != 0:
-        project_id = int(argv[argv.index('-p') + 1])
+        project = argv[argv.index('-p') + 1]
 
     handler_names = listdir(project_folder)
     handler_folders = []
@@ -502,13 +489,12 @@ def main():
 
         mkdir(analysis_folder)
 
-        site_data = []
-        softbin_data = []
-
+        parse_data = []
         parse_file_widgets = ['ParseFile: ', Percentage(), ' ', Bar('#'), ' ', Timer(), ' ', ETA(), ' ',
                               FileTransferSpeed()]
         parse_file_pbar = ProgressBar(widgets=parse_file_widgets, maxval=len(file_list)).start()
         for i in range(len(file_list)):
+            lotno_data = {}
             temp_site_data = []
             temp_softbin_data = []
             for file in file_list[i]:
@@ -517,10 +503,11 @@ def main():
                 temp_softbin_data.append(parse_file(file, 2))
             # get Date
             date = basename(dirname(dirname(file_list[i][0])))
-            # get lotno
-            lotno = basename(lotno_folders[i])
-            site_data.append([lotno, temp_site_data, date])
-            softbin_data.append([lotno, temp_softbin_data, date])
+            lotno_data['site data'] = temp_site_data
+            lotno_data['swbin data'] = temp_softbin_data
+            lotno_data['date'] = date
+            lotno_data['lotno'] = get_lotno(file_list[i][0])
+            parse_data.append(lotno_data)
             parse_file_pbar.update(i + 1)
         parse_file_pbar.finish()
 
@@ -528,7 +515,7 @@ def main():
         handler = basename(handler_folder)
         analysis_file = join(analysis_folder, handler + '_Total_Analysis' + now_time + '.xlsx')
         # save data
-        save_data(analysis_file, site_data, softbin_data)
+        save_data(analysis_file, parse_data)
 
 
 if __name__ == '__main__':
