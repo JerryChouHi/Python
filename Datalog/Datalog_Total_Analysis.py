@@ -4,16 +4,19 @@
 # @File     :
 # @Function : analysis all data
 
-from csv import reader
+from csv import reader, field_size_limit
 from os.path import basename, dirname, exists, join, isdir
-from os import listdir, makedirs
+from os import listdir, makedirs, getcwd
 from datetime import datetime
-from sys import argv
+from sys import argv, exit, maxsize
 from openpyxl import Workbook
 from openpyxl.styles import PatternFill, Border, Side, Font, Alignment
 from openpyxl.styles.colors import YELLOW, GREEN, BLACK, WHITE, RED
-from progressbar import *
 from openpyxl.utils import get_column_letter
+from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QLineEdit, QComboBox, QFileDialog, QProgressBar, \
+    QErrorMessage, QRadioButton
+from PyQt5.QtCore import QThread, pyqtSignal, QRect
+from PyQt5.QtGui import QIcon, QBrush, QPixmap, QPalette
 
 
 def find_item(item_list, value):
@@ -104,15 +107,16 @@ border = Border(top=thin, left=thin, right=thin, bottom=thin)
 row_offset = 5
 # default project
 project = 'F28'
+lotCount = 0
+now_time = datetime.now().strftime("%Y%m%d%H%M%S")
 
 hwbin_to_swbin = {
     'F28': {
         1: {'SWBin': (1, 2), 'isPassBin': True},
         2: {'SWBin': (41, 42, 43, 44, 45, 53, 54, 55), 'isPassBin': True},
-        4: {'SWBin': (23, 24, 25, 29, 30, 33, 34, 36, 39, 40, 70, 71, 72), 'isPassBin': True},
+        4: {'SWBin': (23, 24, 25, 26, 27, 29, 30, 31, 32, 33, 34, 36, 39, 40, 70, 71, 72), 'isPassBin': False},
         5: {'SWBin': (5, 6, 7, 8, 9, 12, 96, 97, 98, 99), 'isPassBin': False},
-        6: {'SWBin': (13, 14, 15, 35), 'isPassBin': False},
-        8: {'SWBin': (26, 27, 31, 32), 'isPassBin': False}  # separate them out from HWBin4
+        6: {'SWBin': (13, 14, 15, 35), 'isPassBin': False}
     },
     'JX828': {
         3: {'SWBin': (1, 2, 3), 'isPassBin': True},
@@ -139,8 +143,8 @@ def parse_file(file, group_by_id):
     parse_result = {}
     data = []
     # get file data
-    with open(file) as f:
-        csv_reader = reader(f)
+    with open(file, encoding='unicode_escape') as f:
+        csv_reader = reader((line.replace('\0', '') for line in f))
         for row in csv_reader:
             data.append(row)
 
@@ -192,19 +196,21 @@ def parse_file(file, group_by_id):
     parse_result['chip count'] = chip_count
     return parse_result
 
+
 def get_lotno(file):
     """
     get lotno
     """
     data = []
     # get file data
-    with open(file) as f:
-        csv_reader = reader(f)
+    with open(file, encoding='unicode_escape') as f:
+        csv_reader = reader((line.replace('\0', '') for line in f))
         for row in csv_reader:
             data.append(row)
     # get lotno
     lotno = data[5][1]
     return lotno
+
 
 def save_data(analysis_file, parse_data):
     """
@@ -251,11 +257,12 @@ def save_data(analysis_file, parse_data):
             site_count_list = [[0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [5, 0], [6, 0], [7, 0], [8, 0], [9, 0], [10, 0],
                                [11, 0], [12, 0], [13, 0], [14, 0], [15, 0]]
             for site in range(16):
-                if x<begin_fail_swbin:
+                if x < begin_fail_swbin:
                     for m in range(len(parse_data[i]['site data'])):
                         if (site in parse_data[i]['site data'][m]['group index'].keys()) and (
-                            swbin in parse_data[i]['site data'][m]['group index'][site][0].keys()):
-                            site_count_list[site][1] += len(parse_data[i]['site data'][m]['group index'][site][0][swbin])
+                                    swbin in parse_data[i]['site data'][m]['group index'][site][0].keys()):
+                            site_count_list[site][1] += len(
+                                parse_data[i]['site data'][m]['group index'][site][0][swbin])
                 else:
                     if (site in parse_data[i]['site data'][-1]['group index'].keys()) and (
                                 swbin in parse_data[i]['site data'][-1]['group index'][site][0].keys()):
@@ -413,6 +420,8 @@ def save_data(analysis_file, parse_data):
                 pass_count += lotno_swbin_count[i][j][1]
             softbinlotno_sheet.cell(row=2 + i, column=3).value = '{:.2%}'.format(
                 pass_count / parse_data[i]['swbin data'][0]['chip count'])
+            if pass_count >= parse_data[i]['swbin data'][0]['chip count']:
+                softbinlotno_sheet.cell(row=2 + i, column=3).fill = PatternFill(fill_type='solid', fgColor=RED)
             softbinlotno_sheet.cell(row=2 + i, column=4 + 2 * x).value = lotno_swbin_count[i][x][1]
             softbinlotno_sheet.cell(row=2 + i, column=5 + 2 * x).value = '{:.2%}'.format(
                 lotno_swbin_count[i][x][1] / parse_data[i]['swbin data'][0]['chip count'])
@@ -435,88 +444,280 @@ def save_data(analysis_file, parse_data):
     wb.save(analysis_file)
 
 
-def main():
-    global project
+class Runthread(QThread):
+    _signal = pyqtSignal(str)
 
-    # project folder path
-    if argv.count('-d') == 0:
-        print("Error：Project folder path is required.Format:-d D:\Project folder.")
-        exit()
-    else:
-        project_folder = argv[argv.index('-d') + 1]
-        for i in range(argv.index('-d') + 2, len(argv)):
-            if not argv[i].startswith('-'):
-                project_folder += (' ' + argv[i])
-            else:
-                break
+    def __init__(self, open_path, choose_radio):
+        super(Runthread, self).__init__()
+        self.open_path = open_path
+        self.choose_radio = choose_radio
+        self.count = 0
 
-    # project F28,JX828,JX825
-    if argv.count('-p') != 0:
-        project = argv[argv.index('-p') + 1]
+    def __del__(self):
+        self.wait()
 
-    handler_names = listdir(project_folder)
-    handler_folders = []
-    for handler_name in handler_names:
-        if isdir(join(project_folder, handler_name)):
-            handler_folders.append(join(project_folder, handler_name))
+    def run(self):
+        if self.choose_radio=='ProjectFolder':
+            handler_names = listdir(self.open_path)
+            handler_folders = []
+            for handler_name in handler_names:
+                if isdir(join(self.open_path, handler_name)):
+                    handler_folders.append(join(self.open_path, handler_name))
 
-    for handler_folder in handler_folders:
-        print(handler_folder)
-        date_folders = []
-        date_names = listdir(handler_folder)
-        for date_name in date_names:
-            if date_name != 'Analysis' and isdir(join(handler_folder, date_name)):
-                date_folders.append(join(handler_folder, date_name))
+            for handler_folder in handler_folders:
+                date_folders = []
+                date_names = listdir(handler_folder)
+                for date_name in date_names:
+                    if date_name != 'Analysis' and isdir(join(handler_folder, date_name)):
+                        date_folders.append(join(handler_folder, date_name))
 
-        lotno_folders = []
-        for date_folder in date_folders:
-            lot_names = listdir(date_folder)
-            for lot_name in lot_names:
-                if isdir(join(date_folder, lot_name)):
-                    lotno_folders.append(join(date_folder, lot_name))
-        file_list = []
-        for lot_folder in lotno_folders:
-            # get CSV file under the folder
-            file_list.append(get_filelist(lot_folder, '.csv'))
-            if not file_list:
-                exit()
+                lotno_folders = []
+                for date_folder in date_folders:
+                    lot_names = listdir(date_folder)
+                    for lot_name in lot_names:
+                        if isdir(join(date_folder, lot_name)):
+                            lotno_folders.append(join(date_folder, lot_name))
+                file_list = []
+                for lot_folder in lotno_folders:
+                    # get CSV file under the folder
+                    file_list.append(get_filelist(lot_folder, '.csv'))
+                    if not file_list:
+                        exit()
 
-        # analysis folder path
-        if argv.count('-a') == 0:
-            analysis_folder = handler_folder + '\Analysis'
+                # analysis folder path
+                if argv.count('-a') == 0:
+                    analysis_folder = handler_folder + '\Analysis'
+                else:
+                    analysis_folder = argv[argv.index('-a') + 1]
+
+                mkdir(analysis_folder)
+
+                parse_data = []
+
+                for i in range(len(file_list)):
+                    lotno_data = {}
+                    temp_site_data = []
+                    temp_softbin_data = []
+                    for file in file_list[i]:
+                        # parse file
+                        temp_site_data.append(parse_file(file, 1))
+                        temp_softbin_data.append(parse_file(file, 2))
+                    # get Date
+                    date = basename(dirname(dirname(file_list[i][0])))
+                    lotno_data['site data'] = temp_site_data
+                    lotno_data['swbin data'] = temp_softbin_data
+                    lotno_data['date'] = date
+                    lotno_data['lotno'] = get_lotno(file_list[i][0])
+                    parse_data.append(lotno_data)
+                    self.count += 1
+                    self._signal.emit(str(self.count * 100 // lotCount))
+                handler = basename(handler_folder)
+                analysis_file = join(analysis_folder, handler + '_Total_Analysis' + now_time + '.xlsx')
+                # save data
+                save_data(analysis_file, parse_data)
         else:
-            analysis_folder = argv[argv.index('-a') + 1]
+            date_folders = []
+            date_names = listdir(self.open_path)
+            for date_name in date_names:
+                if date_name != 'Analysis' and isdir(join(self.open_path, date_name)):
+                    date_folders.append(join(self.open_path, date_name))
 
-        mkdir(analysis_folder)
+            lotno_folders = []
+            for date_folder in date_folders:
+                lot_names = listdir(date_folder)
+                for lot_name in lot_names:
+                    if isdir(join(date_folder, lot_name)):
+                        lotno_folders.append(join(date_folder, lot_name))
+            file_list = []
+            for lot_folder in lotno_folders:
+                # get CSV file under the folder
+                file_list.append(get_filelist(lot_folder, '.csv'))
+                if not file_list:
+                    exit()
 
-        parse_data = []
-        parse_file_widgets = ['ParseFile: ', Percentage(), ' ', Bar('#'), ' ', Timer(), ' ', ETA(), ' ',
-                              FileTransferSpeed()]
-        parse_file_pbar = ProgressBar(widgets=parse_file_widgets, maxval=len(file_list)).start()
-        for i in range(len(file_list)):
-            lotno_data = {}
-            temp_site_data = []
-            temp_softbin_data = []
-            for file in file_list[i]:
-                # parse file
-                temp_site_data.append(parse_file(file, 1))
-                temp_softbin_data.append(parse_file(file, 2))
-            # get Date
-            date = basename(dirname(dirname(file_list[i][0])))
-            lotno_data['site data'] = temp_site_data
-            lotno_data['swbin data'] = temp_softbin_data
-            lotno_data['date'] = date
-            lotno_data['lotno'] = get_lotno(file_list[i][0])
-            parse_data.append(lotno_data)
-            parse_file_pbar.update(i + 1)
-        parse_file_pbar.finish()
+            # analysis folder path
+            if argv.count('-a') == 0:
+                analysis_folder = self.open_path + '\Analysis'
+            else:
+                analysis_folder = argv[argv.index('-a') + 1]
 
-        now_time = datetime.now().strftime("%Y%m%d%H%M")
-        handler = basename(handler_folder)
-        analysis_file = join(analysis_folder, handler + '_Total_Analysis' + now_time + '.xlsx')
-        # save data
-        save_data(analysis_file, parse_data)
+            mkdir(analysis_folder)
+
+            parse_data = []
+
+            for i in range(len(file_list)):
+                lotno_data = {}
+                temp_site_data = []
+                temp_softbin_data = []
+                for file in file_list[i]:
+                    # parse file
+                    temp_site_data.append(parse_file(file, 1))
+                    temp_softbin_data.append(parse_file(file, 2))
+                # get Date
+                date = basename(dirname(dirname(file_list[i][0])))
+                lotno_data['site data'] = temp_site_data
+                lotno_data['swbin data'] = temp_softbin_data
+                lotno_data['date'] = date
+                lotno_data['lotno'] = get_lotno(file_list[i][0])
+                parse_data.append(lotno_data)
+                self.count += 1
+                self._signal.emit(str(self.count * 100 // lotCount))
+            handler = basename(self.open_path)
+            analysis_file = join(analysis_folder, handler + '_Total_Analysis' + now_time + '.xlsx')
+            # save data
+            save_data(analysis_file, parse_data)
+        self._signal.emit(str(100))
+
+
+class Ui_MainWindow(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.cwd = getcwd()
+        self.qe = QErrorMessage(self)
+        self.pale = QPalette()
+        self.open_edit = QLineEdit(self)
+        self.open_button = QPushButton('Open', self)
+        self.analysis_button = QPushButton('Analysis', self)
+        self.progressBar = QProgressBar(self)
+        self.combobox = QComboBox(self)
+        self.ProjectFolder_radioButton = QRadioButton('ProjectFolder', self)
+        self.HandlerFolder_radioButton = QRadioButton('HandlerFolder', self)
+        self.initUI()
+
+    def initUI(self):
+        self.setWindowTitle('Datalog Total Analysis')
+        self.setWindowIcon(QIcon('./icos/favicon.ico'))
+        self.pale.setBrush(self.backgroundRole(), QBrush(QPixmap('./images/kobe3.jpg')))
+        self.setPalette(self.pale)
+        self.setMaximumSize(800, 600)
+        self.setMinimumSize(800, 600)
+
+        self.ProjectFolder_radioButton.setGeometry(QRect(50, 20, 100, 30))
+        self.ProjectFolder_radioButton.setChecked(True)
+        self.ProjectFolder_radioButton.toggled.connect(self.choose)
+        self.HandlerFolder_radioButton.setGeometry(QRect(170, 20, 100, 30))
+        self.HandlerFolder_radioButton.toggled.connect(self.choose)
+
+        self.open_edit.setGeometry(QRect(50, 80, 500, 50))
+        self.open_edit.setReadOnly(True)
+
+        self.open_button.setGeometry(QRect(580, 80, 170, 50))
+        # click button call openfolder
+        self.open_button.clicked.connect(self.open)
+
+        self.combobox.setGeometry(QRect(50, 180, 200, 50))
+        self.combobox.insertItem(0, self.tr('F28'))
+        self.combobox.insertItem(1, self.tr('JX828'))
+        self.combobox.insertItem(2, self.tr('JX825'))
+
+        self.analysis_button.setGeometry(QRect(280, 180, 170, 50))
+        self.analysis_button.clicked.connect(self.analysis)
+
+        self.progressBar.setGeometry(QRect(50, 280, 700, 30))
+        self.progressBar.setValue(0)
+
+        self.show()
+
+    def choose(self):
+        if self.HandlerFolder_radioButton.isChecked():
+            self.ProjectFolder_radioButton.setChecked(False)
+        else:
+            self.HandlerFolder_radioButton.setChecked(False)
+
+    def open(self):
+        dir_choose = QFileDialog.getExistingDirectory(self, 'Select directory', self.cwd)
+        if not dir_choose:
+            return
+        self.open_edit.setText(dir_choose)
+        global lotCount
+        lotCount = 0
+        if self.ProjectFolder_radioButton.isChecked():
+            handler_names = listdir(self.open_edit.text())
+            handler_folders = []
+            for handler_name in handler_names:
+                if isdir(join(self.open_edit.text(), handler_name)):
+                    handler_folders.append(join(self.open_edit.text(), handler_name))
+            if not handler_folders:
+                self.qe.showMessage('Path is incorrect,please check!')
+                return
+            for handler_folder in handler_folders:
+                date_folders = []
+                date_names = listdir(handler_folder)
+                for date_name in date_names:
+                    if date_name != 'Analysis' and isdir(join(handler_folder, date_name)):
+                        date_folders.append(join(handler_folder, date_name))
+                if not date_folders:
+                    self.qe.showMessage('Path is incorrect,please check!')
+                    return
+                lotno_folders = []
+                for date_folder in date_folders:
+                    lot_names = listdir(date_folder)
+                    for lot_name in lot_names:
+                        if isdir(join(date_folder, lot_name)):
+                            lotno_folders.append(join(date_folder, lot_name))
+                if not lotno_folders:
+                    self.qe.showMessage('Path is incorrect,please check!')
+                    return
+                lotCount += len(lotno_folders)
+        else:
+            date_folders = []
+            date_names = listdir(self.open_edit.text())
+            for date_name in date_names:
+                if date_name != 'Analysis' and isdir(join(self.open_edit.text(), date_name)):
+                    date_folders.append(join(self.open_edit.text(), date_name))
+            if not date_folders:
+                self.qe.showMessage('Path is incorrect,please check!')
+                return
+            lotno_folders = []
+            for date_folder in date_folders:
+                lot_names = listdir(date_folder)
+                for lot_name in lot_names:
+                    if isdir(join(date_folder, lot_name)):
+                        lotno_folders.append(join(date_folder, lot_name))
+            if not lotno_folders:
+                self.qe.showMessage('Path is incorrect,please check!')
+                return
+            lotCount += len(lotno_folders)
+
+
+    def call_backlog(self, msg):
+        self.progressBar.setValue(int(msg))  # pass the thread's parameters to progressBar
+        if msg == '100':
+            # del self.thread
+            self.analysis_button.setEnabled(True)
+
+    def analysis(self):
+        if not self.open_edit.text():
+            self.qe.showMessage('Path cannot be empty!')
+            return
+        else:
+            if lotCount == 0:
+                return
+            self.progressBar.setValue(0)
+            global project
+            project = self.combobox.currentText()
+            if self.ProjectFolder_radioButton.isChecked():
+                choose_radio = self.ProjectFolder_radioButton.text()
+            else:
+                choose_radio = self.HandlerFolder_radioButton.text()
+            # create thread
+            self.analysis_button.setEnabled(False)
+            self.thread = Runthread(self.open_edit.text(), choose_radio)
+            # connect signal
+            self.thread._signal.connect(self.call_backlog)
+            self.thread.start()
 
 
 if __name__ == '__main__':
-    main()
+    # _csv.Error:field larger than field limit(131072)
+    maxInt = maxsize
+    while True:
+        try:
+            field_size_limit(maxInt)
+            break
+        except OverflowError:
+            maxInt = int(maxInt / 10)
+    app = QApplication(argv)
+    MainWindow = QMainWindow()
+    ui = Ui_MainWindow()
+    exit(app.exec_())
