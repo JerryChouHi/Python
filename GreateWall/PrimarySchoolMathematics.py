@@ -5,29 +5,44 @@
 # @Function :
 
 from sys import argv, exit
-from Mathematics import Ui_MainWindow
-from ChooseTopicType import Ui_ChooseWindow
+import Mathematics
+import ChooseTopicType
 from PyQt5.QtGui import QFont
 from PyQt5.QtWidgets import QApplication, QMainWindow
 from random import randint
 
 
-class MainWindow(QMainWindow, Ui_MainWindow):
+class MainWindow(QMainWindow, Mathematics.Ui_MainWindow):
     def __init__(self, s):
         super(MainWindow, self).__init__()
         self.s1 = s[0]
         self.s2 = s[1]
         self.setupUi(self)
-        self.label_01.setFont(QFont('Timers', 20))
-        self.label_11.setFont(QFont('Timers', 20))
-        self.label_21.setFont(QFont('Timers', 20))
-        self.label_31.setFont(QFont('Timers', 20))
-        self.label_41.setFont(QFont('Timers', 20))
         self.refresh()
         self.pushButton_check.clicked.connect(self.check)
         self.pushButton_refresh.clicked.connect(self.refresh)
 
     def refresh(self):
+        self.lineEdit_03.setText('')
+        self.lineEdit_04.setText('')
+        self.label_03.setText('')
+
+        self.lineEdit_13.setText('')
+        self.lineEdit_14.setText('')
+        self.label_13.setText('')
+
+        self.lineEdit_23.setText('')
+        self.lineEdit_24.setText('')
+        self.label_23.setText('')
+
+        self.lineEdit_33.setText('')
+        self.lineEdit_34.setText('')
+        self.label_33.setText('')
+
+        self.lineEdit_43.setText('')
+        self.lineEdit_44.setText('')
+        self.label_43.setText('')
+
         if self.s2 == '+':
             self.label_01.setText('+')
             self.label_11.setText('+')
@@ -47,17 +62,17 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 self.lineEdit_32.setText(str(randint(0, 9)))
                 self.lineEdit_42.setText(str(randint(0, 9)))
             elif self.s1 == '2':
-                self.lineEdit_01.setText(str(randint(0, 99)))
-                self.lineEdit_11.setText(str(randint(0, 99)))
-                self.lineEdit_21.setText(str(randint(0, 99)))
-                self.lineEdit_31.setText(str(randint(0, 99)))
-                self.lineEdit_41.setText(str(randint(0, 99)))
+                self.lineEdit_01.setText(str(randint(10, 99)))
+                self.lineEdit_11.setText(str(randint(10, 99)))
+                self.lineEdit_21.setText(str(randint(10, 99)))
+                self.lineEdit_31.setText(str(randint(10, 99)))
+                self.lineEdit_41.setText(str(randint(10, 99)))
 
-                self.lineEdit_02.setText(str(randint(0, 99)))
-                self.lineEdit_12.setText(str(randint(0, 99)))
-                self.lineEdit_22.setText(str(randint(0, 99)))
-                self.lineEdit_32.setText(str(randint(0, 99)))
-                self.lineEdit_42.setText(str(randint(0, 99)))
+                self.lineEdit_02.setText(str(randint(10, 99)))
+                self.lineEdit_12.setText(str(randint(10, 99)))
+                self.lineEdit_22.setText(str(randint(10, 99)))
+                self.lineEdit_32.setText(str(randint(10, 99)))
+                self.lineEdit_42.setText(str(randint(10, 99)))
         elif self.s2 == '-':
             self.label_01.setText('-')
             self.label_11.setText('-')
@@ -190,7 +205,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.lineEdit_goal.setText(str(rightCount * 20))
 
 
-class ChooseWindow(QMainWindow, Ui_ChooseWindow):
+class ChooseWindow(QMainWindow, ChooseTopicType.Ui_MainWindow):
     def __init__(self):
         super(ChooseWindow, self).__init__()
         self.setupUi(self)

@@ -8,24 +8,31 @@
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
-class Ui_ChooseWindow(object):
+class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
-        MainWindow.resize(320, 240)
+        MainWindow.resize(320, 200)
+        MainWindow.setMinimumSize(QtCore.QSize(320, 200))
         self.centralwidget = QtWidgets.QWidget(MainWindow)
         self.centralwidget.setObjectName("centralwidget")
-        self.pushButton_1plus = QtWidgets.QPushButton(self.centralwidget)
-        self.pushButton_1plus.setGeometry(QtCore.QRect(50, 50, 91, 31))
+        self.groupBox = QtWidgets.QGroupBox(self.centralwidget)
+        self.groupBox.setGeometry(QtCore.QRect(10, 10, 301, 171))
+        self.groupBox.setTitle("")
+        self.groupBox.setObjectName("groupBox")
+        self.gridLayout = QtWidgets.QGridLayout(self.groupBox)
+        self.gridLayout.setObjectName("gridLayout")
+        self.pushButton_1plus = QtWidgets.QPushButton(self.groupBox)
         self.pushButton_1plus.setObjectName("pushButton_1plus")
-        self.pushButton_1sub = QtWidgets.QPushButton(self.centralwidget)
-        self.pushButton_1sub.setGeometry(QtCore.QRect(170, 50, 91, 31))
+        self.gridLayout.addWidget(self.pushButton_1plus, 0, 0, 1, 1)
+        self.pushButton_1sub = QtWidgets.QPushButton(self.groupBox)
         self.pushButton_1sub.setObjectName("pushButton_1sub")
-        self.pushButton_2plus = QtWidgets.QPushButton(self.centralwidget)
-        self.pushButton_2plus.setGeometry(QtCore.QRect(50, 110, 91, 31))
+        self.gridLayout.addWidget(self.pushButton_1sub, 0, 1, 1, 1)
+        self.pushButton_2plus = QtWidgets.QPushButton(self.groupBox)
         self.pushButton_2plus.setObjectName("pushButton_2plus")
-        self.pushButton_2sub = QtWidgets.QPushButton(self.centralwidget)
-        self.pushButton_2sub.setGeometry(QtCore.QRect(170, 110, 91, 31))
+        self.gridLayout.addWidget(self.pushButton_2plus, 1, 0, 1, 1)
+        self.pushButton_2sub = QtWidgets.QPushButton(self.groupBox)
         self.pushButton_2sub.setObjectName("pushButton_2sub")
+        self.gridLayout.addWidget(self.pushButton_2sub, 1, 1, 1, 1)
         MainWindow.setCentralWidget(self.centralwidget)
 
         self.retranslateUi(MainWindow)

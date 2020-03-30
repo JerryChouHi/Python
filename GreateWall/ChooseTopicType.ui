@@ -7,64 +7,61 @@
     <x>0</x>
     <y>0</y>
     <width>320</width>
-    <height>240</height>
+    <height>200</height>
    </rect>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>320</width>
+    <height>200</height>
+   </size>
   </property>
   <property name="windowTitle">
    <string>选择题目类型</string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <widget class="QPushButton" name="pushButton_1plus">
+   <widget class="QGroupBox" name="groupBox">
     <property name="geometry">
      <rect>
-      <x>50</x>
-      <y>50</y>
-      <width>91</width>
-      <height>31</height>
+      <x>10</x>
+      <y>10</y>
+      <width>301</width>
+      <height>171</height>
      </rect>
     </property>
-    <property name="text">
-     <string>一位数加法</string>
+    <property name="title">
+     <string/>
     </property>
-   </widget>
-   <widget class="QPushButton" name="pushButton_1sub">
-    <property name="geometry">
-     <rect>
-      <x>170</x>
-      <y>50</y>
-      <width>91</width>
-      <height>31</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>一位数减法</string>
-    </property>
-   </widget>
-   <widget class="QPushButton" name="pushButton_2plus">
-    <property name="geometry">
-     <rect>
-      <x>50</x>
-      <y>110</y>
-      <width>91</width>
-      <height>31</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>两位数加法</string>
-    </property>
-   </widget>
-   <widget class="QPushButton" name="pushButton_2sub">
-    <property name="geometry">
-     <rect>
-      <x>170</x>
-      <y>110</y>
-      <width>91</width>
-      <height>31</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>两位数减法</string>
-    </property>
+    <layout class="QGridLayout" name="gridLayout">
+     <item row="0" column="0">
+      <widget class="QPushButton" name="pushButton_1plus">
+       <property name="text">
+        <string>一位数加法</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="1">
+      <widget class="QPushButton" name="pushButton_1sub">
+       <property name="text">
+        <string>一位数减法</string>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="0">
+      <widget class="QPushButton" name="pushButton_2plus">
+       <property name="text">
+        <string>两位数加法</string>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="1">
+      <widget class="QPushButton" name="pushButton_2sub">
+       <property name="text">
+        <string>两位数减法</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
    </widget>
   </widget>
  </widget>
