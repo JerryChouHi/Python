@@ -6,13 +6,13 @@
 #
 # WARNING! All changes made in this file will be lost!
 
-import sys
+from Datalog_Analysis_UI import Ui_MainWindow
+from sys import argv, exit, maxsize
 from os import listdir, makedirs, getcwd
 from csv import reader, field_size_limit
-from PyQt5.QtCore import QThread, pyqtSignal, QRegExp, QRect, QMetaObject, QCoreApplication
-from PyQt5.QtGui import QIntValidator, QRegExpValidator, QIcon
-from PyQt5.QtWidgets import QApplication, QMainWindow, QFileDialog, QErrorMessage, QWidget, QStatusBar, QMenuBar, \
-    QLineEdit, QPushButton, QLabel, QProgressBar, QRadioButton, QHBoxLayout
+from PyQt5.QtCore import QThread, pyqtSignal, QRegExp
+from PyQt5.QtGui import QIntValidator, QRegExpValidator
+from PyQt5.QtWidgets import QApplication, QMainWindow, QFileDialog, QErrorMessage
 from os.path import join, isdir, exists, basename, dirname
 from math import isnan
 from openpyxl import Workbook
@@ -203,8 +203,6 @@ class Runthread(QThread):
                 if isdir(folder):
                     # get CSV file under the folder
                     file_list = get_filelist(folder, '.csv')
-                    if not file_list:
-                        exit()
 
                     # create analysis folder
                     analysis_folder = folder + '\Analysis'
@@ -215,8 +213,6 @@ class Runthread(QThread):
         elif self.choose_radio == 'LotFolder':
             # get CSV file under the folder
             file_list = get_filelist(self.open_path, '.csv')
-            if not file_list:
-                exit()
 
             # create analysis folder
             analysis_folder = self.open_path + '\Analysis'
@@ -228,136 +224,33 @@ class Runthread(QThread):
             # create analysis folder
             analysis_folder = dirname(self.open_path) + '\Analysis'
             mkdir(analysis_folder)
-
             ParseAndSave(self.open_path, self._signal, analysis_folder)
         self._signal.emit(str(100))
 
 
-class Ui_MainWindow(QMainWindow):
+class MainWindow(QMainWindow, Ui_MainWindow):
     def __init__(self):
-        super().__init__()
+        super(MainWindow, self).__init__()
+        self.setupUi(self)
         self.cwd = getcwd()
         self.qe = QErrorMessage(self)
-        self.centralwidget = QWidget(MainWindow)
-        self.statusbar = QStatusBar(MainWindow)
-        self.menubar = QMenuBar(MainWindow)
-        self.TestDataRowNum_lineEdit = QLineEdit(self.centralwidget)
-        self.TestDataColLetter_lineEdit = QLineEdit(self.centralwidget)
-        self.LoLimitRowNum_lineEdit = QLineEdit(self.centralwidget)
-        self.HiLimitRowNum_lineEdit = QLineEdit(self.centralwidget)
-        self.OpenPath_lineEdit = QLineEdit(self.centralwidget)
-        self.progressBar = QProgressBar(self.centralwidget)
-        self.Analysis_pushButton = QPushButton(self.centralwidget)
-        self.TestDataRowNum_label = QLabel(self.centralwidget)
-        self.TestDataColLetter_label = QLabel(self.centralwidget)
-        self.BinNumRowNum_label = QLabel(self.centralwidget)
-        self.LoLimitRowNum_label = QLabel(self.centralwidget)
-        self.Open_pushButton = QPushButton(self.centralwidget)
-        self.HiLimitRowNum_label = QLabel(self.centralwidget)
-        self.widget = QWidget(self.centralwidget)
-        self.widget.setGeometry(QRect(150, 30, 281, 18))
-        self.widget.setObjectName("widget")
-        self.SingleFile_radioButton = QRadioButton(self.widget)
-        self.LotFolder_radioButton = QRadioButton(self.widget)
-        self.DateFolder_radioButton = QRadioButton(self.widget)
-        self.horizontalLayout = QHBoxLayout(self.widget)
-        self.BeginColLetter_label = QLabel(self.centralwidget)
-        self.BeginColLetter_lineEdit = QLineEdit(self.centralwidget)
-        self.EndColLetter_label = QLabel(self.centralwidget)
-        self.EndColLetter_lineEdit = QLineEdit(self.centralwidget)
-        self.AllTestData_radioButton = QRadioButton(self.centralwidget)
-        self.initUI()
-
-    def initUI(self):
-        self.setWindowTitle("Datalog Analysis")
-        self.setWindowIcon(QIcon('favicon.ico'))
-        self.setMaximumSize(800, 600)
-        self.setMinimumSize(800, 600)
-        self.centralwidget.setObjectName("centralwidget")
-
-        self.horizontalLayout.setContentsMargins(0, 0, 0, 0)
-        self.horizontalLayout.setObjectName("horizontalLayout")
-        self.DateFolder_radioButton.setObjectName("DateFolder_radioButton")
-        self.horizontalLayout.addWidget(self.DateFolder_radioButton)
         self.DateFolder_radioButton.setChecked(True)
-        self.DateFolder_radioButton.toggled.connect(self.choose)
-        self.LotFolder_radioButton.setObjectName("LotFolder_radioButton")
-        self.horizontalLayout.addWidget(self.LotFolder_radioButton)
-        self.LotFolder_radioButton.toggled.connect(self.choose)
-        self.SingleFile_radioButton.setObjectName("SingleFile_radioButton")
-        self.horizontalLayout.addWidget(self.SingleFile_radioButton)
-        self.SingleFile_radioButton.toggled.connect(self.choose)
-
-        self.OpenPath_lineEdit.setGeometry(QRect(150, 80, 400, 30))
-        self.OpenPath_lineEdit.setReadOnly(True)
-        self.OpenPath_lineEdit.setObjectName("OpenPath_lineEdit")
-        self.Open_pushButton.setGeometry(QRect(560, 80, 75, 30))
-        self.Open_pushButton.setObjectName("Open_pushButton")
         self.Open_pushButton.clicked.connect(self.Open)
-
-        self.HiLimitRowNum_label.setGeometry(QRect(150, 150, 100, 20))
-        self.HiLimitRowNum_label.setObjectName("HiLimitRowNum_label")
-        self.HiLimitRowNum_lineEdit.setGeometry(QRect(260, 150, 100, 20))
-        self.HiLimitRowNum_lineEdit.setObjectName("HiLimitRowNum_lineEdit")
         self.HiLimitRowNum_lineEdit.setValidator(QIntValidator())
-        self.LoLimitRowNum_label.setGeometry(QRect(400, 150, 100, 20))
-        self.LoLimitRowNum_label.setObjectName("LoLimitRowNum_label")
-        self.LoLimitRowNum_lineEdit.setGeometry(QRect(510, 150, 100, 20))
-        self.LoLimitRowNum_lineEdit.setObjectName("LoLimitRowNum_lineEdit")
         self.LoLimitRowNum_lineEdit.setValidator(QIntValidator())
-
-        self.TestDataRowNum_label.setGeometry(QRect(150, 200, 100, 20))
-        self.TestDataRowNum_label.setObjectName("TestDataRowNum_label")
-        self.TestDataRowNum_lineEdit.setGeometry(QRect(260, 200, 100, 20))
-        self.TestDataRowNum_lineEdit.setObjectName("TestDataRowNum_lineEdit")
         self.TestDataRowNum_lineEdit.setValidator(QIntValidator())
-        self.TestDataColLetter_label.setGeometry(QRect(400, 200, 100, 20))
-        self.TestDataColLetter_label.setObjectName("TestDataColLetter_label")
-        self.TestDataColLetter_lineEdit.setGeometry(QRect(510, 200, 100, 20))
-        self.TestDataColLetter_lineEdit.setObjectName("TestDataColLetter_lineEdit")
         reg = QRegExp('[A-Z]+')
         pValidator = QRegExpValidator(self)
         pValidator.setRegExp(reg)
         self.TestDataColLetter_lineEdit.setValidator(pValidator)
-
-        self.AllTestData_radioButton.setGeometry(QRect(150, 250, 89, 16))
-        self.AllTestData_radioButton.setObjectName("AllTestData")
         self.AllTestData_radioButton.setChecked(True)
         self.AllTestData_radioButton.toggled.connect(self.btnstate)
-
-        self.BeginColLetter_label.setGeometry(QRect(150, 280, 100, 20))
-        self.BeginColLetter_label.setObjectName("BeginColLetter")
-        self.BeginColLetter_lineEdit.setGeometry(QRect(260, 280, 100, 20))
-        self.BeginColLetter_lineEdit.setObjectName("BeginColLetter_lineEdit")
         self.BeginColLetter_lineEdit.setValidator(pValidator)
-        self.EndColLetter_label.setGeometry(QRect(400, 280, 100, 20))
-        self.EndColLetter_label.setObjectName("EndColLetter")
-        self.EndColLetter_lineEdit.setGeometry(QRect(510, 280, 100, 20))
-        self.EndColLetter_lineEdit.setObjectName("EndColLetter_lineEdit")
         self.EndColLetter_lineEdit.setValidator(pValidator)
         if self.AllTestData_radioButton.isChecked():
             self.BeginColLetter_lineEdit.setEnabled(False)
             self.EndColLetter_lineEdit.setEnabled(False)
-
-        self.Analysis_pushButton.setGeometry(QRect(150, 330, 75, 25))
-        self.Analysis_pushButton.setObjectName("Analysis_pushButton")
         self.Analysis_pushButton.clicked.connect(self.analysis)
-
-        self.progressBar.setGeometry(QRect(150, 380, 500, 25))
-        self.progressBar.setProperty("value", 0)
-        self.progressBar.setObjectName("progressBar")
-
-        self.setCentralWidget(self.centralwidget)
-        self.menubar.setGeometry(QRect(150, 300, 500, 25))
-        self.menubar.setObjectName("menubar")
-        self.setMenuBar(self.menubar)
-        self.statusbar.setObjectName("statusbar")
-        self.setStatusBar(self.statusbar)
-
-        self.retranslateUi()
-        QMetaObject.connectSlotsByName(MainWindow)
-
-        self.show()
 
     def btnstate(self):
         if self.AllTestData_radioButton.isChecked():
@@ -367,31 +260,6 @@ class Ui_MainWindow(QMainWindow):
             self.BeginColLetter_lineEdit.setEnabled(True)
             self.EndColLetter_lineEdit.setEnabled(True)
 
-    def choose(self):
-        if self.DateFolder_radioButton.isChecked():
-            self.LotFolder_radioButton.setChecked(False)
-            self.SingleFile_radioButton.setChecked(False)
-        elif self.LotFolder_radioButton.isChecked():
-            self.DateFolder_radioButton.setChecked(False)
-            self.SingleFile_radioButton.setChecked(False)
-        else:
-            self.DateFolder_radioButton.setChecked(False)
-            self.LotFolder_radioButton.setChecked(False)
-
-    def retranslateUi(self):
-        _translate = QCoreApplication.translate
-        self.HiLimitRowNum_label.setText(_translate("MainWindow", "HiLimitRowNum"))
-        self.Open_pushButton.setText(_translate("MainWindow", "Open"))
-        self.LoLimitRowNum_label.setText(_translate("MainWindow", "LoLimitRowNum"))
-        self.TestDataRowNum_label.setText(_translate("MainWindow", "TestDataRowNum"))
-        self.TestDataColLetter_label.setText(_translate("MainWindow", "TestDataColLetter"))
-        self.Analysis_pushButton.setText(_translate("MainWindow", "Analysis"))
-        self.DateFolder_radioButton.setText(_translate("MainWindow", "DateFolder"))
-        self.LotFolder_radioButton.setText(_translate("MainWindow", "LotFolder"))
-        self.SingleFile_radioButton.setText(_translate("MainWindow", "SingleFile"))
-        self.BeginColLetter_label.setText(_translate("MainWindow", "BeginColLetter"))
-        self.EndColLetter_label.setText(_translate("MainWindow", "EndColLetter"))
-        self.AllTestData_radioButton.setText(_translate("MainWindow", "AllTestData"))
 
     def Open(self):
         global RowCount
@@ -419,7 +287,7 @@ class Ui_MainWindow(QMainWindow):
                         # get CSV file under the folder
                         file_list = get_filelist(folder, '.csv')
                         if not file_list:
-                            exit()
+                            return
                         for file in file_list:
                             getParaFile = file
                             with open(file, encoding='unicode_escape') as f:
@@ -428,7 +296,7 @@ class Ui_MainWindow(QMainWindow):
             elif self.LotFolder_radioButton.isChecked():
                 file_list = get_filelist(self.OpenPath_lineEdit.text(), '.csv')
                 if not file_list:
-                    exit()
+                    return
                 for file in file_list:
                     getParaFile = file
                     with open(file, encoding='unicode_escape') as f:
@@ -478,6 +346,7 @@ class Ui_MainWindow(QMainWindow):
             return
         else:
             if RowCount == 0:
+                self.qe.showMessage('The test data in open path is illegal.')
                 return
             global HiLimitRowNum
             HiLimitRowNum = int(self.HiLimitRowNum_lineEdit.text())
@@ -511,14 +380,14 @@ class Ui_MainWindow(QMainWindow):
 
 if __name__ == '__main__':
     # _csv.Error:field larger than field limit(131072)
-    maxInt = sys.maxsize
+    maxInt = maxsize
     while True:
         try:
             field_size_limit(maxInt)
             break
         except OverflowError:
             maxInt = int(maxInt / 10)
-    app = QApplication(sys.argv)
-    MainWindow = QMainWindow()
-    ui = Ui_MainWindow()
-    sys.exit(app.exec_())
+    app = QApplication(argv)
+    myMainWindow = MainWindow()
+    myMainWindow.show()
+    exit(app.exec_())
