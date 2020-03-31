@@ -4,117 +4,119 @@
 # @File     :
 # @Function : Date data analysis
 
+import Datalog_DateLot_Analysis_UI
 from csv import reader, field_size_limit
 from os.path import basename, isdir, join, exists
 from os import listdir, makedirs, getcwd
 from datetime import datetime
 from math import isnan
 from sys import argv, maxsize, exit
-from PyQt5.QtCore import QRect, QThread, pyqtSignal
-from PyQt5.QtGui import QIcon, QPalette, QBrush, QPixmap
-from PyQt5.QtWidgets import QApplication, QMainWindow, QFileDialog, QErrorMessage, QLineEdit, QProgressBar, QPushButton, \
-    QRadioButton, QComboBox, QWidget
+from PyQt5.QtCore import QThread, pyqtSignal
+from PyQt5.QtGui import QPalette, QBrush, QPixmap
+from PyQt5.QtWidgets import QApplication, QMainWindow, QFileDialog, QErrorMessage
 from openpyxl import Workbook
 from openpyxl.styles import PatternFill, Border, Side, Alignment, Font
 from openpyxl.styles.colors import YELLOW, GREEN, BLACK, WHITE, RED
 from openpyxl.utils import get_column_letter
+from numpy import array
 
 
-def find_item(item_list, value):
+def FindItem(itemList, value):
     """
     find value in item list
     """
-    return [i for i, v in enumerate(item_list) if v == value]
+    return [i for i, v in enumerate(itemList) if v == value]
 
 
-def search_string(data, target):
+def SearchString(data, target):
     """
     find out if target exists in data
     """
     for i in range(len(data)):
         try:
-            col_num = data[i].index(target)
-            row_num = i
-            return row_num, col_num
+            colNum = data[i].index(target)
+            rowNum = i
+            return rowNum, colNum
         except:
             pass
     print("Can't find " + target + " !")
     return False
 
 
-def set_column_width(sheet):
+def SetColumnWidth(sheet):
     """
     set column width
     """
     # get the maximum width of each column
-    col_width = [0.5] * sheet.max_column
+    colWidth = [0.5] * sheet.max_column
     for row in range(sheet.max_row):
         for col in range(sheet.max_column):
             value = sheet.cell(row=row + 1, column=col + 1).value
             if value:
                 width = len(str(value))
-                if width > col_width[col]:
-                    col_width[col] = width
+                if width > colWidth[col]:
+                    colWidth[col] = width
     # set column width
-    for i in range(len(col_width)):
-        col_lettert = get_column_letter(i + 1)
-        if col_width[i] > 100:
+    for i in range(len(colWidth)):
+        colLettert = get_column_letter(i + 1)
+        if colWidth[i] > 100:
             # set to 100 if col_width greater than 100
-            sheet.column_dimensions[col_lettert].width = 100
+            sheet.column_dimensions[colLettert].width = 100
         else:
-            sheet.column_dimensions[col_lettert].width = col_width[i] + 4
+            sheet.column_dimensions[colLettert].width = colWidth[i] + 4
 
 
-def get_filelist(folder, postfix=None):
+def GetFileList(folder, postfix=None):
     """
     find a list of files with a postfix
     """
-    fullname_list = []
+    fullNameList = []
     if isdir(folder):
         files = listdir(folder)
         for filename in files:
-            fullname_list.append(join(folder, filename))
+            fullNameList.append(join(folder, filename))
         if postfix:
-            target_file_list = []
-            for fullname in fullname_list:
+            targetFileList = []
+            for fullname in fullNameList:
                 if fullname.endswith(postfix):
-                    target_file_list.append(fullname)
-            return target_file_list
+                    targetFileList.append(fullname)
+            return targetFileList
         else:
-            return fullname_list
+            return fullNameList
     else:
         print("Error：Not a folder!")
         return False
 
 
-def mkdir(path):
+def MkDir(path):
     """
     create a folder
     """
     path = path.strip()
     path = path.rstrip("\\")
-    is_exists = exists(path)
-    if not is_exists:
+    isExists = exists(path)
+    if not isExists:
         makedirs(path)
         return True
     else:
         return False
 
 
-row_offset = 5
-col_offset = 4
-high_limit_row_num = 0
+rowOffset = 5
+colOffset = 4
+highLimitRowNum = 0
 # default project
 project = 'Unknown'
 analysisItem = 'Unknown'
 # get current time
-now_time = datetime.now().strftime("%Y%m%d%H%M%S")
+nowTime = 'Unknown'
 alignment = Alignment(horizontal='center', vertical='center')
 thin = Side(border_style='thin', color=BLACK)
 border = Border(top=thin, left=thin, right=thin, bottom=thin)
-fileCount = 0
+totalRowCount = 0
+currentRowCount = 0
 
-hwbin_to_swbin = {
+hwbinToSwbin = {
     'F28': {
         1: {'SWBin': (1, 2), 'isPassBin': True},
         2: {'SWBin': (41, 42, 43, 44, 45, 53, 54, 55), 'isPassBin': True},
@@ -139,7 +141,7 @@ hwbin_to_swbin = {
     }
 }
 
-bin_definition_list = {
+binDefinitionList = {
     'F28':
         {
             'PCLK_O/S': {'SWBin': 5, 'HWBin': 5, 'Priority': 1},
@@ -1348,729 +1350,765 @@ bin_definition_list = {
 }
 
 
-def parse_file(file, analysis_folder):
+def ParseFile(file, _signal, analysisFolder):
     """
     parse file
     get basic information,datacheck result,binningcheck result,nanchipno result and summary result
     """
-    parse_result = {}
-    global high_limit_row_num
+    global currentRowCount
+    parseResult = {}
+    global highLimitRowNum
     data = []
     # get file data
     with open(file) as f:
-        csv_reader = reader(f)
-        for row in csv_reader:
+        csvReader = reader(f)
+        for row in csvReader:
             data.append(row)
 
     # get row and column of last test item
     if project == 'F28':
-        search_last_test_item = search_string(data, 'Full_Error')
+        searchLastTestItem = SearchString(data, 'Full_Error')
     elif project == 'JX828':
-        search_last_test_item = search_string(data, 'ChipVer')
+        searchLastTestItem = SearchString(data, 'ChipVer')
     elif project == 'JX825':
-        search_last_test_item = search_string(data, 'SRAM_0x56_Read')
-    if not search_last_test_item:
+        searchLastTestItem = SearchString(data, 'SRAM_0x56_Read')
+    if not searchLastTestItem:
         exit()
     else:
-        test_item_row_num = search_last_test_item[0]
-        last_test_item_col_num = search_last_test_item[1]
-    high_limit_row_num = test_item_row_num + 2
-    low_limit_row_num = test_item_row_num + 3
+        testItemRowNum = searchLastTestItem[0]
+        lastTestItemColNum = searchLastTestItem[1]
+    highLimitRowNum = testItemRowNum + 2
+    lowLimitRowNum = testItemRowNum + 3
 
     # get row and column of last DC test item
-    search_pwdn_total = search_string(data, 'PWDN_Total')
-    if not search_pwdn_total:
+    searchPwdnTotal = SearchString(data, 'PWDN_Total')
+    if not searchPwdnTotal:
         exit()
     else:
-        pwdn_total_col_num = search_pwdn_total[1]
+        pwdnTotalColNum = searchPwdnTotal[1]
 
     # get row and column of Binning
-    search_binning = search_string(data, 'Binning')
-    if not search_binning:
+    searchBinning = SearchString(data, 'Binning')
+    if not searchBinning:
         exit()
     else:
-        binning_col_num = search_binning[1]
+        binningColNum = searchBinning[1]
 
     # get column of iic_test
-    search_iic_test = search_string(data, 'iic_test')
-    if not search_iic_test:
+    searchIICTest = SearchString(data, 'iic_test')
+    if not searchIICTest:
         exit()
     else:
-        iic_test_col_num = search_iic_test[1]
+        IICTestColNum = searchIICTest[1]
 
     # get row of first register
-    first_register_row_num = len(data)
-    for i in range(test_item_row_num + row_offset, len(data)):
+    firstRegisterRowNum = len(data)
+    for i in range(testItemRowNum + rowOffset, len(data)):
         try:
             int(data[i][0])
         except:
-            first_register_row_num = i
+            firstRegisterRowNum = i
             break
 
     # fill '' to align with last test item col num
     for i in range(0, len(data)):
-        add_count = last_test_item_col_num + 1 - len(data[i])
-        if add_count > 0:
-            for j in range(add_count):
+        addCount = lastTestItemColNum + 1 - len(data[i])
+        if addCount > 0:
+            for j in range(addCount):
                 data[i].append('')
 
     # parse file name
-    file_name = basename(file).split('.')[0]
+    fileName = basename(file).split('.')[0]
     # calculate chip count
-    chip_count = first_register_row_num - test_item_row_num - row_offset
-    # get lotno
-    lotno = data[5][1]
+    chipCount = firstRegisterRowNum - testItemRowNum - rowOffset
+    # get lotNo
+    lotNo = data[5][1]
 
     if analysisItem in ('All', 'Data Check'):
-        row_count = len(data)
+        rowCount = len(data)
 
         # get row number with null value
-        exist_nan_row_list = []
-        for i in range(test_item_row_num + row_offset, first_register_row_num):
-            for j in range(binning_col_num + 1):
+        existNanRowList = []
+        for i in range(testItemRowNum + rowOffset, firstRegisterRowNum):
+            for j in range(binningColNum + 1):
                 if len(data[i][j].strip()) == 0:
-                    exist_nan_row_list.append(i)
+                    existNanRowList.append(i)
                     break
 
-        datacheck_result = []
-        for row_num in range(row_count):
-            row_data = []
-            for col_num in range(last_test_item_col_num + 1):
-                test_item_name = data[test_item_row_num][col_num].strip()
-                value = data[row_num][col_num]
-                if col_offset <= col_num <= binning_col_num and high_limit_row_num <= row_num <= low_limit_row_num:
+        dataCheckResult = []
+        for rowNum in range(rowCount):
+            rowData = []
+            for colNum in range(lastTestItemColNum + 1):
+                testItemName = data[testItemRowNum][colNum].strip()
+                value = data[rowNum][colNum]
+                if colOffset <= colNum <= binningColNum and highLimitRowNum <= rowNum <= lowLimitRowNum:
                     # fill color of limit value is green
-                    row_data.append((value, '008000'))
-                elif col_num == 0 and row_num in exist_nan_row_list:
+                    rowData.append((value, '008000'))
+                elif colNum == 0 and rowNum in existNanRowList:
                     # fill color of first value of exist nan row is purple
-                    row_data.append((value, 'A020F0'))
-                elif col_offset <= col_num <= binning_col_num and test_item_row_num + row_offset <= row_num < first_register_row_num:
+                    rowData.append((value, 'A020F0'))
+                elif colOffset <= colNum <= binningColNum and testItemRowNum + rowOffset <= rowNum < firstRegisterRowNum:
                     try:
-                        value_convert = float(value)
-                        high_limit_data = data[high_limit_row_num][col_num]
+                        valueConvert = float(value)
+                        highLimitData = data[highLimitRowNum][colNum]
                         try:
-                            high_limit = float(high_limit_data)
+                            highLimit = float(highLimitData)
                         except:
-                            high_limit = high_limit_data
-                        low_limit_data = data[low_limit_row_num][col_num]
+                            highLimit = highLimitData
+                        lowLimitData = data[lowLimitRowNum][colNum]
                         try:
-                            low_limit = float(low_limit_data)
+                            lowLimit = float(lowLimitData)
                         except:
-                            low_limit = low_limit_data
-                        if value_convert == int(value_convert):
-                            value_convert = int(value_convert)
-                        if (test_item_name == 'AVDD_O/S' and project == 'JX828') or high_limit == 'N' or (
-                                        high_limit != 'N' and low_limit <= value_convert <= high_limit):
+                            lowLimit = lowLimitData
+                        if valueConvert == int(valueConvert):
+                            valueConvert = int(valueConvert)
+                        if (testItemName == 'AVDD_O/S' and project == 'JX828') or highLimit == 'N' or (
+                                        highLimit != 'N' and lowLimit <= valueConvert <= highLimit):
                             # fill color of following scenario value is white
                             # 1.JX828 ignore AVDD_O/S
                             # 2.limit is N
                             # 3.limit is not N and data wihtin limit
-                            row_data.append((value_convert, 'FFFFFF'))
+                            rowData.append((valueConvert, 'FFFFFF'))
                         else:
                             # fill color of over limit is red
-                            row_data.append((value_convert, 'FF0000'))
+                            rowData.append((valueConvert, 'FF0000'))
                     except:
                         if not value.strip():
                             # fill color of '' is purple
-                            row_data.append((value, 'A020F0'))
-                        elif col_num == iic_test_col_num:
+                            rowData.append((value, 'A020F0'))
+                        elif colNum == IICTestColNum:
                             if value == '1':
                                 # fill color of iic_test 1 is white
-                                row_data.append((value_convert, 'FFFFFF'))
+                                rowData.append((valueConvert, 'FFFFFF'))
                             else:
                                 # fill color of iic_test not 1 is yellow
-                                row_data.append((value, 'FFFF00'))
+                                rowData.append((value, 'FFFF00'))
                 else:
                     # set '' when value is nan
                     if isinstance(value, float) and isnan(value):
                         value = ''
                     # fill color is white
-                    row_data.append((value, 'FFFFFF'))
-            datacheck_result.append(row_data)
-        data_check_file = join(analysis_folder, file_name + '_DataCheck_Analysis' + now_time + '.xlsx')
-        data_check_wb = Workbook()  # create file object
-        data_check_sheet = data_check_wb.active  # get first sheet
-        data_check_sheet.freeze_panes = 'E17'  # set freeze panes
+                    rowData.append((value, 'FFFFFF'))
+            dataCheckResult.append(rowData)
+            currentRowCount += 1
+            if currentRowCount != totalRowCount:
+                _signal.emit(str(currentRowCount * 100 // totalRowCount))
+
+        dataCheckFile = join(analysisFolder, fileName + '_DataCheck_Analysis' + nowTime + '.xlsx')
+        dataCheckWb = Workbook()  # create file object
+        dataCheckSheet = dataCheckWb.active  # get first sheet
+        dataCheckSheet.freeze_panes = 'E17'  # set freeze panes
         irow = 1
-        for i in range(len(datacheck_result)):
-            for j in range(len(datacheck_result[i])):
-                data_check_sheet.cell(row=irow, column=j + 1).value = datacheck_result[i][j][0]
-                data_check_sheet.cell(row=irow, column=j + 1).fill = PatternFill(fill_type='solid',
-                                                                                 fgColor=datacheck_result[i][j][1])
-                data_check_sheet.cell(row=irow, column=j + 1).border = border
+        for i in range(len(dataCheckResult)):
+            for j in range(len(dataCheckResult[i])):
+                dataCheckSheet.cell(row=irow, column=j + 1).value = dataCheckResult[i][j][0]
+                dataCheckSheet.cell(row=irow, column=j + 1).fill = PatternFill(fill_type='solid',
+                                                                               fgColor=dataCheckResult[i][j][1])
+                dataCheckSheet.cell(row=irow, column=j + 1).border = border
             irow += 1
-        data_check_wb.save(data_check_file)
+            currentRowCount += 1
+            if currentRowCount != totalRowCount:
+                _signal.emit(str(currentRowCount * 100 // totalRowCount))
+        dataCheckWb.save(dataCheckFile)
     if analysisItem in ('All', 'Binning Check'):
-        bin_definition = bin_definition_list[project]
-        binning_check_result = []
-        for row_num in range(test_item_row_num + row_offset, first_register_row_num):
-            # set current_test_item is All Pass
-            current_test_item = 'All Pass'
-            for col_num in range(col_offset, binning_col_num + 1):
-                test_item = data[test_item_row_num][col_num].strip()
-                if test_item == 'AVDD_O/S' and project == 'JX828':
+        binDefinition = binDefinitionList[project]
+        binningCheckResult = []
+        for rowNum in range(testItemRowNum + rowOffset, firstRegisterRowNum):
+            # set currentTestItem is All Pass
+            currentTestItem = 'All Pass'
+            for colNum in range(colOffset, binningColNum + 1):
+                testItem = data[testItemRowNum][colNum].strip()
+                if testItem == 'AVDD_O/S' and project == 'JX828':
                     # JX828 skip AVDD_O/S
                     continue
                 else:
-                    high_limit_data = data[high_limit_row_num][col_num]
-                    low_limit_data = data[low_limit_row_num][col_num]
+                    highLimitData = data[highLimitRowNum][colNum]
+                    lowLimitData = data[lowLimitRowNum][colNum]
                 try:
-                    high_limit = float(high_limit_data)
-                    low_limit = float(low_limit_data)
+                    highLimit = float(highLimitData)
+                    lowLimit = float(lowLimitData)
                     try:
-                        value = data[row_num][col_num]
-                        value_convert = float(value)
-                        if value_convert == int(value_convert):
-                            value_convert = int(value_convert)
-                        if value_convert < low_limit or high_limit < value_convert:
+                        value = data[rowNum][colNum]
+                        valueConvert = float(value)
+                        if valueConvert == int(valueConvert):
+                            valueConvert = int(valueConvert)
+                        if valueConvert < lowLimit or highLimit < valueConvert:
                             # over limit
-                            if bin_definition[test_item]['Priority'] < bin_definition[current_test_item]['Priority']:
-                                # set current_test_item is test_item when test_item's priority less than current_test_item's priority
-                                current_test_item = test_item
+                            if binDefinition[testItem]['Priority'] < binDefinition[currentTestItem]['Priority']:
+                                # set currentTestItem is testItem when testItem's priority less than currentTestItem's priority
+                                currentTestItem = testItem
                     except:
                         # value is ''
-                        if test_item in bin_definition.keys() and 'IsNan' in bin_definition[test_item].keys() and \
-                                        bin_definition[bin_definition[test_item]['IsNan']]['Priority'] < \
-                                        bin_definition[current_test_item]['Priority']:
-                            # set current_test_item is bin_definition[test_item]['IsNan']
-                            # when test_item in keys and InNan in keys
-                            # and bin_definition[test_item]['IsNan']'s priority less than current_test_item's priority
-                            current_test_item = bin_definition[test_item]['IsNan']
-                        elif test_item in bin_definition.keys() and 'IsNan' not in bin_definition[test_item].keys() and \
-                                        bin_definition[test_item]['Priority'] < \
-                                        bin_definition[current_test_item]['Priority']:
-                            # set current_test_item is test_item
-                            # when test_item in keys and InNan not in keys
-                            # and test_item's priority less than current_test_item's priority
-                            current_test_item = test_item
+                        if testItem in binDefinition.keys() and 'IsNan' in binDefinition[testItem].keys() and \
+                                        binDefinition[binDefinition[testItem]['IsNan']]['Priority'] < \
+                                        binDefinition[currentTestItem]['Priority']:
+                            # set currentTestItem is binDefinition[testItem]['IsNan']
+                            # when testItem in keys and InNan in keys
+                            # and binDefinition[testItem]['IsNan']'s priority less than currentTestItem's priority
+                            currentTestItem = binDefinition[testItem]['IsNan']
+                        elif testItem in binDefinition.keys() and 'IsNan' not in binDefinition[testItem].keys() and \
+                                        binDefinition[testItem]['Priority'] < \
+                                        binDefinition[currentTestItem]['Priority']:
+                            # set currentTestItem is testItem
+                            # when testItem in keys and InNan not in keys
+                            # and testItem's priority less than currentTestItem's priority
+                            currentTestItem = testItem
                 except:
                     # limit is N or nan
                     try:
-                        value = data[row_num][col_num]
+                        value = data[rowNum][colNum]
                         float(value)
-                        if test_item == 'iic_test' and value == '0':
-                            if bin_definition[test_item]['Priority'] < bin_definition[current_test_item]['Priority']:
-                                # set current_test_item is bin_definition[test_item]['IsNan']
-                                # when bin_definition[test_item]['IsNan']'s priority less than current_test_item's priority
-                                current_test_item = test_item
+                        if testItem == 'iic_test' and value == '0':
+                            if binDefinition[testItem]['Priority'] < binDefinition[currentTestItem]['Priority']:
+                                # set currentTestItem is binDefinition[testItem]['IsNan']
+                                # when binDefinition[testItem]['IsNan']'s priority less than currentTestItem's priority
+                                currentTestItem = testItem
                     except:
                         # value is ''
-                        if test_item in bin_definition.keys() and 'IsNan' in bin_definition[test_item].keys() and \
-                                        bin_definition[bin_definition[test_item]['IsNan']]['Priority'] < \
-                                        bin_definition[current_test_item]['Priority']:
-                            # set current_test_item is bin_definition[test_item]['IsNan']
-                            # when test_item in keys and InNan in keys
-                            # and bin_definition[test_item]['IsNan']'s priority less than current_test_item's priority
-                            current_test_item = bin_definition[test_item]['IsNan']
-                        elif test_item in bin_definition.keys() and 'IsNan' not in bin_definition[test_item].keys() and \
-                                        bin_definition[test_item]['Priority'] < bin_definition[current_test_item][
+                        if testItem in binDefinition.keys() and 'IsNan' in binDefinition[testItem].keys() and \
+                                        binDefinition[binDefinition[testItem]['IsNan']]['Priority'] < \
+                                        binDefinition[currentTestItem]['Priority']:
+                            # set currentTestItem is binDefinition[testItem]['IsNan']
+                            # when testItem in keys and InNan in keys
+                            # and binDefinition[testItem]['IsNan']'s priority less than currentTestItem's priority
+                            currentTestItem = binDefinition[testItem]['IsNan']
+                        elif testItem in binDefinition.keys() and 'IsNan' not in binDefinition[testItem].keys() and \
+                                        binDefinition[testItem]['Priority'] < binDefinition[currentTestItem][
                                     'Priority']:
-                            # set current_test_item is test_item
-                            # when test_item in keys and InNan not in keys
-                            # and test_item's priority less than current_test_item's priority
-                            current_test_item = test_item
-            if bin_definition[current_test_item]['SWBin'] != int(data[row_num][2]):
-                # current_test_item's SWBin is not equal to SW_BIN in csv file
-                binning_check_result.append(
-                    "              SB_BIN error of chipNo " + data[row_num][
+                            # set currentTestItem is testItem
+                            # when testItem in keys and InNan not in keys
+                            # and testItem's priority less than currentTestItem's priority
+                            currentTestItem = testItem
+            if binDefinition[currentTestItem]['SWBin'] != int(data[rowNum][2]):
+                # currentTestItem's SWBin is not equal to SW_BIN in csv file
+                binningCheckResult.append(
+                    "              SB_BIN error of chipNo " + data[rowNum][
                         0] + " : according to the priority,swbin should be " + str(
-                        bin_definition[current_test_item]['SWBin']) + " ,but in CSV it's " + data[row_num][2] + "\n")
-            if bin_definition[current_test_item]['HWBin'] != int(data[row_num][3]):
-                # current_test_item's HWBin is not equal to hW_BIN in csv file
-                binning_check_result.append(
-                    "              hW_BIN error of chipNo " + data[row_num][
+                        binDefinition[currentTestItem]['SWBin']) + " ,but in CSV it's " + data[rowNum][2] + "\n")
+            if binDefinition[currentTestItem]['HWBin'] != int(data[rowNum][3]):
+                # currentTestItem's HWBin is not equal to hW_BIN in csv file
+                binningCheckResult.append(
+                    "              hW_BIN error of chipNo " + data[rowNum][
                         0] + " : according to the priority,hwbin should be " + str(
-                        bin_definition[current_test_item]['HWBin']) + " ,but in CSV it's " + data[row_num][3] + "\n")
-        binning_check_file = join(analysis_folder, lotno + '_BinningCheck_Analysis' + now_time + '.txt')
-        with open(binning_check_file, 'a') as f:
-            f.write("            " + file_name + "：\n")
-            if len(binning_check_result) > 0:
-                for item in binning_check_result:
+                        binDefinition[currentTestItem]['HWBin']) + " ,but in CSV it's " + data[rowNum][3] + "\n")
+            currentRowCount += 1
+            if currentRowCount != totalRowCount:
+                _signal.emit(str(currentRowCount * 100 // totalRowCount))
+        binningCheckFile = join(analysisFolder, lotNo + '_BinningCheck_Analysis' + nowTime + '.txt')
+        with open(binningCheckFile, 'a') as f:
+            f.write("            " + fileName + "：\n")
+            if len(binningCheckResult) > 0:
+                for item in binningCheckResult:
                     f.write(item)
             else:
                 f.write('              No problem.\n')
     if analysisItem in ('All', 'Nan ChipNo'):
-        dc_nan_chipno = []
-        image_nan_chipno = []
-        for i in range(test_item_row_num + row_offset, first_register_row_num):
-            for j in range(col_offset, pwdn_total_col_num + 1):
+        dcNanChipno = []
+        imageNanChipno = []
+        for i in range(testItemRowNum + rowOffset, firstRegisterRowNum):
+            for j in range(colOffset, pwdnTotalColNum + 1):
                 if len(data[i][j].strip()) == 0:
-                    # append value which is '' in columns col_offset to pwdn_total_col_num
-                    dc_nan_chipno.append(data[i][0])
+                    # append value which is '' in columns colOffset to pwdnTotalColNum
+                    dcNanChipno.append(data[i][0])
                     break
-        for i in range(test_item_row_num + row_offset, first_register_row_num):
-            for j in range(pwdn_total_col_num + 1, binning_col_num + 1):
+        currentRowCount += 1
+        if currentRowCount != totalRowCount:
+            _signal.emit(str(currentRowCount * 100 // totalRowCount))
+        for i in range(testItemRowNum + rowOffset, firstRegisterRowNum):
+            for j in range(pwdnTotalColNum + 1, binningColNum + 1):
                 if len(data[i][j].strip()) == 0:
-                    # append value which is '' in columns pwdn_total_col_num+1 to binning_col_num
-                    image_nan_chipno.append(data[i][0])
+                    # append value which is '' in columns pwdnTotalColNum+1 to binningColNum
+                    imageNanChipno.append(data[i][0])
                     break
-        nan_chipno_file = join(analysis_folder, lotno + '_NanChipno_Analysis' + now_time + '.txt')
-        dc_count = len(dc_nan_chipno)
-        image_count = len(image_nan_chipno)
-        with open(nan_chipno_file, 'a') as f:
-            f.write("            " + file_name + "：\n")
-            if dc_count > 0 or image_count > 0:
-                if dc_count == 0:
+        currentRowCount += 1
+        if currentRowCount != totalRowCount:
+            _signal.emit(str(currentRowCount * 100 // totalRowCount))
+        nanChipnoFile = join(analysisFolder, lotNo + '_NanChipno_Analysis' + nowTime + '.txt')
+        dcCount = len(dcNanChipno)
+        imageCount = len(imageNanChipno)
+        with open(nanChipnoFile, 'a') as f:
+            f.write("            " + fileName + "：\n")
+            if dcCount > 0 or imageCount > 0:
+                if dcCount == 0:
                     f.write("              (1) DC : no nan value.\n")
                 else:
-                    f.write("              (1) DC : " + str(dc_count) + " in total.They are : " + str(
-                        dc_nan_chipno) + "\n")
-                if image_count == 0:
+                    f.write("              (1) DC : " + str(dcCount) + " in total.They are : " + str(
+                        dcNanChipno) + "\n")
+                if imageCount == 0:
                     f.write("              (2) IMAGE : no nan value\n")
                 else:
-                    f.write("              (2) IMAGE : " + str(image_count) + " in total.They are : " + str(
-                        image_nan_chipno) + '\n')
+                    f.write("              (2) IMAGE : " + str(imageCount) + " in total.They are : " + str(
+                        imageNanChipno) + '\n')
             else:
                 f.write("              No nan value.\n")
+        currentRowCount += 1
+        if currentRowCount != totalRowCount:
+            _signal.emit(str(currentRowCount * 100 // totalRowCount))
     if analysisItem in ('All', 'Summary'):
-        summary_result = {}
-        for group_by_id in range(1, 4):
+        summaryResult = {}
+        for groupById in range(1, 4):
             # 1:Site    2:SW_BIN    3:hW_BIN
-            group_name = data[test_item_row_num][group_by_id]
-            group_list = []
-            for i in range(test_item_row_num + row_offset, first_register_row_num):
+            groupName = data[testItemRowNum][groupById]
+            groupList = []
+            for i in range(testItemRowNum + rowOffset, firstRegisterRowNum):
                 # get value
-                group_list.append(int(data[i][group_by_id]))
+                groupList.append(int(data[i][groupById]))
             # remove duplicate value
-            format_group_list = list(set(group_list))
+            formatGroupList = list(set(groupList))
             # sort list
-            format_group_list.sort()
+            formatGroupList.sort()
 
-            group_index = {}
-            for i in format_group_list:
+            groupIndex = {}
+            for i in formatGroupList:
                 temp = []
-                # find i in group_list
-                data_list = find_item(group_list, i)
-                if group_by_id == 1:
-                    temp_list = []
-                    for j in data_list:
+                # find i in groupList
+                dataList = FindItem(groupList, i)
+                if groupById == 1:
+                    tempList = []
+                    for j in dataList:
                         # get the corresponding SW_BIN of Site
-                        temp_list.append(data[test_item_row_num + row_offset + j][2])
+                        tempList.append(data[testItemRowNum + rowOffset + j][2])
                     # remove duplicate value
-                    format_temp_list = list(set(temp_list))
-                    temp_index = {}
-                    for m in format_temp_list:
-                        # find m in temp_list
-                        temp_data_list = find_item(temp_list, m)
-                        temp_index[m] = temp_data_list
-                    temp.append(temp_index)
+                    formatTempList = list(set(tempList))
+                    tempIndex = {}
+                    for m in formatTempList:
+                        # find m in tempList
+                        tempDataList = FindItem(tempList, m)
+                        tempIndex[m] = tempDataList
+                    temp.append(tempIndex)
                 else:
-                    temp.append(data_list)
-                testitem_fail_count = []
-                for col_num in range(col_offset, last_test_item_col_num + 1):
-                    test_item = data[test_item_row_num][col_num].strip()
-                    if test_item == 'AVDD_O/S' and project == 'JX828':
+                    temp.append(dataList)
+                testItemFailCount = []
+                for colNum in range(colOffset, lastTestItemColNum + 1):
+                    testItem = data[testItemRowNum][colNum].strip()
+                    if testItem == 'AVDD_O/S' and project == 'JX828':
                         # set AVDD_O/S's limit in JX828 project
-                        high_limit_data = -0.2
-                        low_limit_data = -0.6
+                        highLimitData = -0.2
+                        lowLimitData = -0.6
                     else:
-                        high_limit_data = data[high_limit_row_num][col_num]
-                        low_limit_data = data[low_limit_row_num][col_num]
-                    temp_list = [data[test_item_row_num][col_num], 0]
+                        highLimitData = data[highLimitRowNum][colNum]
+                        lowLimitData = data[lowLimitRowNum][colNum]
+                    tempList = [data[testItemRowNum][colNum], 0]
                     try:
-                        high_limit = float(high_limit_data)
-                        low_limit = float(low_limit_data)
-                        for j in data_list:
+                        highLimit = float(highLimitData)
+                        lowLimit = float(lowLimitData)
+                        for j in dataList:
                             try:
-                                value = data[test_item_row_num + row_offset + j][col_num]
-                                value_convert = float(value)
-                                if value_convert == int(value_convert):
-                                    value_convert = int(value_convert)
-                                if value_convert < low_limit or high_limit < value_convert:
+                                value = data[testItemRowNum + rowOffset + j][colNum]
+                                valueConvert = float(value)
+                                if valueConvert == int(valueConvert):
+                                    valueConvert = int(valueConvert)
+                                if valueConvert < lowLimit or highLimit < valueConvert:
                                     # count+1 when value over limit
-                                    temp_list[1] += 1
+                                    tempList[1] += 1
                             except:
                                 # count+1 when value is ''
-                                temp_list[1] += 1
+                                tempList[1] += 1
                     except:
                         # limit is N or nan
                         continue
-                    testitem_fail_count.append(temp_list)
-                temp.append(testitem_fail_count)
-                group_index[i] = temp
-            summary_result[group_name] = group_index
-            parse_result['summary'] = summary_result
-    parse_result['chip count'] = chip_count
-    parse_result['lotno'] = lotno
-    return parse_result
+                    testItemFailCount.append(tempList)
+                temp.append(testItemFailCount)
+                groupIndex[i] = temp
+            summaryResult[groupName] = groupIndex
+            parseResult['summary'] = summaryResult
+            currentRowCount += 1
+            if currentRowCount != totalRowCount:
+                _signal.emit(str(currentRowCount * 100 // totalRowCount))
+    parseResult['chip count'] = chipCount
+    parseResult['lotNo'] = lotNo
+    return parseResult
 
 
-def save_data(analysis_folder, parse_data):
+def save_data(analysisFolder, _signal, parseData):
     """
     save data
     save data check,binning check,nan chipno and summary to files
     """
-    site_data = []
-    softbin_data = []
-    hardbin_data = []
-    lot_count = parse_data[0]['chip count']
-    lotno = parse_data[0]['lotno']
-    for data in parse_data:
+    global currentRowCount
+    siteData = []
+    softbinData = []
+    hardbinData = []
+    lotCount = parseData[0]['chip count']
+    lotNo = parseData[0]['lotNo']
+    for data in parseData:
         if analysisItem in ('All', 'Summary'):
-            site_data.append(data['summary']['Site'])
+            siteData.append(data['summary']['Site'])
             # sort softbin
-            softbin_data.append(
+            softbinData.append(
                 sorted(data['summary']['SW_BIN'].items(), key=lambda item: len(item[1][0]), reverse=True))
-            hardbin_data.append(data['summary']['hW_BIN'])
+            hardbinData.append(data['summary']['hW_BIN'])
     if analysisItem in ('All', 'Summary'):
-        summary_file = join(analysis_folder, lotno + '_Summary_Analysis_' + now_time + '.xlsx')
-        summary_wb = Workbook()
+        summaryFile = join(analysisFolder, lotNo + '_Summary_Analysis_' + nowTime + '.xlsx')
+        summaryWb = Workbook()
 
-        ok_hwbin_count = 0
-        begin_fail_swbin = 0
-        for hw_bin_key in hwbin_to_swbin[project].keys():
-            if hwbin_to_swbin[project][hw_bin_key]['isPassBin']:
-                ok_hwbin_count += 1
-                begin_fail_swbin += len(hwbin_to_swbin[project][hw_bin_key]['SWBin'])
+        okHwbinCount = 0
+        beginFailSwbin = 0
+        for hwbinKey in hwbinToSwbin[project].keys():
+            if hwbinToSwbin[project][hwbinKey]['isPassBin']:
+                okHwbinCount += 1
+                beginFailSwbin += len(hwbinToSwbin[project][hwbinKey]['SWBin'])
 
-        color_list = ['99FFFF', '33FF00', 'FFFFCC', 'FFFF33', 'FF9900', 'FF0099', 'FF0000']
-        swbin_list = []
-        key_index = 0
-        for hwbin_key in hwbin_to_swbin[project].keys():
-            for swbin in hwbin_to_swbin[project][hwbin_key]['SWBin']:
-                swbin_list.append([swbin, color_list[key_index]])
-            key_index += 1
+        colorList = ['99FFFF', '33FF00', 'FFFFCC', 'FFFF33', 'FF9900', 'FF0099', 'FF0000']
+        swbinList = []
+        keyIndex = 0
+        for hwbinKey in hwbinToSwbin[project].keys():
+            for swbin in hwbinToSwbin[project][hwbinKey]['SWBin']:
+                swbinList.append([swbin, colorList[keyIndex]])
+            keyIndex += 1
 
-        hardbin_sheet = summary_wb.create_sheet('HWBin')
-        hardbin_sheet.freeze_panes = 'B2'
-        summary_data = []
-        for i in range(len(hardbin_data)):
-            temp_list = []
+        hardbinSheet = summaryWb.create_sheet('HWBin')
+        hardbinSheet.freeze_panes = 'B2'
+        summaryData = []
+        for i in range(len(hardbinData)):
+            tempList = []
             if i == 0:
-                temp_list.append('FT')
+                tempList.append('FT')
             else:
-                temp_list.append('RT' + str(i))
-            test_count = 0
-            pass_count = 0
-            for hw_bin_key in hwbin_to_swbin[project].keys():
-                if hw_bin_key in hardbin_data[i].keys():
-                    bin_count = len(hardbin_data[i][hw_bin_key][0])
+                tempList.append('RT' + str(i))
+            testCount = 0
+            passCount = 0
+            for hwbinKey in hwbinToSwbin[project].keys():
+                if hwbinKey in hardbinData[i].keys():
+                    binCount = len(hardbinData[i][hwbinKey][0])
                 else:
-                    bin_count = 0
-                if hwbin_to_swbin[project][hw_bin_key]['isPassBin']:
-                    pass_count += bin_count
-                test_count += bin_count
-                temp_list.append(bin_count)
-            temp_list.append(test_count)
-            pass_percent = '{:.2%}'.format(pass_count / test_count)
-            temp_list.append(pass_percent)
-            summary_data.append(temp_list)
+                    binCount = 0
+                if hwbinToSwbin[project][hwbinKey]['isPassBin']:
+                    passCount += binCount
+                testCount += binCount
+                tempList.append(binCount)
+            tempList.append(testCount)
+            passPercent = '{:.2%}'.format(passCount / testCount)
+            tempList.append(passPercent)
+            summaryData.append(tempList)
         irow = 1
         icol = 1
-        hardbin_sheet.cell(row=irow, column=icol).value = lotno
+        hardbinSheet.cell(row=irow, column=icol).value = lotNo
         icol += 1
-        for hw_bin_key in hwbin_to_swbin[project].keys():
-            hardbin_sheet.cell(row=irow, column=icol).value = 'HWBin' + str(hw_bin_key)
+        for hwbinKey in hwbinToSwbin[project].keys():
+            hardbinSheet.cell(row=irow, column=icol).value = 'HWBin' + str(hwbinKey)
             icol += 1
-        hardbin_sheet.cell(row=irow, column=icol).value = 'TestCount'
+        hardbinSheet.cell(row=irow, column=icol).value = 'TestCount'
         icol += 1
-        hardbin_sheet.cell(row=irow, column=icol).value = 'PassPercent'
+        hardbinSheet.cell(row=irow, column=icol).value = 'PassPercent'
         irow += 1
-        for i in range(len(summary_data)):
-            for j in range(len(summary_data[i])):
-                hardbin_sheet.cell(row=irow, column=(j + 1)).value = summary_data[i][j]
+        for i in range(len(summaryData)):
+            for j in range(len(summaryData[i])):
+                hardbinSheet.cell(row=irow, column=(j + 1)).value = summaryData[i][j]
                 if j == 0:
-                    hardbin_sheet.cell(row=irow, column=(j + 1)).fill = PatternFill(fill_type='solid', fgColor=GREEN)
-                elif 1 <= j < len(summary_data[i]) - 2:
-                    hardbin_sheet.cell(row=irow + 1, column=(j + 1)).value = '{:.2%}'.format(
-                        summary_data[i][j] / summary_data[i][-2])
-                    hardbin_sheet.cell(row=irow + 1, column=(j + 1)).fill = PatternFill(fill_type='solid',
-                                                                                        fgColor=GREEN)
-                elif j == len(summary_data[i]) - 2 and i > 0:
-                    compare_count = 0
-                    for m in range(ok_hwbin_count + 1, len(summary_data[i]) - 2):
-                        compare_count += summary_data[i - 1][m]
-                    if summary_data[i][j] != compare_count:
+                    hardbinSheet.cell(row=irow, column=(j + 1)).fill = PatternFill(fill_type='solid', fgColor=GREEN)
+                elif 1 <= j < len(summaryData[i]) - 2:
+                    hardbinSheet.cell(row=irow + 1, column=(j + 1)).value = '{:.2%}'.format(
+                        summaryData[i][j] / summaryData[i][-2])
+                    hardbinSheet.cell(row=irow + 1, column=(j + 1)).fill = PatternFill(fill_type='solid',
+                                                                                       fgColor=GREEN)
+                elif j == len(summaryData[i]) - 2 and i > 0:
+                    compareCount = 0
+                    for m in range(okHwbinCount + 1, len(summaryData[i]) - 2):
+                        compareCount += summaryData[i - 1][m]
+                    if summaryData[i][j] != compareCount:
                         # the number of test is not equal to the total number of chips failed in the previous test
-                        if summary_data[i][j] > compare_count:
+                        if summaryData[i][j] > compareCount:
                             flag = '↓'
                         else:
                             flag = '↑'
-                        hardbin_sheet.cell(row=irow, column=(j + 1)).fill = PatternFill(fill_type='solid', fgColor=RED)
-                        hardbin_sheet.cell(row=irow + 1, column=(j + 1)).value = flag + str(compare_count)
-                        hardbin_sheet.cell(row=irow + 1, column=(j + 1)).font = Font(color=RED, bold=True)
+                        hardbinSheet.cell(row=irow, column=(j + 1)).fill = PatternFill(fill_type='solid', fgColor=RED)
+                        hardbinSheet.cell(row=irow + 1, column=(j + 1)).value = flag + str(compareCount)
+                        hardbinSheet.cell(row=irow + 1, column=(j + 1)).font = Font(color=RED, bold=True)
             irow += 2
-        hardbin_sheet.cell(row=irow, column=1).value = 'Summary'
-        hardbin_sheet.cell(row=irow, column=1).fill = PatternFill(fill_type='solid', fgColor=GREEN)
+        hardbinSheet.cell(row=irow, column=1).value = 'Summary'
+        hardbinSheet.cell(row=irow, column=1).fill = PatternFill(fill_type='solid', fgColor=GREEN)
         # summary pass hwbin count : add all lots pass hwbin count
-        pass_hwbin_count = [0] * ok_hwbin_count
-        for i in range(len(summary_data)):
-            for j in range(len(pass_hwbin_count)):
-                pass_hwbin_count[j] += summary_data[i][j + 1]
+        passHwbinCount = [0] * okHwbinCount
+        for i in range(len(summaryData)):
+            for j in range(len(passHwbinCount)):
+                passHwbinCount[j] += summaryData[i][j + 1]
         # summary total pass hwbin count : add all pass hwbin count
-        total_pass_hwbin_count = 0
-        for i in range(len(pass_hwbin_count)):
-            hardbin_sheet.cell(row=irow, column=2 + i).value = pass_hwbin_count[i]
-            total_pass_hwbin_count += pass_hwbin_count[i]
+        totalPassHwbinCount = 0
+        for i in range(len(passHwbinCount)):
+            hardbinSheet.cell(row=irow, column=2 + i).value = passHwbinCount[i]
+            totalPassHwbinCount += passHwbinCount[i]
         # summary fail hwbin count : last lot's fail hwbin count
-        for i in range(len(pass_hwbin_count) + 1, len(summary_data[-1]) - 2):
-            hardbin_sheet.cell(row=irow, column=(i + 1)).value = summary_data[-1][i]
-        hardbin_sheet.cell(row=irow, column=icol - 1).value = summary_data[0][-2]
-        hardbin_sheet.cell(row=irow, column=icol).value = '{:.2%}'.format(total_pass_hwbin_count / summary_data[0][-2])
+        for i in range(len(passHwbinCount) + 1, len(summaryData[-1]) - 2):
+            hardbinSheet.cell(row=irow, column=(i + 1)).value = summaryData[-1][i]
+        hardbinSheet.cell(row=irow, column=icol - 1).value = summaryData[0][-2]
+        hardbinSheet.cell(row=irow, column=icol).value = '{:.2%}'.format(totalPassHwbinCount / summaryData[0][-2])
 
-        for row in hardbin_sheet.rows:
+        for row in hardbinSheet.rows:
             for cell in row:
                 cell.border = border
                 if cell.row == 1:
                     cell.fill = PatternFill(fill_type='solid', fgColor=YELLOW)
                     cell.font = Font(bold=True)
                     cell.alignment = alignment
-                if cell.row == 2 and cell.column == hardbin_sheet.max_column:
+                if cell.row == 2 and cell.column == hardbinSheet.max_column:
                     cell.fill = PatternFill(fill_type='solid', fgColor=GREEN)
-                if cell.row == hardbin_sheet.max_row and cell.column == hardbin_sheet.max_column:
+                if cell.row == hardbinSheet.max_row and cell.column == hardbinSheet.max_column:
                     cell.fill = PatternFill(fill_type='solid', fgColor=GREEN)
 
-        hardsoftbin_sheet = summary_wb.create_sheet('HWBin-SWBin')
-        hardsoftbin_sheet.freeze_panes = 'C2'
+        currentRowCount += 1
+        if currentRowCount != totalRowCount:
+            _signal.emit(str(currentRowCount * 100 // totalRowCount))
+
+        hardsoftbinSheet = summaryWb.create_sheet('HWBin-SWBin')
+        hardsoftbinSheet.freeze_panes = 'C2'
         irow = 1
-        hardsoftbin_sheet.cell(row=irow, column=1).value = lotno
-        hardsoftbin_sheet.cell(row=irow, column=1).fill = PatternFill(fill_type='solid', fgColor=YELLOW)
-        hardsoftbin_sheet.cell(row=irow, column=3).value = 'FT'
-        hardsoftbin_sheet.cell(row=irow, column=3).fill = PatternFill(fill_type='solid', fgColor=YELLOW)
-        hardsoftbin_sheet.merge_cells(start_row=irow, end_row=irow, start_column=3, end_column=4)
-        for i in range(1, len(softbin_data)):
-            hardsoftbin_sheet.cell(row=irow, column=3 + 2 * i).value = 'RT' + str(i)
-            hardsoftbin_sheet.cell(row=irow, column=3 + 2 * i).fill = PatternFill(fill_type='solid', fgColor=YELLOW)
-            hardsoftbin_sheet.merge_cells(start_row=irow, end_row=irow, start_column=3 + 2 * i, end_column=4 + 2 * i)
+        hardsoftbinSheet.cell(row=irow, column=1).value = lotNo
+        hardsoftbinSheet.cell(row=irow, column=1).fill = PatternFill(fill_type='solid', fgColor=YELLOW)
+        hardsoftbinSheet.cell(row=irow, column=3).value = 'FT'
+        hardsoftbinSheet.cell(row=irow, column=3).fill = PatternFill(fill_type='solid', fgColor=YELLOW)
+        hardsoftbinSheet.merge_cells(start_row=irow, end_row=irow, start_column=3, end_column=4)
+        for i in range(1, len(softbinData)):
+            hardsoftbinSheet.cell(row=irow, column=3 + 2 * i).value = 'RT' + str(i)
+            hardsoftbinSheet.cell(row=irow, column=3 + 2 * i).fill = PatternFill(fill_type='solid', fgColor=YELLOW)
+            hardsoftbinSheet.merge_cells(start_row=irow, end_row=irow, start_column=3 + 2 * i, end_column=4 + 2 * i)
         irow += 1
 
         # sort swbin in hwbin from FT by swbin count from more to less
-        swbin_sort_by_FT_list = []
-        for hw_bin_key in hwbin_to_swbin[project].keys():
-            temp_list = []
-            for swbin in hwbin_to_swbin[project][hw_bin_key]['SWBin']:
-                find_softbin = False
-                for x in range(len(softbin_data[0])):
-                    if swbin == softbin_data[0][x][0]:
-                        find_softbin = True
-                        swbin_count = len(softbin_data[0][x][1][0])
-                        temp_list.append((swbin, swbin_count))
+        swbinSortByFTList = []
+        for hwbinKey in hwbinToSwbin[project].keys():
+            tempList = []
+            for swbin in hwbinToSwbin[project][hwbinKey]['SWBin']:
+                findSoftbin = False
+                for x in range(len(softbinData[0])):
+                    if swbin == softbinData[0][x][0]:
+                        findSoftbin = True
+                        swbinCount = len(softbinData[0][x][1][0])
+                        tempList.append((swbin, swbinCount))
                         break
-                if not find_softbin:
-                    temp_list.append((swbin, 0))
-            for m in range(len(temp_list) - 1):
-                for n in range(m + 1, len(temp_list)):
-                    if temp_list[m][1] < temp_list[n][1]:
-                        temp_list[m], temp_list[n] = temp_list[n], temp_list[m]
-            temp_count_list = [hw_bin_key]
-            for y in range(len(temp_list)):
-                temp_count_list.append(temp_list[y][0])
-            swbin_sort_by_FT_list.append(temp_count_list)
+                if not findSoftbin:
+                    tempList.append((swbin, 0))
+            for m in range(len(tempList) - 1):
+                for n in range(m + 1, len(tempList)):
+                    if tempList[m][1] < tempList[n][1]:
+                        tempList[m], tempList[n] = tempList[n], tempList[m]
+            tempCountList = [hwbinKey]
+            for y in range(len(tempList)):
+                tempCountList.append(tempList[y][0])
+            swbinSortByFTList.append(tempCountList)
 
-        summary_soft_count = []
-        for i in range(len(swbin_sort_by_FT_list)):
-            hardsoftbin_sheet.cell(row=irow, column=1).value = 'HWBin' + str(swbin_sort_by_FT_list[i][0])
-            hardsoftbin_sheet.cell(row=irow, column=1).fill = PatternFill(fill_type='solid', fgColor=GREEN)
-            hardsoftbin_sheet.cell(row=irow, column=1).font = Font(bold=True)
-            for j in range(1, len(swbin_sort_by_FT_list[i])):
-                hardsoftbin_sheet.cell(row=irow, column=2).value = 'SWBin' + str(swbin_sort_by_FT_list[i][j])
-                temp_count = 0
-                for m in range(len(softbin_data)):
-                    find_softbin = False
-                    for n in range(len(softbin_data[m])):
-                        if swbin_sort_by_FT_list[i][j] == softbin_data[m][n][0]:
-                            find_softbin = True
-                            swbin_count = len(softbin_data[m][n][1][0])
+        summarySoftCount = []
+        for i in range(len(swbinSortByFTList)):
+            hardsoftbinSheet.cell(row=irow, column=1).value = 'HWBin' + str(swbinSortByFTList[i][0])
+            hardsoftbinSheet.cell(row=irow, column=1).fill = PatternFill(fill_type='solid', fgColor=GREEN)
+            hardsoftbinSheet.cell(row=irow, column=1).font = Font(bold=True)
+            for j in range(1, len(swbinSortByFTList[i])):
+                hardsoftbinSheet.cell(row=irow, column=2).value = 'SWBin' + str(swbinSortByFTList[i][j])
+                tempCount = 0
+                for m in range(len(softbinData)):
+                    findSoftbin = False
+                    for n in range(len(softbinData[m])):
+                        if swbinSortByFTList[i][j] == softbinData[m][n][0]:
+                            findSoftbin = True
+                            swbinCount = len(softbinData[m][n][1][0])
                             break
-                    if not find_softbin:
-                        swbin_count = 0
-                    if i in range(ok_hwbin_count):
+                    if not findSoftbin:
+                        swbinCount = 0
+                    if i in range(okHwbinCount):
                         # add the number of pass hwbin's swbin of all lots
-                        temp_count += swbin_count
-                    elif m == len(softbin_data) - 1:
+                        tempCount += swbinCount
+                    elif m == len(softbinData) - 1:
                         # set the number of fail hwbin's swbin of last lot
-                        temp_count = swbin_count
-                    hardsoftbin_sheet.cell(row=irow, column=(2 * m + 3)).value = swbin_count
-                    hardsoftbin_sheet.cell(row=irow, column=(2 * m + 4)).value = '{:.2%}'.format(
-                        swbin_count / summary_data[0][-2])
-                    hardsoftbin_sheet.cell(row=irow, column=(2 * m + 4)).fill = PatternFill(fill_type='solid',
-                                                                                            fgColor=GREEN)
+                        tempCount = swbinCount
+                    hardsoftbinSheet.cell(row=irow, column=(2 * m + 3)).value = swbinCount
+                    hardsoftbinSheet.cell(row=irow, column=(2 * m + 4)).value = '{:.2%}'.format(
+                        swbinCount / summaryData[0][-2])
+                    hardsoftbinSheet.cell(row=irow, column=(2 * m + 4)).fill = PatternFill(fill_type='solid',
+                                                                                           fgColor=GREEN)
                 irow += 1
-                summary_soft_count.append(temp_count)
-            summary_soft_count.append('')
+                summarySoftCount.append(tempCount)
+            summarySoftCount.append('')
             irow += 1
 
         irow = 1
-        icol = 4 + 2 * len(softbin_data)
-        hardsoftbin_sheet.cell(row=irow, column=icol).value = 'Summary'
-        hardsoftbin_sheet.cell(row=irow, column=icol).fill = PatternFill(fill_type='solid', fgColor='FFA500')
-        hardsoftbin_sheet.merge_cells(start_row=irow, end_row=irow, start_column=icol, end_column=icol + 1)
+        icol = 4 + 2 * len(softbinData)
+        hardsoftbinSheet.cell(row=irow, column=icol).value = 'Summary'
+        hardsoftbinSheet.cell(row=irow, column=icol).fill = PatternFill(fill_type='solid', fgColor='FFA500')
+        hardsoftbinSheet.merge_cells(start_row=irow, end_row=irow, start_column=icol, end_column=icol + 1)
         irow += 1
-        for i in range(len(summary_soft_count)):
-            if isinstance(summary_soft_count[i], int):
-                hardsoftbin_sheet.cell(row=irow, column=icol).value = summary_soft_count[i]
-                hardsoftbin_sheet.cell(row=irow, column=icol + 1).value = '{:.2%}'.format(
-                    summary_soft_count[i] / summary_data[0][-2])
-                hardsoftbin_sheet.cell(row=irow, column=icol + 1).fill = PatternFill(fill_type='solid',
-                                                                                     fgColor='FFA500')
+        for i in range(len(summarySoftCount)):
+            if isinstance(summarySoftCount[i], int):
+                hardsoftbinSheet.cell(row=irow, column=icol).value = summarySoftCount[i]
+                hardsoftbinSheet.cell(row=irow, column=icol + 1).value = '{:.2%}'.format(
+                    summarySoftCount[i] / summaryData[0][-2])
+                hardsoftbinSheet.cell(row=irow, column=icol + 1).fill = PatternFill(fill_type='solid',
+                                                                                    fgColor='FFA500')
             irow += 1
 
-        for row in hardsoftbin_sheet.rows:
+        for row in hardsoftbinSheet.rows:
             for cell in row:
                 cell.border = border
                 if cell.row == 1:
                     cell.font = Font(bold=True)
                     cell.alignment = alignment
 
-        sitesoftbin_sheet = summary_wb.create_sheet('Site-SWBin')
-        sitesoftbin_sheet.freeze_panes = 'B2'
+        currentRowCount += 1
+        if currentRowCount != totalRowCount:
+            _signal.emit(str(currentRowCount * 100 // totalRowCount))
+
+        sitesoftbinSheet = summaryWb.create_sheet('Site-SWBin')
+        sitesoftbinSheet.freeze_panes = 'B2'
         irow = 1
-        sitesoftbin_sheet.cell(row=irow, column=1).value = lotno
-        sitesoftbin_sheet.cell(row=irow, column=1).fill = PatternFill(fill_type='solid', fgColor=YELLOW)
+        sitesoftbinSheet.cell(row=irow, column=1).value = lotNo
+        sitesoftbinSheet.cell(row=irow, column=1).fill = PatternFill(fill_type='solid', fgColor=YELLOW)
         for i in range(16):
-            sitesoftbin_sheet.cell(row=irow, column=2 + i).value = 'Site' + str(i)
-            sitesoftbin_sheet.cell(row=irow, column=2 + i).fill = PatternFill(fill_type='solid', fgColor=YELLOW)
-        sitesoftbin_sheet.merge_cells(start_row=irow, end_row=irow, start_column=19, end_column=20)
-        sitesoftbin_sheet.cell(row=irow, column=19).value = 'Summary'
-        sitesoftbin_sheet.cell(row=irow, column=19).fill = PatternFill(fill_type='solid', fgColor='FFA500')
+            sitesoftbinSheet.cell(row=irow, column=2 + i).value = 'Site' + str(i)
+            sitesoftbinSheet.cell(row=irow, column=2 + i).fill = PatternFill(fill_type='solid', fgColor=YELLOW)
+        sitesoftbinSheet.merge_cells(start_row=irow, end_row=irow, start_column=19, end_column=20)
+        sitesoftbinSheet.cell(row=irow, column=19).value = 'Summary'
+        sitesoftbinSheet.cell(row=irow, column=19).fill = PatternFill(fill_type='solid', fgColor='FFA500')
         irow += 1
 
-        lotno_site_swbin_count = []
-        for x in range(len(swbin_list)):
-            site_count_list = [[0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [5, 0], [6, 0], [7, 0], [8, 0], [9, 0], [10, 0],
-                               [11, 0], [12, 0], [13, 0], [14, 0], [15, 0]]
-            swbin = str(swbin_list[x][0])
+        lotNoSiteSwbinCount = []
+        for x in range(len(swbinList)):
+            siteCountList = [[0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [5, 0], [6, 0], [7, 0], [8, 0], [9, 0], [10, 0],
+                             [11, 0], [12, 0], [13, 0], [14, 0], [15, 0]]
+            swbin = str(swbinList[x][0])
             for site in range(16):
-                if x < begin_fail_swbin:
-                    for i in range(len(site_data)):
-                        if (site in site_data[i].keys()) and (swbin in site_data[i][site][0].keys()):
-                            site_count_list[site][1] += len(site_data[i][site][0][swbin])
+                if x < beginFailSwbin:
+                    for i in range(len(siteData)):
+                        if (site in siteData[i].keys()) and (swbin in siteData[i][site][0].keys()):
+                            siteCountList[site][1] += len(siteData[i][site][0][swbin])
                 else:
-                    if (site in site_data[-1].keys()) and (swbin in site_data[-1][site][0].keys()):
-                        site_count_list[site][1] += len(site_data[-1][site][0][swbin])
-            lotno_site_swbin_count.append(site_count_list)
-        site_swbin_count = []
-        for i in range(len(lotno_site_swbin_count)):
-            temp_total_count = 0
-            temp_list = [0] * 16
-            temp_swbin_count = []
-            for j in range(len(temp_list)):
-                temp_list[j] += lotno_site_swbin_count[i][j][1]
-                temp_swbin_count.append([temp_list[j], WHITE])
-                temp_total_count += temp_list[j]
-                if j == len(temp_list) - 1:
-                    temp_swbin_count.append([temp_total_count, 'FFA500'])
-            site_swbin_count.append(temp_swbin_count)
+                    if (site in siteData[-1].keys()) and (swbin in siteData[-1][site][0].keys()):
+                        siteCountList[site][1] += len(siteData[-1][site][0][swbin])
+            lotNoSiteSwbinCount.append(siteCountList)
+        siteSwbinCount = []
+        for i in range(len(lotNoSiteSwbinCount)):
+            tempTotalCount = 0
+            tempList = [0] * 16
+            tempSwbinCount = []
+            for j in range(len(tempList)):
+                tempList[j] += lotNoSiteSwbinCount[i][j][1]
+                tempSwbinCount.append([tempList[j], WHITE])
+                tempTotalCount += tempList[j]
+                if j == len(tempList) - 1:
+                    tempSwbinCount.append([tempTotalCount, 'FFA500'])
+            siteSwbinCount.append(tempSwbinCount)
         # add the number of fail swbin by all site
         # fill color of max value in fail swbin is green(all values are 0 do not fill green)
         # fill color of min value in fail swbin is red(multiple values of 0 do not fill red)
-        site_pass_total_list = [0] * 16
-        for i in range(begin_fail_swbin):
-            for j in range(len(site_swbin_count[i]) - 1):
-                site_pass_total_list[j] += site_swbin_count[i][j][0]
-        site_fail_total_list = [0] * 16
-        for i in range(begin_fail_swbin, len(site_swbin_count)):
-            min_value = site_swbin_count[i][0][0]
-            max_value = site_swbin_count[i][0][0]
-            for m in range(1, len(site_swbin_count[i]) - 1):
-                if min_value > site_swbin_count[i][m][0]:
-                    min_value = site_swbin_count[i][m][0]
-                if max_value < site_swbin_count[i][m][0]:
-                    max_value = site_swbin_count[i][m][0]
-            min_index = []
-            max_index = []
-            for j in range(len(site_swbin_count[i]) - 1):
-                site_fail_total_list[j] += site_swbin_count[i][j][0]
-                if site_swbin_count[i][j][0] == min_value:
-                    min_index.append(j)
-                if site_swbin_count[i][j][0] == max_value:
-                    max_index.append(j)
-            if min_value == 0 and len(min_index) == 1:
-                site_swbin_count[i][min_index[0]][1] = GREEN
-                for y in range(len(max_index)):
-                    site_swbin_count[i][max_index[y]][1] = RED
-            elif min_value == 0 and max_value > 0:
-                for y in range(len(max_index)):
-                    site_swbin_count[i][max_index[y]][1] = RED
-            elif min_value > 0:
-                for x in range(len(min_index)):
-                    site_swbin_count[i][min_index[x]][1] = GREEN
-                for y in range(len(max_index)):
-                    site_swbin_count[i][max_index[y]][1] = RED
+        sitePassTotalList = [0] * 16
+        for i in range(beginFailSwbin):
+            for j in range(len(siteSwbinCount[i]) - 1):
+                sitePassTotalList[j] += siteSwbinCount[i][j][0]
+        siteFailTotalList = [0] * 16
+        for i in range(beginFailSwbin, len(siteSwbinCount)):
+            minValue = siteSwbinCount[i][0][0]
+            maxValue = siteSwbinCount[i][0][0]
+            for m in range(1, len(siteSwbinCount[i]) - 1):
+                if minValue > siteSwbinCount[i][m][0]:
+                    minValue = siteSwbinCount[i][m][0]
+                if maxValue < siteSwbinCount[i][m][0]:
+                    maxValue = siteSwbinCount[i][m][0]
+            minIndex = []
+            maxIndex = []
+            for j in range(len(siteSwbinCount[i]) - 1):
+                siteFailTotalList[j] += siteSwbinCount[i][j][0]
+                if siteSwbinCount[i][j][0] == minValue:
+                    minIndex.append(j)
+                if siteSwbinCount[i][j][0] == maxValue:
+                    maxIndex.append(j)
+            if minValue == 0 and len(minIndex) == 1:
+                siteSwbinCount[i][minIndex[0]][1] = GREEN
+                for y in range(len(maxIndex)):
+                    siteSwbinCount[i][maxIndex[y]][1] = RED
+            elif minValue == 0 and maxValue > 0:
+                for y in range(len(maxIndex)):
+                    siteSwbinCount[i][maxIndex[y]][1] = RED
+            elif minValue > 0:
+                for x in range(len(minIndex)):
+                    siteSwbinCount[i][minIndex[x]][1] = GREEN
+                for y in range(len(maxIndex)):
+                    siteSwbinCount[i][maxIndex[y]][1] = RED
 
-        for x in range(len(swbin_list)):
-            sitesoftbin_sheet.cell(row=irow, column=1).value = 'SWBin' + str(swbin_list[x][0])
-            sitesoftbin_sheet.cell(row=irow, column=1).fill = PatternFill(fill_type='solid', fgColor=swbin_list[x][1])
-            for y in range(len(site_swbin_count[x])):
-                if y < len(site_swbin_count[x]) - 1:
-                    if site_swbin_count[x][y][0] > 0:
-                        sitesoftbin_sheet.cell(row=irow, column=2 + y).value = '{:.4%}'.format(
-                            site_swbin_count[x][y][0] / summary_data[0][-2])
-                    sitesoftbin_sheet.cell(row=irow, column=2 + y).fill = PatternFill(fill_type='solid',
-                                                                                      fgColor=site_swbin_count[x][y][1])
+        for x in range(len(swbinList)):
+            sitesoftbinSheet.cell(row=irow, column=1).value = 'SWBin' + str(swbinList[x][0])
+            sitesoftbinSheet.cell(row=irow, column=1).fill = PatternFill(fill_type='solid', fgColor=swbinList[x][1])
+            for y in range(len(siteSwbinCount[x])):
+                if y < len(siteSwbinCount[x]) - 1:
+                    if siteSwbinCount[x][y][0] > 0:
+                        sitesoftbinSheet.cell(row=irow, column=2 + y).value = '{:.4%}'.format(
+                            siteSwbinCount[x][y][0] / summaryData[0][-2])
+                    sitesoftbinSheet.cell(row=irow, column=2 + y).fill = PatternFill(fill_type='solid',
+                                                                                     fgColor=siteSwbinCount[x][y][1])
                 else:
-                    sitesoftbin_sheet.cell(row=irow, column=3 + y).value = site_swbin_count[x][y][0]
-                    sitesoftbin_sheet.cell(row=irow, column=4 + y).value = '{:.4%}'.format(
-                        site_swbin_count[x][y][0] / summary_data[0][-2])
-                    sitesoftbin_sheet.cell(row=irow, column=4 + y).fill = PatternFill(fill_type='solid',
-                                                                                      fgColor=site_swbin_count[x][y][1])
+                    sitesoftbinSheet.cell(row=irow, column=3 + y).value = siteSwbinCount[x][y][0]
+                    sitesoftbinSheet.cell(row=irow, column=4 + y).value = '{:.4%}'.format(
+                        siteSwbinCount[x][y][0] / summaryData[0][-2])
+                    sitesoftbinSheet.cell(row=irow, column=4 + y).fill = PatternFill(fill_type='solid',
+                                                                                     fgColor=siteSwbinCount[x][y][1])
             irow += 1
         irow += 1
-        sitesoftbin_sheet.merge_cells(start_row=irow, end_row=irow + 1, start_column=1, end_column=1)
-        sitesoftbin_sheet.cell(row=irow, column=1).value = 'FailPercent'
-        sitesoftbin_sheet.cell(row=irow, column=1).font = Font(bold=True)
-        sitesoftbin_sheet.cell(row=irow, column=1).alignment = alignment
-        sitesoftbin_sheet.cell(row=irow, column=1).fill = PatternFill(fill_type='solid', fgColor='FFA500')
-        for i in range(len(site_fail_total_list)):
-            sitesoftbin_sheet.cell(row=irow, column=2 + i).value = site_fail_total_list[i]
-            sitesoftbin_sheet.cell(row=irow + 1, column=2 + i).value = '{:.4%}'.format(
-                site_fail_total_list[i] / summary_data[0][-2])
-            sitesoftbin_sheet.cell(row=irow + 1, column=2 + i).fill = PatternFill(fill_type='solid', fgColor=RED)
-        sitesoftbin_sheet.cell(row=irow, column=3 + len(site_fail_total_list)).value = sum(site_fail_total_list)
-        sitesoftbin_sheet.cell(row=irow, column=3 + len(site_fail_total_list)).fill = PatternFill(fill_type='solid',
+        sitesoftbinSheet.merge_cells(start_row=irow, end_row=irow + 1, start_column=1, end_column=1)
+        sitesoftbinSheet.cell(row=irow, column=1).value = 'FailPercent'
+        sitesoftbinSheet.cell(row=irow, column=1).font = Font(bold=True)
+        sitesoftbinSheet.cell(row=irow, column=1).alignment = alignment
+        sitesoftbinSheet.cell(row=irow, column=1).fill = PatternFill(fill_type='solid', fgColor='FFA500')
+        for i in range(len(siteFailTotalList)):
+            sitesoftbinSheet.cell(row=irow, column=2 + i).value = siteFailTotalList[i]
+            sitesoftbinSheet.cell(row=irow + 1, column=2 + i).value = '{:.4%}'.format(
+                siteFailTotalList[i] / summaryData[0][-2])
+            sitesoftbinSheet.cell(row=irow + 1, column=2 + i).fill = PatternFill(fill_type='solid', fgColor=RED)
+        sitesoftbinSheet.cell(row=irow, column=3 + len(siteFailTotalList)).value = sum(siteFailTotalList)
+        sitesoftbinSheet.cell(row=irow, column=3 + len(siteFailTotalList)).fill = PatternFill(fill_type='solid',
+                                                                                              fgColor=RED)
+        sitesoftbinSheet.cell(row=irow + 1, column=3 + len(siteFailTotalList)).value = '{:.4%}'.format(
+            sum(siteFailTotalList) / summaryData[0][-2])
+        sitesoftbinSheet.cell(row=irow + 1, column=3 + len(siteFailTotalList)).fill = PatternFill(fill_type='solid',
                                                                                                   fgColor=RED)
-        sitesoftbin_sheet.cell(row=irow + 1, column=3 + len(site_fail_total_list)).value = '{:.4%}'.format(
-            sum(site_fail_total_list) / summary_data[0][-2])
-        sitesoftbin_sheet.cell(row=irow + 1, column=3 + len(site_fail_total_list)).fill = PatternFill(fill_type='solid',
-                                                                                                      fgColor=RED)
         irow += 2
-        sitesoftbin_sheet.merge_cells(start_row=irow, end_row=irow + 1, start_column=1, end_column=1)
-        sitesoftbin_sheet.cell(row=irow, column=1).value = 'PassPercent'
-        sitesoftbin_sheet.cell(row=irow, column=1).font = Font(bold=True)
-        sitesoftbin_sheet.cell(row=irow, column=1).alignment = alignment
-        sitesoftbin_sheet.cell(row=irow, column=1).fill = PatternFill(fill_type='solid', fgColor=GREEN)
-        for i in range(len(site_pass_total_list)):
-            sitesoftbin_sheet.cell(row=irow, column=2 + i).value = site_pass_total_list[i]
-            sitesoftbin_sheet.cell(row=irow + 1, column=2 + i).value = '{:.4%}'.format(
-                site_pass_total_list[i] / summary_data[0][-2])
-            sitesoftbin_sheet.cell(row=irow + 1, column=2 + i).fill = PatternFill(fill_type='solid', fgColor=GREEN)
-        sitesoftbin_sheet.cell(row=irow, column=3 + len(site_pass_total_list)).value = sum(site_pass_total_list)
-        sitesoftbin_sheet.cell(row=irow, column=3 + len(site_pass_total_list)).fill = PatternFill(fill_type='solid',
+        sitesoftbinSheet.merge_cells(start_row=irow, end_row=irow + 1, start_column=1, end_column=1)
+        sitesoftbinSheet.cell(row=irow, column=1).value = 'PassPercent'
+        sitesoftbinSheet.cell(row=irow, column=1).font = Font(bold=True)
+        sitesoftbinSheet.cell(row=irow, column=1).alignment = alignment
+        sitesoftbinSheet.cell(row=irow, column=1).fill = PatternFill(fill_type='solid', fgColor=GREEN)
+        for i in range(len(sitePassTotalList)):
+            sitesoftbinSheet.cell(row=irow, column=2 + i).value = sitePassTotalList[i]
+            sitesoftbinSheet.cell(row=irow + 1, column=2 + i).value = '{:.4%}'.format(
+                sitePassTotalList[i] / summaryData[0][-2])
+            sitesoftbinSheet.cell(row=irow + 1, column=2 + i).fill = PatternFill(fill_type='solid', fgColor=GREEN)
+        sitesoftbinSheet.cell(row=irow, column=3 + len(sitePassTotalList)).value = sum(sitePassTotalList)
+        sitesoftbinSheet.cell(row=irow, column=3 + len(sitePassTotalList)).fill = PatternFill(fill_type='solid',
+                                                                                              fgColor=GREEN)
+        sitesoftbinSheet.cell(row=irow + 1, column=3 + len(sitePassTotalList)).value = '{:.4%}'.format(
+            sum(sitePassTotalList) / summaryData[0][-2])
+        sitesoftbinSheet.cell(row=irow + 1, column=3 + len(sitePassTotalList)).fill = PatternFill(fill_type='solid',
                                                                                                   fgColor=GREEN)
-        sitesoftbin_sheet.cell(row=irow + 1, column=3 + len(site_pass_total_list)).value = '{:.4%}'.format(
-            sum(site_pass_total_list) / summary_data[0][-2])
-        sitesoftbin_sheet.cell(row=irow + 1, column=3 + len(site_pass_total_list)).fill = PatternFill(fill_type='solid',
-                                                                                                      fgColor=GREEN)
-        for row in sitesoftbin_sheet.rows:
+        for row in sitesoftbinSheet.rows:
             for cell in row:
                 cell.border = border
                 if cell.row == 1:
                     cell.font = Font(bold=True)
                     cell.alignment = alignment
 
-        hwbin_testitem_sheet = summary_wb.create_sheet('HWBin-TestItem')
-        hwbin_testitem_sheet.freeze_panes = 'B2'
+        currentRowCount += 1
+        if currentRowCount != totalRowCount:
+            _signal.emit(str(currentRowCount * 100 // totalRowCount))
+
+        hwbinTestItemSheet = summaryWb.create_sheet('HWBin-TestItem')
+        hwbinTestItemSheet.freeze_panes = 'B2'
         irow = 1
-        hwbin_testitem_sheet.cell(row=irow, column=1).value = lot_count
-        for hwbin_key in hardbin_data[0].keys():
-            for i in range(len(hardbin_data[0][hwbin_key][1])):
-                hwbin_testitem_sheet.cell(row=irow, column=i + 2).value = hardbin_data[0][hwbin_key][1][i][0]
+        hwbinTestItemSheet.cell(row=irow, column=1).value = lotCount
+        for hwbinKey in hardbinData[0].keys():
+            for i in range(len(hardbinData[0][hwbinKey][1])):
+                hwbinTestItemSheet.cell(row=irow, column=i + 2).value = hardbinData[0][hwbinKey][1][i][0]
             break
         irow += 1
-        for hwbin_key in hardbin_data[0].keys():
-            hwbin_testitem_sheet.cell(row=irow, column=1).value = 'HWBin' + str(hwbin_key)
-            hwbin_testitem_sheet.cell(row=irow, column=1).fill = PatternFill(fill_type='solid', fgColor=GREEN)
-            for i in range(len(hardbin_data[0][hwbin_key][1])):
-                hwbin_testitem_sheet.cell(row=irow, column=2 + i).value = hardbin_data[0][hwbin_key][1][i][1]
-                hwbin_testitem_sheet.cell(row=irow + 1, column=2 + i).value = '{:.2%}'.format(
-                    hardbin_data[0][hwbin_key][1][i][1] / lot_count)
-                if hardbin_data[0][hwbin_key][1][i][1] > 0:
+        for hwbinKey in hardbinData[0].keys():
+            hwbinTestItemSheet.cell(row=irow, column=1).value = 'HWBin' + str(hwbinKey)
+            hwbinTestItemSheet.cell(row=irow, column=1).fill = PatternFill(fill_type='solid', fgColor=GREEN)
+            for i in range(len(hardbinData[0][hwbinKey][1])):
+                hwbinTestItemSheet.cell(row=irow, column=2 + i).value = hardbinData[0][hwbinKey][1][i][1]
+                hwbinTestItemSheet.cell(row=irow + 1, column=2 + i).value = '{:.2%}'.format(
+                    hardbinData[0][hwbinKey][1][i][1] / lotCount)
+                if hardbinData[0][hwbinKey][1][i][1] > 0:
                     # percent value greater than 0 are filled in red
-                    hwbin_testitem_sheet.cell(row=irow + 1, column=2 + i).fill = PatternFill(fill_type='solid',
-                                                                                             fgColor=RED)
+                    hwbinTestItemSheet.cell(row=irow + 1, column=2 + i).fill = PatternFill(fill_type='solid',
+                                                                                           fgColor=RED)
             irow += 2
 
-        for row in hwbin_testitem_sheet.rows:
+        for row in hwbinTestItemSheet.rows:
             for cell in row:
                 cell.border = border
                 if cell.row == 1 and cell.column > 1:
@@ -2078,30 +2116,34 @@ def save_data(analysis_folder, parse_data):
                     cell.font = Font(bold=True)
                     cell.alignment = alignment
 
-        swbin_testitem_sheet = summary_wb.create_sheet('SWBin-TestItem')
-        swbin_testitem_sheet.freeze_panes = 'B2'
+        currentRowCount += 1
+        if currentRowCount != totalRowCount:
+            _signal.emit(str(currentRowCount * 100 // totalRowCount))
+
+        swbinTestItemSheet = summaryWb.create_sheet('SWBin-TestItem')
+        swbinTestItemSheet.freeze_panes = 'B2'
         irow = 1
-        swbin_testitem_sheet.cell(row=irow, column=1).value = lot_count
-        for i in range(len(softbin_data[0][0][1][1])):
-            swbin_testitem_sheet.cell(row=irow, column=i + 2).value = softbin_data[0][0][1][1][i][0]
+        swbinTestItemSheet.cell(row=irow, column=1).value = lotCount
+        for i in range(len(softbinData[0][0][1][1])):
+            swbinTestItemSheet.cell(row=irow, column=i + 2).value = softbinData[0][0][1][1][i][0]
         irow += 1
-        for x in range(len(swbin_list)):
-            swbin_testitem_sheet.cell(row=irow, column=1).value = 'SWBin' + str(swbin_list[x][0])
-            swbin_testitem_sheet.cell(row=irow, column=1).fill = PatternFill(fill_type='solid',
-                                                                             fgColor=swbin_list[x][1])
-            for i in range(len(softbin_data[0])):
-                if swbin_list[x][0] == softbin_data[0][i][0]:
-                    for j in range(len(softbin_data[0][i][1][1])):
-                        swbin_testitem_sheet.cell(row=irow, column=2 + j).value = softbin_data[0][i][1][1][j][1]
-                        swbin_testitem_sheet.cell(row=irow + 1, column=2 + j).value = '{:.2%}'.format(
-                            softbin_data[0][i][1][1][j][1] / lot_count)
-                        if softbin_data[0][i][1][1][j][1] > 0:
+        for x in range(len(swbinList)):
+            swbinTestItemSheet.cell(row=irow, column=1).value = 'SWBin' + str(swbinList[x][0])
+            swbinTestItemSheet.cell(row=irow, column=1).fill = PatternFill(fill_type='solid',
+                                                                           fgColor=swbinList[x][1])
+            for i in range(len(softbinData[0])):
+                if swbinList[x][0] == softbinData[0][i][0]:
+                    for j in range(len(softbinData[0][i][1][1])):
+                        swbinTestItemSheet.cell(row=irow, column=2 + j).value = softbinData[0][i][1][1][j][1]
+                        swbinTestItemSheet.cell(row=irow + 1, column=2 + j).value = '{:.2%}'.format(
+                            softbinData[0][i][1][1][j][1] / lotCount)
+                        if softbinData[0][i][1][1][j][1] > 0:
                             # percent value greater than 0 are filled in red
-                            swbin_testitem_sheet.cell(row=irow + 1, column=2 + j).fill = PatternFill(fill_type='solid',
-                                                                                                     fgColor=RED)
+                            swbinTestItemSheet.cell(row=irow + 1, column=2 + j).fill = PatternFill(fill_type='solid',
+                                                                                                   fgColor=RED)
             irow += 2
 
-        for row in swbin_testitem_sheet.rows:
+        for row in swbinTestItemSheet.rows:
             for cell in row:
                 cell.border = border
                 if cell.row == 1 and cell.column > 1:
@@ -2109,30 +2151,34 @@ def save_data(analysis_folder, parse_data):
                     cell.font = Font(bold=True)
                     cell.alignment = alignment
 
-        site_testitem_sheet = summary_wb.create_sheet('Site-TestItem')
-        site_testitem_sheet.freeze_panes = 'B2'
+        currentRowCount += 1
+        if currentRowCount != totalRowCount:
+            _signal.emit(str(currentRowCount * 100 // totalRowCount))
+
+        siteTestItemSheet = summaryWb.create_sheet('Site-TestItem')
+        siteTestItemSheet.freeze_panes = 'B2'
         irow = 1
-        site_testitem_sheet.cell(row=irow, column=1).value = lot_count
-        for site_key in site_data[0].keys():
-            for i in range(len(site_data[0][site_key][1])):
-                site_testitem_sheet.cell(row=irow, column=i + 2).value = site_data[0][site_key][1][i][0]
+        siteTestItemSheet.cell(row=irow, column=1).value = lotCount
+        for siteKey in siteData[0].keys():
+            for i in range(len(siteData[0][siteKey][1])):
+                siteTestItemSheet.cell(row=irow, column=i + 2).value = siteData[0][siteKey][1][i][0]
             break
         irow += 1
-        for site_key in site_data[0].keys():
-            site_testitem_sheet.cell(row=irow, column=1).value = 'Site' + str(site_key)
-            site_testitem_sheet.cell(row=irow, column=1).fill = PatternFill(fill_type='solid',
-                                                                            fgColor=GREEN)
-            for i in range(len(site_data[0][site_key][1])):
-                site_testitem_sheet.cell(row=irow, column=2 + i).value = site_data[0][site_key][1][i][1]
-                site_testitem_sheet.cell(row=irow + 1, column=2 + i).value = '{:.2%}'.format(
-                    site_data[0][site_key][1][i][1] / lot_count)
-                if site_data[0][site_key][1][i][1] > 0:
+        for siteKey in siteData[0].keys():
+            siteTestItemSheet.cell(row=irow, column=1).value = 'Site' + str(siteKey)
+            siteTestItemSheet.cell(row=irow, column=1).fill = PatternFill(fill_type='solid',
+                                                                          fgColor=GREEN)
+            for i in range(len(siteData[0][siteKey][1])):
+                siteTestItemSheet.cell(row=irow, column=2 + i).value = siteData[0][siteKey][1][i][1]
+                siteTestItemSheet.cell(row=irow + 1, column=2 + i).value = '{:.2%}'.format(
+                    siteData[0][siteKey][1][i][1] / lotCount)
+                if siteData[0][siteKey][1][i][1] > 0:
                     # percent value greater than 0 are filled in red
-                    site_testitem_sheet.cell(row=irow + 1, column=2 + i).fill = PatternFill(fill_type='solid',
-                                                                                            fgColor=RED)
+                    siteTestItemSheet.cell(row=irow + 1, column=2 + i).fill = PatternFill(fill_type='solid',
+                                                                                          fgColor=RED)
             irow += 2
 
-        for row in site_testitem_sheet.rows:
+        for row in siteTestItemSheet.rows:
             for cell in row:
                 cell.border = border
                 if cell.row == 1 and cell.column > 1:
@@ -2140,188 +2186,178 @@ def save_data(analysis_folder, parse_data):
                     cell.font = Font(bold=True)
                     cell.alignment = alignment
 
-        for sheet_name in summary_wb.sheetnames:
+        for sheet_name in summaryWb.sheetnames:
             if sheet_name == 'Sheet':
-                del summary_wb[sheet_name]
+                del summaryWb[sheet_name]
             else:
-                set_column_width(summary_wb[sheet_name])
-        summary_wb.save(summary_file)
+                SetColumnWidth(summaryWb[sheet_name])
+        summaryWb.save(summaryFile)
+        currentRowCount += 1
+        if currentRowCount != totalRowCount:
+            _signal.emit(str(currentRowCount * 100 // totalRowCount))
 
 
 class Runthread(QThread):
     _signal = pyqtSignal(str)
 
-    def __init__(self, open_path, choose_radio):
+    def __init__(self, openPath, chooseRadio):
         super(Runthread, self).__init__()
-        self.open_path = open_path
-        self.choose_radio = choose_radio
-        self.filecount = 0
+        self.openPath = openPath
+        self.chooseRadio = chooseRadio
 
     def __del__(self):
         self.wait()
 
     def run(self):
-        if self.choose_radio == 'DateFolder':
-            lotno_names = listdir(self.open_path)
-            for name in lotno_names:
-                folder = join(self.open_path, name)
+        if self.chooseRadio == 'DateFolder':
+            lotNoNames = listdir(self.openPath)
+            for name in lotNoNames:
+                folder = join(self.openPath, name)
                 if isdir(folder):
                     # get CSV file under the folder
-                    file_list = get_filelist(folder, '.csv')
-                    if not file_list:
+                    fileList = GetFileList(folder, '.csv')
+                    if not fileList:
                         exit()
 
                     # analysis folder path
                     if argv.count('-a') == 0:
                         # default analysis folder
-                        analysis_folder = folder + '\Analysis'
+                        analysisFolder = folder + '\Analysis'
                     else:
-                        analysis_folder = argv[argv.index('-a') + 1]
+                        analysisFolder = argv[argv.index('-a') + 1]
 
                     # create analysis folder
-                    mkdir(analysis_folder)
+                    MkDir(analysisFolder)
 
-                    parse_data = []
-                    for file in file_list:
+                    parseData = []
+                    for file in fileList:
                         # parse file
-                        parse_data.append(parse_file(file, analysis_folder))
-                        self.filecount += 1
-                        if self.filecount != fileCount:
-                            self._signal.emit(str(self.filecount * 100 // fileCount))
+                        parseData.append(ParseFile(file, self._signal, analysisFolder))
                     # save data
-                    save_data(analysis_folder, parse_data)
+                    save_data(analysisFolder, self._signal, parseData)
         else:
-            file_list = get_filelist(self.open_path, '.csv')
-            if not file_list:
+            fileList = GetFileList(self.openPath, '.csv')
+            if not fileList:
                 exit()
 
             # analysis folder path
             if argv.count('-a') == 0:
                 # default analysis folder
-                analysis_folder = self.open_path + '\Analysis'
+                analysisFolder = self.openPath + '\Analysis'
             else:
-                analysis_folder = argv[argv.index('-a') + 1]
+                analysisFolder = argv[argv.index('-a') + 1]
 
             # create analysis folder
-            mkdir(analysis_folder)
+            MkDir(analysisFolder)
 
-            parse_data = []
-            for file in file_list:
+            parseData = []
+            for file in fileList:
                 # parse file
-                parse_data.append(parse_file(file, analysis_folder))
-                self.filecount += 1
-                if self.filecount != fileCount:
-                    self._signal.emit(str(self.filecount * 100 // fileCount))
+                parseData.append(ParseFile(file, self._signal, analysisFolder))
             # save data
-            save_data(analysis_folder, parse_data)
+            save_data(analysisFolder, self._signal, parseData)
         self._signal.emit(str(100))
 
 
-class Ui_MainWindow(QMainWindow):
+class MainWindow(QMainWindow, Datalog_DateLot_Analysis_UI.Ui_MainWindow):
     def __init__(self):
-        super().__init__()
+        super(MainWindow, self).__init__()
+        self.setupUi(self)
         self.cwd = getcwd()
         self.qe = QErrorMessage(self)
         self.pale = QPalette()
-
-        self.DateFolder_radioButton = QRadioButton('DateFolder', self)
-        self.LotFolder_radioButton = QRadioButton('LotFolder', self)
-
-        self.open_edit = QLineEdit(self)
-        self.open_button = QPushButton('Open', self)
-
-        self.project_combobox = QComboBox(self)
-        self.analysisItem_combobox = QComboBox(self)
-
-        self.analysis_button = QPushButton('Analysis', self)
-        self.progressBar = QProgressBar(self)
-
-        self.initUI()
-
-    def initUI(self):
-        self.setWindowTitle('Datalog DateLot Analysis')
-        self.setWindowIcon(QIcon('./icos/favicon.ico'))
         self.pale.setBrush(self.backgroundRole(), QBrush(QPixmap('./images/kobe3.jpg')))
         self.setPalette(self.pale)
-        self.setMaximumSize(800, 600)
-        self.setMinimumSize(800, 600)
-
-        self.DateFolder_radioButton.setGeometry(QRect(50, 20, 100, 30))
-        self.DateFolder_radioButton.setChecked(True)
-        self.LotFolder_radioButton.setGeometry(QRect(170, 20, 100, 30))
-
-        self.open_edit.setGeometry(QRect(50, 80, 500, 50))
-        self.open_edit.setReadOnly(True)
-
-        self.open_button.setGeometry(QRect(580, 80, 170, 50))
         # click button call openfolder
-        self.open_button.clicked.connect(self.open)
+        self.Open_pushButton.clicked.connect(self.Open)
+        self.Project_comboBox.insertItem(0, self.tr('F28'))
+        self.Project_comboBox.insertItem(1, self.tr('JX828'))
+        self.Project_comboBox.insertItem(2, self.tr('JX825'))
+        self.AnalysisItem_comboBox.insertItem(0, self.tr('All'))
+        self.AnalysisItem_comboBox.insertItem(1, self.tr('Summary'))
+        self.AnalysisItem_comboBox.insertItem(2, self.tr('Data Check'))
+        self.AnalysisItem_comboBox.insertItem(3, self.tr('Binning Check'))
+        self.AnalysisItem_comboBox.insertItem(4, self.tr('Nan ChipNo'))
+        self.Analysis_pushButton.clicked.connect(self.Analysis)
 
-        self.project_combobox.setGeometry(QRect(50, 180, 200, 50))
-        self.project_combobox.insertItem(0, self.tr('F28'))
-        self.project_combobox.insertItem(1, self.tr('JX828'))
-        self.project_combobox.insertItem(2, self.tr('JX825'))
-
-        self.analysisItem_combobox.setGeometry(QRect(280, 180, 200, 50))
-        self.analysisItem_combobox.insertItem(0, self.tr('All'))
-        self.analysisItem_combobox.insertItem(1, self.tr('Summary'))
-        self.analysisItem_combobox.insertItem(2, self.tr('Data Check'))
-        self.analysisItem_combobox.insertItem(3, self.tr('Binning Check'))
-        self.analysisItem_combobox.insertItem(4, self.tr('Nan ChipNo'))
-
-        self.analysis_button.setGeometry(QRect(510, 180, 170, 50))
-        self.analysis_button.clicked.connect(self.analysis)
-
-        self.progressBar.setGeometry(QRect(50, 280, 700, 30))
-        self.progressBar.setValue(0)
-
-        self.show()
-
-    def open(self):
-        dir_choose = QFileDialog.getExistingDirectory(self, 'Select directory', self.cwd)
-        if not dir_choose:
+    def Open(self):
+        if self.DateFolder_radioButton.isChecked():
+            dirChoose = QFileDialog.getExistingDirectory(self, 'Select DateFolder Directory', self.cwd)
+        else:
+            dirChoose = QFileDialog.getExistingDirectory(self, 'Select LotFolder Directory', self.cwd)
+        if not dirChoose:
             return
-        self.open_edit.setText(dir_choose)
+        self.Open_lineEdit.setText(dirChoose)
 
-    def call_backlog(self, msg):
+    def CallBackLog(self, msg):
         self.progressBar.setValue(int(msg))  # pass the thread's parameters to progressBar
         if msg == '100':
-            # del self.thread
-            self.analysis_button.setEnabled(True)
+            self.Analysis_pushButton.setEnabled(True)
 
-    def analysis(self):
-        if not self.open_edit.text():
+    def Analysis(self):
+        if not self.Open_lineEdit.text():
             self.qe.showMessage('Path cannot be empty!')
             return
         else:
-            global fileCount
-            fileCount = 0
+            global totalRowCount
+            totalRowCount = 0
+            global analysisItem
+            analysisItem = self.AnalysisItem_comboBox.currentText()
             if self.DateFolder_radioButton.isChecked():
-                lotno_names = listdir(self.open_edit.text())
-                for lot_name in lotno_names:
-                    lot_folder = join(self.open_edit.text(), lot_name)
-                    if isdir(lot_folder):
-                        file_list = get_filelist(lot_folder, '.csv')
-                        fileCount += len(file_list)
+                lotNoNames = listdir(self.Open_lineEdit.text())
+                for lotName in lotNoNames:
+                    lotFolder = join(self.Open_lineEdit.text(), lotName)
+                    if isdir(lotFolder):
+                        fileList = GetFileList(lotFolder, '.csv')
+                        for file in fileList:
+                            with open(file, encoding='unicode_escape') as f:
+                                csvReader = reader(f)
+                                if analysisItem == 'All':
+                                    totalRowCount += (array(list(csvReader)).shape[0] * 3)
+                                    totalRowCount += 12
+                                elif analysisItem == 'Data Check':
+                                    totalRowCount += (array(list(csvReader)).shape[0] * 2)
+                                elif analysisItem == 'Binning Check':
+                                    totalRowCount += (array(list(csvReader)).shape[0])
+                                elif analysisItem == 'Nan ChipNo':
+                                    totalRowCount += 3
+                                elif analysisItem == 'Summary':
+                                    totalRowCount += 9
             else:
-                file_list = get_filelist(self.open_edit.text(), '.csv')
-                fileCount += len(file_list)
-            if fileCount == 0:
+                fileList = GetFileList(self.Open_lineEdit.text(), '.csv')
+                for file in fileList:
+                    with open(file, encoding='unicode_escape') as f:
+                        csvReader = reader(f)
+                        if analysisItem == 'All':
+                            totalRowCount += (array(list(csvReader)).shape[0] * 3)
+                            totalRowCount += 12
+                        elif analysisItem == 'Data Check':
+                            totalRowCount += (array(list(csvReader)).shape[0] * 2)
+                        elif analysisItem == 'Binning Check':
+                            totalRowCount += (array(list(csvReader)).shape[0])
+                        elif analysisItem == 'Nan ChipNo':
+                            totalRowCount += 3
+                        elif analysisItem == 'Summary':
+                            totalRowCount += 9
+            if totalRowCount == 0:
+                self.qe.showMessage('No files available!')
                 return
+            global nowTime
+            nowTime = datetime.now().strftime("%Y%m%d%H%M%S")
+            global currentRowCount
+            currentRowCount = 0
             self.progressBar.setValue(0)
             global project
-            project = self.project_combobox.currentText()
-            global analysisItem
-            analysisItem = self.analysisItem_combobox.currentText()
+            project = self.Project_comboBox.currentText()
             if self.DateFolder_radioButton.isChecked():
-                choose_radio = self.DateFolder_radioButton.text()
+                chooseRadio = self.DateFolder_radioButton.text()
             else:
-                choose_radio = self.LotFolder_radioButton.text()
+                chooseRadio = self.LotFolder_radioButton.text()
             # create thread
-            self.analysis_button.setEnabled(False)
-            self.thread = Runthread(self.open_edit.text(), choose_radio)
+            self.Analysis_pushButton.setEnabled(False)
+            self.thread = Runthread(self.Open_lineEdit.text(), chooseRadio)
             # connect signal
-            self.thread._signal.connect(self.call_backlog)
+            self.thread._signal.connect(self.CallBackLog)
             self.thread.start()
 
 
@@ -2335,6 +2371,6 @@ if __name__ == '__main__':
         except OverflowError:
             maxInt = int(maxInt / 10)
     app = QApplication(argv)
-    MainWindow = QMainWindow()
-    ui = Ui_MainWindow()
+    myMainWindow = MainWindow()
+    myMainWindow.show()
     exit(app.exec_())
