@@ -25,12 +25,16 @@
   <property name="windowTitle">
    <string>Datalog Analysis</string>
   </property>
+  <property name="windowIcon">
+   <iconset>
+    <normaloff>icos/favicon.ico</normaloff>icos/favicon.ico</iconset>
+  </property>
   <property name="windowOpacity">
    <double>7.000000000000000</double>
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="gridLayout_2">
-    <item row="0" column="0">
+    <item row="0" column="1">
      <widget class="QGroupBox" name="groupBox">
       <property name="minimumSize">
        <size>

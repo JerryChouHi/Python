@@ -14,6 +14,9 @@ class Ui_MainWindow(object):
         MainWindow.resize(680, 539)
         MainWindow.setMinimumSize(QtCore.QSize(0, 0))
         MainWindow.setMaximumSize(QtCore.QSize(16777215, 16777215))
+        icon = QtGui.QIcon()
+        icon.addPixmap(QtGui.QPixmap("icos/favicon.ico"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        MainWindow.setWindowIcon(icon)
         MainWindow.setWindowOpacity(7.0)
         self.centralwidget = QtWidgets.QWidget(MainWindow)
         self.centralwidget.setObjectName("centralwidget")
@@ -101,7 +104,7 @@ class Ui_MainWindow(object):
         self.OpenPath_lineEdit.setReadOnly(True)
         self.OpenPath_lineEdit.setObjectName("OpenPath_lineEdit")
         self.gridLayout.addWidget(self.OpenPath_lineEdit, 1, 0, 1, 3)
-        self.gridLayout_2.addWidget(self.groupBox, 0, 0, 1, 1)
+        self.gridLayout_2.addWidget(self.groupBox, 0, 1, 1, 1)
         MainWindow.setCentralWidget(self.centralwidget)
 
         self.retranslateUi(MainWindow)

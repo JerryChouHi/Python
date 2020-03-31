@@ -6,7 +6,7 @@
 #
 # WARNING! All changes made in this file will be lost!
 
-from Datalog_Analysis_UI import Ui_MainWindow
+import Datalog_Analysis_UI
 from sys import argv, exit, maxsize
 from os import listdir, makedirs, getcwd
 from csv import reader, field_size_limit
@@ -25,210 +25,210 @@ from numpy import array
 thin = Side(border_style='thin', color=BLACK)
 border = Border(top=thin, left=thin, right=thin, bottom=thin)
 
-HiLimitRowNum = 0
-LoLimitRowNum = 0
-TestDataRowNum = 0
-TestDataColLetter = 'A'
-AllTestData = False
-BeginColLetter = 'A'
-EndColLetter = 'A'
-RowCount = 0
-CurrentRowCount = 0
-# get current time
-now_time = datetime.now().strftime("%Y%m%d%H%M%S")
+hiLimitRowNum = 0
+loLimitRowNum = 0
+testDataRowNum = 0
+testDataColLetter = 'A'
+allTestData = False
+beginColLetter = 'A'
+endColLetter = 'A'
+totalRowCount = 0
+currentRowCount = 0
+nowTime = 'Unknown'
 
 
-def get_filelist(folder, postfix=None):
+def GetFileList(folder, postfix=None):
     """
     find a list of files with a postfix
     """
-    fullname_list = []
+    fullNameList = []
     if isdir(folder):
         files = listdir(folder)
         for filename in files:
-            fullname_list.append(join(folder, filename))
+            fullNameList.append(join(folder, filename))
         if postfix:
-            target_file_list = []
-            for fullname in fullname_list:
+            targetFileList = []
+            for fullname in fullNameList:
                 if fullname.endswith(postfix):
-                    target_file_list.append(fullname)
-            return target_file_list
+                    targetFileList.append(fullname)
+            return targetFileList
         else:
-            return fullname_list
+            return fullNameList
     else:
         print("Error：Not a folder!")
         return False
 
 
-def mkdir(path):
+def MkDir(path):
     """
     create a folder
     """
     path = path.strip()
     path = path.rstrip("\\")
-    is_exists = exists(path)
-    if not is_exists:
+    isExists = exists(path)
+    if not isExists:
         makedirs(path)
         return True
     else:
         return False
 
 
-def search_string(data, target):
+def SearchString(data, target):
     """
     find out if target exists in data
     """
     for i in range(len(data)):
         try:
-            col_num = data[i].index(target)
-            row_num = i
-            return row_num, col_num
+            colNum = data[i].index(target)
+            rowNum = i
+            return rowNum, colNum
         except:
             pass
     print("Can't find " + target + " !")
     return False
 
 
-def ParseAndSave(file, _signal, analysis_folder):
+def ParseAndSave(file, _signal, analysisFolder):
     """
     parse and save file
     """
-    global CurrentRowCount
+    global currentRowCount
     data = []
     # get file data
     with open(file, encoding='unicode_escape') as f:
-        csv_reader = reader(f)
-        for row in csv_reader:
+        csvReader = reader(f)
+        for row in csvReader:
             data.append(row)
 
     # data check----------------------------
-    row_count = len(data)
+    rowCount = len(data)
 
-    datacheck_result = []
-    for row_num in range(row_count):
-        row_data = []
-        OverLimitCount = 0
-        for col_num in range(len(data[row_num])):
-            value = data[row_num][col_num]
-            high_limit_data = data[HiLimitRowNum - 1][col_num]
-            low_limit_data = data[LoLimitRowNum - 1][col_num]
-            if AllTestData:
-                beginColNum = column_index_from_string(TestDataColLetter)
-                endColNum = len(data[row_num])
+    dataCheckResult = []
+    for rowNum in range(rowCount):
+        rowData = []
+        overLimitCount = 0
+        for colNum in range(len(data[rowNum])):
+            value = data[rowNum][colNum]
+            highLimitData = data[hiLimitRowNum - 1][colNum]
+            lowLimitData = data[loLimitRowNum - 1][colNum]
+            if allTestData:
+                beginColNum = column_index_from_string(testDataColLetter)
+                endColNum = len(data[rowNum])
             else:
-                beginColNum = column_index_from_string(BeginColLetter)
-                endColNum = column_index_from_string(EndColLetter)
-            if col_num in range(beginColNum - 1, endColNum) and row_num in (HiLimitRowNum - 1, LoLimitRowNum - 1):
+                beginColNum = column_index_from_string(beginColLetter)
+                endColNum = column_index_from_string(endColLetter)
+            if colNum in range(beginColNum - 1, endColNum) and rowNum in (hiLimitRowNum - 1, loLimitRowNum - 1):
                 # fill color of limit value is green
-                row_data.append([value, GREEN])
-            elif col_num in range(beginColNum - 1, endColNum) and row_num >= TestDataRowNum - 1:
+                rowData.append([value, GREEN])
+            elif colNum in range(beginColNum - 1, endColNum) and rowNum >= testDataRowNum - 1:
                 try:
-                    value_convert = float(value)
+                    valueConvert = float(value)
                     try:
-                        high_limit = float(high_limit_data)
+                        highLimit = float(highLimitData)
                     except:
-                        high_limit = high_limit_data
+                        highLimit = highLimitData
                     try:
-                        low_limit = float(low_limit_data)
+                        lowLimit = float(lowLimitData)
                     except:
-                        low_limit = low_limit_data
-                    if value_convert == int(value_convert):
-                        value_convert = int(value_convert)
-                    if high_limit == 'N' or (high_limit != 'N' and low_limit <= value_convert <= high_limit):
+                        lowLimit = lowLimitData
+                    if valueConvert == int(valueConvert):
+                        valueConvert = int(valueConvert)
+                    if highLimit == 'N' or (highLimit != 'N' and lowLimit <= valueConvert <= highLimit):
                         # fill color of following scenario value is white
                         # 1.limit is N
                         # 2.limit is not N and data wihtin limit
-                        row_data.append([value_convert, WHITE])
+                        rowData.append([valueConvert, WHITE])
                     else:
                         # fill color of over limit is red
-                        row_data.append([value_convert, RED])
-                        OverLimitCount += 1
+                        rowData.append([valueConvert, RED])
+                        overLimitCount += 1
                 except:
                     if not value.strip():
                         # fill color of '' is purple
-                        row_data.append([value, 'A020F0'])
-                    elif not high_limit_data.strip():
+                        rowData.append([value, 'A020F0'])
+                    elif not highLimitData.strip():
                         # fill color is white
-                        row_data.append([value, WHITE])
+                        rowData.append([value, WHITE])
             else:
                 # set '' when value is nan
                 if isinstance(value, float) and isnan(value):
                     value = ''
                 # fill color is white
-                row_data.append([value, WHITE])
-        if OverLimitCount > 0:
-            row_data[0][0] = row_data[0][0] + '(' + str(OverLimitCount) + ')'
-            row_data[0][1] = RED
-        datacheck_result.append(row_data)
-        CurrentRowCount += 1
-        _signal.emit(str(CurrentRowCount * 100 // RowCount))
+                rowData.append([value, WHITE])
+        if overLimitCount > 0:
+            rowData[0][0] = rowData[0][0] + '(' + str(overLimitCount) + ')'
+            rowData[0][1] = RED
+        dataCheckResult.append(rowData)
+        currentRowCount += 1
+        if currentRowCount != totalRowCount:
+            _signal.emit(str(currentRowCount * 100 // totalRowCount))
 
-    file_name = basename(file).split('.')[0]
-    data_check_file = join(analysis_folder, file_name + '_DataCheck_Analysis' + now_time + '.xlsx')
-    data_check_wb = Workbook()  # create file object
-    data_check_sheet = data_check_wb.active  # get first sheet
-    freeze_panes = TestDataColLetter + str(TestDataRowNum)
-    data_check_sheet.freeze_panes = freeze_panes  # set freeze panes
+    fileName = basename(file).split('.')[0]
+    dataCheckFile = join(analysisFolder, fileName + '_DataCheck_Analysis' + nowTime + '.xlsx')
+    dataCheckWb = Workbook()  # create file object
+    dataCheckSheet = dataCheckWb.active  # get first sheet
+    freezePanes = testDataColLetter + str(testDataRowNum)
+    dataCheckSheet.freezePanes = freezePanes  # set freeze panes
 
     irow = 1
-    for i in range(len(datacheck_result)):
-        for j in range(len(datacheck_result[i])):
-            data_check_sheet.cell(row=irow, column=j + 1).value = datacheck_result[i][j][0]
-            data_check_sheet.cell(row=irow, column=j + 1).fill = PatternFill(fill_type='solid',
-                                                                             fgColor=datacheck_result[i][j][1])
-            data_check_sheet.cell(row=irow, column=j + 1).border = border
+    for i in range(len(dataCheckResult)):
+        for j in range(len(dataCheckResult[i])):
+            dataCheckSheet.cell(row=irow, column=j + 1).value = dataCheckResult[i][j][0]
+            dataCheckSheet.cell(row=irow, column=j + 1).fill = PatternFill(fill_type='solid',
+                                                                           fgColor=dataCheckResult[i][j][1])
+            dataCheckSheet.cell(row=irow, column=j + 1).border = border
         irow += 1
-        CurrentRowCount += 1
-        if CurrentRowCount != RowCount:
-            _signal.emit(str(CurrentRowCount * 100 // RowCount))
-    data_check_wb.save(data_check_file)
+        currentRowCount += 1
+        if currentRowCount != totalRowCount:
+            _signal.emit(str(currentRowCount * 100 // totalRowCount))
+    dataCheckWb.save(dataCheckFile)
 
 
 class Runthread(QThread):
     _signal = pyqtSignal(str)
 
-    def __init__(self, open_path, choose_radio):
+    def __init__(self, openPath, chooseRadio):
         super(Runthread, self).__init__()
-        self.open_path = open_path
-        self.choose_radio = choose_radio
+        self.openPath = openPath
+        self.chooseRadio = chooseRadio
 
     def __del__(self):
         self.wait()
 
     def run(self):
-        if self.choose_radio == 'DateFolder':
-            lotno_names = listdir(self.open_path)
-            for name in lotno_names:
-                folder = join(self.open_path, name)
+        if self.chooseRadio == 'DateFolder':
+            lotnoNames = listdir(self.openPath)
+            for name in lotnoNames:
+                folder = join(self.openPath, name)
                 if isdir(folder):
                     # get CSV file under the folder
-                    file_list = get_filelist(folder, '.csv')
+                    fileList = GetFileList(folder, '.csv')
 
                     # create analysis folder
-                    analysis_folder = folder + '\Analysis'
-                    mkdir(analysis_folder)
+                    analysisFolder = folder + '\Analysis'
+                    MkDir(analysisFolder)
 
-                    for file in file_list:
-                        ParseAndSave(file, self._signal, analysis_folder)
-        elif self.choose_radio == 'LotFolder':
+                    for file in fileList:
+                        ParseAndSave(file, self._signal, analysisFolder)
+        elif self.chooseRadio == 'LotFolder':
             # get CSV file under the folder
-            file_list = get_filelist(self.open_path, '.csv')
+            fileList = GetFileList(self.openPath, '.csv')
 
             # create analysis folder
-            analysis_folder = self.open_path + '\Analysis'
-            mkdir(analysis_folder)
+            analysisFolder = self.openPath + '\Analysis'
+            MkDir(analysisFolder)
 
-            for file in file_list:
-                ParseAndSave(file, self._signal, analysis_folder)
+            for file in fileList:
+                ParseAndSave(file, self._signal, analysisFolder)
         else:
             # create analysis folder
-            analysis_folder = dirname(self.open_path) + '\Analysis'
-            mkdir(analysis_folder)
-            ParseAndSave(self.open_path, self._signal, analysis_folder)
+            analysisFolder = dirname(self.openPath) + '\Analysis'
+            MkDir(analysisFolder)
+            ParseAndSave(self.openPath, self._signal, analysisFolder)
         self._signal.emit(str(100))
 
 
-class MainWindow(QMainWindow, Ui_MainWindow):
+class MainWindow(QMainWindow, Datalog_Analysis_UI.Ui_MainWindow):
     def __init__(self):
         super(MainWindow, self).__init__()
         self.setupUi(self)
@@ -244,15 +244,15 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         pValidator.setRegExp(reg)
         self.TestDataColLetter_lineEdit.setValidator(pValidator)
         self.AllTestData_radioButton.setChecked(True)
-        self.AllTestData_radioButton.toggled.connect(self.btnstate)
+        self.AllTestData_radioButton.toggled.connect(self.BtnState)
         self.BeginColLetter_lineEdit.setValidator(pValidator)
         self.EndColLetter_lineEdit.setValidator(pValidator)
         if self.AllTestData_radioButton.isChecked():
             self.BeginColLetter_lineEdit.setEnabled(False)
             self.EndColLetter_lineEdit.setEnabled(False)
-        self.Analysis_pushButton.clicked.connect(self.analysis)
+        self.Analysis_pushButton.clicked.connect(self.Analysis)
 
-    def btnstate(self):
+    def BtnState(self):
         if self.AllTestData_radioButton.isChecked():
             self.BeginColLetter_lineEdit.setEnabled(False)
             self.EndColLetter_lineEdit.setEnabled(False)
@@ -260,52 +260,51 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.BeginColLetter_lineEdit.setEnabled(True)
             self.EndColLetter_lineEdit.setEnabled(True)
 
-
     def Open(self):
-        global RowCount
-        RowCount = 0
+        global totalRowCount
+        totalRowCount = 0
         if self.SingleFile_radioButton.isChecked():
-            fileName_choose, filetype = QFileDialog.getOpenFileName(self, 'Select CSV File', self.cwd,
-                                                                    'CSV Files(*.csv);;All Files(*)')
-            if not fileName_choose:
+            fileNameChoose, fileType = QFileDialog.getOpenFileName(self, 'Select CSV File', self.cwd,
+                                                                   'CSV Files(*.csv);;All Files(*)')
+            if not fileNameChoose:
                 return
-            self.OpenPath_lineEdit.setText(fileName_choose)
-            with open(fileName_choose, encoding='unicode_escape') as f:
-                csv_reader = reader(f)
-                RowCount += (array(list(csv_reader)).shape[0] * 2)
-            getParaFile = fileName_choose
+            self.OpenPath_lineEdit.setText(fileNameChoose)
+            with open(fileNameChoose, encoding='unicode_escape') as f:
+                csvReader = reader(f)
+                totalRowCount += (array(list(csvReader)).shape[0] * 2)
+            getParaFile = fileNameChoose
         else:
-            dir_choose = QFileDialog.getExistingDirectory(self, 'Select Directory', self.cwd)
-            if not dir_choose:
+            dirChoose = QFileDialog.getExistingDirectory(self, 'Select Directory', self.cwd)
+            if not dirChoose:
                 return
-            self.OpenPath_lineEdit.setText(dir_choose)
+            self.OpenPath_lineEdit.setText(dirChoose)
             if self.DateFolder_radioButton.isChecked():
-                lotno_names = listdir(self.OpenPath_lineEdit.text())
-                for name in lotno_names:
+                lotnoNames = listdir(self.OpenPath_lineEdit.text())
+                for name in lotnoNames:
                     folder = join(self.OpenPath_lineEdit.text(), name)
                     if isdir(folder):
                         # get CSV file under the folder
-                        file_list = get_filelist(folder, '.csv')
-                        if not file_list:
+                        fileList = GetFileList(folder, '.csv')
+                        if not fileList:
                             return
-                        for file in file_list:
+                        for file in fileList:
                             getParaFile = file
                             with open(file, encoding='unicode_escape') as f:
-                                csv_reader = reader(f)
-                                RowCount += (array(list(csv_reader)).shape[0] * 2)
+                                csvReader = reader(f)
+                                totalRowCount += (array(list(csvReader)).shape[0] * 2)
             elif self.LotFolder_radioButton.isChecked():
-                file_list = get_filelist(self.OpenPath_lineEdit.text(), '.csv')
-                if not file_list:
+                fileList = GetFileList(self.OpenPath_lineEdit.text(), '.csv')
+                if not fileList:
                     return
-                for file in file_list:
+                for file in fileList:
                     getParaFile = file
                     with open(file, encoding='unicode_escape') as f:
-                        csv_reader = reader(f)
-                        RowCount += (array(list(csv_reader)).shape[0] * 2)
+                        csvReader = reader(f)
+                        totalRowCount += (array(list(csvReader)).shape[0] * 2)
         data = []
         with open(getParaFile, encoding='unicode_escape') as f:
-            csv_reader = reader(f)
-            for row in csv_reader:
+            csvReader = reader(f)
+            for row in csvReader:
                 data.append(row)
         for i in range(len(data)):
             if data[i][0] == 'MAX':
@@ -323,58 +322,62 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 except:
                     pass
 
-    def call_backlog(self, msg):
+    def CallBackLog(self, msg):
         self.progressBar.setValue(int(msg))  # pass the thread's parameters to progressBar
         if msg == '100':
             self.Analysis_pushButton.setEnabled(True)
 
-    def analysis(self):
+    def Analysis(self):
         if not self.OpenPath_lineEdit.text():
             self.qe.showMessage('Path cannot be empty!')
             return
         elif not self.HiLimitRowNum_lineEdit.text():
-            self.qe.showMessage('HiLimitRowNum cannot be empty!Input limit:Integer only.')
+            self.qe.showMessage('hiLimitRowNum cannot be empty!Input limit:Integer only.')
             return
         elif not self.LoLimitRowNum_lineEdit.text():
-            self.qe.showMessage('LoLimitRowNum cannot be empty!Input limit:Integer only.')
+            self.qe.showMessage('loLimitRowNum cannot be empty!Input limit:Integer only.')
             return
         elif not self.TestDataRowNum_lineEdit.text():
-            self.qe.showMessage('TestDataRowNum cannot be empty!Input limit:Integer only.')
+            self.qe.showMessage('testDataRowNum cannot be empty!Input limit:Integer only.')
             return
         elif not self.TestDataColLetter_lineEdit.text():
-            self.qe.showMessage('TestDataColLetter cannot be empty!Input limit:Uppercase only.')
+            self.qe.showMessage('testDataColLetter cannot be empty!Input limit:Uppercase only.')
             return
         else:
-            if RowCount == 0:
+            if totalRowCount == 0:
                 self.qe.showMessage('The test data in open path is illegal.')
                 return
-            global HiLimitRowNum
-            HiLimitRowNum = int(self.HiLimitRowNum_lineEdit.text())
-            global LoLimitRowNum
-            LoLimitRowNum = int(self.LoLimitRowNum_lineEdit.text())
-            global TestDataRowNum
-            TestDataRowNum = int(self.TestDataRowNum_lineEdit.text())
-            global TestDataColLetter
-            TestDataColLetter = self.TestDataColLetter_lineEdit.text()
-            global AllTestData
+            global nowTime
+            nowTime = datetime.now().strftime("%Y%m%d%H%M%S")
+            global currentRowCount
+            currentRowCount = 0
+            global hiLimitRowNum
+            hiLimitRowNum = int(self.HiLimitRowNum_lineEdit.text())
+            global loLimitRowNum
+            loLimitRowNum = int(self.LoLimitRowNum_lineEdit.text())
+            global testDataRowNum
+            testDataRowNum = int(self.TestDataRowNum_lineEdit.text())
+            global testDataColLetter
+            testDataColLetter = self.TestDataColLetter_lineEdit.text()
+            global allTestData
             if self.AllTestData_radioButton.isChecked():
-                AllTestData = True
+                allTestData = True
             else:
-                global BeginColLetter
-                global EndColLetter
-                BeginColLetter = self.BeginColLetter_lineEdit.text()
-                EndColLetter = self.EndColLetter_lineEdit.text()
+                global beginColLetter
+                global endColLetter
+                beginColLetter = self.BeginColLetter_lineEdit.text()
+                endColLetter = self.EndColLetter_lineEdit.text()
             if self.DateFolder_radioButton.isChecked():
-                choose_radio = self.DateFolder_radioButton.text()
+                chooseRadio = self.DateFolder_radioButton.text()
             elif self.LotFolder_radioButton.isChecked():
-                choose_radio = self.LotFolder_radioButton.text()
+                chooseRadio = self.LotFolder_radioButton.text()
             else:
-                choose_radio = self.SingleFile_radioButton.text()
+                chooseRadio = self.SingleFile_radioButton.text()
             # create thread
             self.Analysis_pushButton.setEnabled(False)
-            self.thread = Runthread(self.OpenPath_lineEdit.text(), choose_radio)
+            self.thread = Runthread(self.OpenPath_lineEdit.text(), chooseRadio)
             # connect signal
-            self.thread._signal.connect(self.call_backlog)
+            self.thread._signal.connect(self.CallBackLog)
             self.thread.start()
 
 
