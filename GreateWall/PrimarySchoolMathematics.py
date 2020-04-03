@@ -7,7 +7,6 @@
 from sys import argv, exit
 import Mathematics
 import ChooseTopicType
-from PyQt5.QtGui import QFont
 from PyQt5.QtWidgets import QApplication, QMainWindow
 from random import randint
 
@@ -15,14 +14,15 @@ from random import randint
 class MainWindow(QMainWindow, Mathematics.Ui_MainWindow):
     def __init__(self, s):
         super(MainWindow, self).__init__()
-        self.s1 = s[0]
-        self.s2 = s[1]
+        self.length = int(s[0])
+        self.symbol = s[1]
+        self.mode = s[2]
         self.setupUi(self)
-        self.refresh()
-        self.pushButton_check.clicked.connect(self.check)
-        self.pushButton_refresh.clicked.connect(self.refresh)
+        self.Refresh()
+        self.pushButton_check.clicked.connect(self.Check)
+        self.pushButton_refresh.clicked.connect(self.Refresh)
 
-    def refresh(self):
+    def Refresh(self):
         self.lineEdit_03.setText('')
         self.lineEdit_04.setText('')
         self.label_03.setText('')
@@ -43,70 +43,45 @@ class MainWindow(QMainWindow, Mathematics.Ui_MainWindow):
         self.lineEdit_44.setText('')
         self.label_43.setText('')
 
-        if self.s2 == '+':
-            self.label_01.setText('+')
-            self.label_11.setText('+')
-            self.label_21.setText('+')
-            self.label_31.setText('+')
-            self.label_41.setText('+')
-            if self.s1 == '1':
-                self.lineEdit_01.setText(str(randint(0, 9)))
-                self.lineEdit_11.setText(str(randint(0, 9)))
-                self.lineEdit_21.setText(str(randint(0, 9)))
-                self.lineEdit_31.setText(str(randint(0, 9)))
-                self.lineEdit_41.setText(str(randint(0, 9)))
+        self.lineEdit_01.setText(self.GetFirstNum())
+        self.lineEdit_11.setText(self.GetFirstNum())
+        self.lineEdit_21.setText(self.GetFirstNum())
+        self.lineEdit_31.setText(self.GetFirstNum())
+        self.lineEdit_41.setText(self.GetFirstNum())
 
-                self.lineEdit_02.setText(str(randint(0, 9)))
-                self.lineEdit_12.setText(str(randint(0, 9)))
-                self.lineEdit_22.setText(str(randint(0, 9)))
-                self.lineEdit_32.setText(str(randint(0, 9)))
-                self.lineEdit_42.setText(str(randint(0, 9)))
-            elif self.s1 == '2':
-                self.lineEdit_01.setText(str(randint(10, 99)))
-                self.lineEdit_11.setText(str(randint(10, 99)))
-                self.lineEdit_21.setText(str(randint(10, 99)))
-                self.lineEdit_31.setText(str(randint(10, 99)))
-                self.lineEdit_41.setText(str(randint(10, 99)))
+        self.label_01.setText(self.symbol)
+        self.label_11.setText(self.symbol)
+        self.label_21.setText(self.symbol)
+        self.label_31.setText(self.symbol)
+        self.label_41.setText(self.symbol)
 
-                self.lineEdit_02.setText(str(randint(10, 99)))
-                self.lineEdit_12.setText(str(randint(10, 99)))
-                self.lineEdit_22.setText(str(randint(10, 99)))
-                self.lineEdit_32.setText(str(randint(10, 99)))
-                self.lineEdit_42.setText(str(randint(10, 99)))
-        elif self.s2 == '-':
-            self.label_01.setText('-')
-            self.label_11.setText('-')
-            self.label_21.setText('-')
-            self.label_31.setText('-')
-            self.label_41.setText('-')
-            if self.s1 == '1':
-                self.lineEdit_01.setText(str(randint(0, 9)))
-                self.lineEdit_11.setText(str(randint(0, 9)))
-                self.lineEdit_21.setText(str(randint(0, 9)))
-                self.lineEdit_31.setText(str(randint(0, 9)))
-                self.lineEdit_41.setText(str(randint(0, 9)))
+        self.lineEdit_02.setText(self.GetSecondNum(self.lineEdit_01.text()))
+        self.lineEdit_12.setText(self.GetSecondNum(self.lineEdit_11.text()))
+        self.lineEdit_22.setText(self.GetSecondNum(self.lineEdit_21.text()))
+        self.lineEdit_32.setText(self.GetSecondNum(self.lineEdit_31.text()))
+        self.lineEdit_42.setText(self.GetSecondNum(self.lineEdit_41.text()))
 
-                self.lineEdit_02.setText(str(randint(0, int(self.lineEdit_01.text()))))
-                self.lineEdit_12.setText(str(randint(0, int(self.lineEdit_11.text()))))
-                self.lineEdit_22.setText(str(randint(0, int(self.lineEdit_21.text()))))
-                self.lineEdit_32.setText(str(randint(0, int(self.lineEdit_31.text()))))
-                self.lineEdit_42.setText(str(randint(0, int(self.lineEdit_41.text()))))
-            elif self.s1 == '2':
-                self.lineEdit_01.setText(str(randint(10, 99)))
-                self.lineEdit_11.setText(str(randint(10, 99)))
-                self.lineEdit_21.setText(str(randint(10, 99)))
-                self.lineEdit_31.setText(str(randint(10, 99)))
-                self.lineEdit_41.setText(str(randint(10, 99)))
+    def GetFirstNum(self):
+        return str(randint(10 ** (self.length - 1), 10 ** self.length - 1))
 
-                self.lineEdit_02.setText(str(randint(10, int(self.lineEdit_01.text()))))
-                self.lineEdit_12.setText(str(randint(10, int(self.lineEdit_11.text()))))
-                self.lineEdit_22.setText(str(randint(10, int(self.lineEdit_21.text()))))
-                self.lineEdit_32.setText(str(randint(10, int(self.lineEdit_31.text()))))
-                self.lineEdit_42.setText(str(randint(10, int(self.lineEdit_41.text()))))
+    def GetSecondNum(self, firstNum):
+        secondNum = 0
+        if self.mode == 'E':
+            for i in range(self.length):
+                if self.symbol == '+':
+                    secondNum += (10 ** (self.length - 1 - i) * randint(0, 9 - int(firstNum[i])))
+                elif self.symbol == '-':
+                    secondNum += (10 ** (self.length - 1 - i) * randint(0, int(firstNum[i])))
+        elif self.mode == 'A':
+            if self.symbol == '+':
+                secondNum = randint(10 ** (self.length - 1), 10 ** self.length - 1)
+            elif self.symbol == '-':
+                secondNum = randint(10 ** (self.length - 1), int(firstNum))
+        return str(secondNum)
 
-    def check(self):
+    def Check(self):
         rightCount = 0
-        if self.s2 == '+':
+        if self.symbol == '+':
             self.lineEdit_04.setText(str(int(self.lineEdit_01.text()) + int(self.lineEdit_02.text())))
             self.lineEdit_14.setText(str(int(self.lineEdit_11.text()) + int(self.lineEdit_12.text())))
             self.lineEdit_24.setText(str(int(self.lineEdit_21.text()) + int(self.lineEdit_22.text())))
@@ -152,7 +127,7 @@ class MainWindow(QMainWindow, Mathematics.Ui_MainWindow):
             else:
                 self.label_43.setText('答错')
                 self.label_43.setStyleSheet('color:red')
-        elif self.s2 == '-':
+        elif self.symbol == '-':
             self.lineEdit_04.setText(str(int(self.lineEdit_01.text()) - int(self.lineEdit_02.text())))
             self.lineEdit_14.setText(str(int(self.lineEdit_11.text()) - int(self.lineEdit_12.text())))
             self.lineEdit_24.setText(str(int(self.lineEdit_21.text()) - int(self.lineEdit_22.text())))
@@ -210,13 +185,16 @@ class ChooseWindow(QMainWindow, ChooseTopicType.Ui_MainWindow):
         super(ChooseWindow, self).__init__()
         self.setupUi(self)
 
-        self.pushButton_1plus.clicked.connect(lambda: self.re('1+'))
-        self.pushButton_1sub.clicked.connect(lambda: self.re('1-'))
-        self.pushButton_2plus.clicked.connect(lambda: self.re('2+'))
-        self.pushButton_2sub.clicked.connect(lambda: self.re('2-'))
+        self.pushButton_1plus.clicked.connect(lambda: self.re('1+A', self.pushButton_1plus.text()))
+        self.pushButton_1sub.clicked.connect(lambda: self.re('1-A', self.pushButton_1sub.text()))
+        self.pushButton_2plus.clicked.connect(lambda: self.re('2+A', self.pushButton_2plus.text()))
+        self.pushButton_2sub.clicked.connect(lambda: self.re('2-A', self.pushButton_2sub.text()))
+        self.pushButton_2plusEasy.clicked.connect(lambda: self.re('2+E', self.pushButton_2plusEasy.text()))
+        self.pushButton_2subEasy.clicked.connect(lambda: self.re('2-E', self.pushButton_2subEasy.text()))
 
-    def re(self, s):
+    def re(self, s, title):
         self.ui = MainWindow(s)
+        self.ui.setWindowTitle(title)
         self.ui.show()
 
 
