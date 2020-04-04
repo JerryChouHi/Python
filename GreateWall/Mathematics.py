@@ -246,5 +246,5 @@ class Ui_MainWindow(object):
         self.label_42.setText(_translate("MainWindow", "<html><head/><body><p align=\"center\"><span style=\" font-size:18pt; font-weight:600;\">=</span></p></body></html>"))
         self.pushButton_refresh.setText(_translate("MainWindow", "刷新"))
         self.label_goal.setText(_translate("MainWindow", "<html><head/><body><p><span style=\" font-size:14pt; font-weight:600;\">得分</span></p></body></html>"))
-        self.pushButton_check.setText(_translate("MainWindow", "检查"))
+        self.pushButton_check.setText(_translate("MainWindow", "检查√×"))
 

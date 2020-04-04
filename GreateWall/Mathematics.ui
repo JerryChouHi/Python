@@ -516,7 +516,7 @@
        <item row="1" column="4">
         <widget class="QPushButton" name="pushButton_check">
          <property name="text">
-          <string>检查</string>
+          <string>检查√×</string>
          </property>
         </widget>
        </item>

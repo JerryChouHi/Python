@@ -89,43 +89,43 @@ class MainWindow(QMainWindow, Mathematics.Ui_MainWindow):
             self.lineEdit_44.setText(str(int(self.lineEdit_41.text()) + int(self.lineEdit_42.text())))
 
             if self.lineEdit_03.text() == self.lineEdit_04.text():
-                self.label_03.setText('答对')
+                self.label_03.setText('√')
                 self.label_03.setStyleSheet('color:green')
                 rightCount += 1
             else:
-                self.label_03.setText('答错')
+                self.label_03.setText('×')
                 self.label_03.setStyleSheet('color:red')
 
             if self.lineEdit_13.text() == self.lineEdit_14.text():
-                self.label_13.setText('答对')
+                self.label_13.setText('√')
                 self.label_13.setStyleSheet('color:green')
                 rightCount += 1
             else:
-                self.label_13.setText('答错')
+                self.label_13.setText('×')
                 self.label_13.setStyleSheet('color:red')
 
             if self.lineEdit_23.text() == self.lineEdit_24.text():
-                self.label_23.setText('答对')
+                self.label_23.setText('√')
                 self.label_23.setStyleSheet('color:green')
                 rightCount += 1
             else:
-                self.label_23.setText('答错')
+                self.label_23.setText('×')
                 self.label_23.setStyleSheet('color:red')
 
             if self.lineEdit_33.text() == self.lineEdit_34.text():
-                self.label_33.setText('答对')
+                self.label_33.setText('√')
                 self.label_33.setStyleSheet('color:green')
                 rightCount += 1
             else:
-                self.label_33.setText('答错')
+                self.label_33.setText('×')
                 self.label_33.setStyleSheet('color:red')
 
             if self.lineEdit_43.text() == self.lineEdit_44.text():
-                self.label_43.setText('答对')
+                self.label_43.setText('√')
                 self.label_43.setStyleSheet('color:green')
                 rightCount += 1
             else:
-                self.label_43.setText('答错')
+                self.label_43.setText('×')
                 self.label_43.setStyleSheet('color:red')
         elif self.symbol == '-':
             self.lineEdit_04.setText(str(int(self.lineEdit_01.text()) - int(self.lineEdit_02.text())))
@@ -135,43 +135,43 @@ class MainWindow(QMainWindow, Mathematics.Ui_MainWindow):
             self.lineEdit_44.setText(str(int(self.lineEdit_41.text()) - int(self.lineEdit_42.text())))
 
             if self.lineEdit_03.text() == self.lineEdit_04.text():
-                self.label_03.setText('答对')
+                self.label_03.setText('√')
                 self.label_03.setStyleSheet('color:green')
                 rightCount += 1
             else:
-                self.label_03.setText('答错')
+                self.label_03.setText('×')
                 self.label_03.setStyleSheet('color:red')
 
             if self.lineEdit_13.text() == self.lineEdit_14.text():
-                self.label_13.setText('答对')
+                self.label_13.setText('√')
                 self.label_13.setStyleSheet('color:green')
                 rightCount += 1
             else:
-                self.label_13.setText('答错')
+                self.label_13.setText('×')
                 self.label_13.setStyleSheet('color:red')
 
             if self.lineEdit_23.text() == self.lineEdit_24.text():
-                self.label_23.setText('答对')
+                self.label_23.setText('√')
                 self.label_23.setStyleSheet('color:green')
                 rightCount += 1
             else:
-                self.label_23.setText('答错')
+                self.label_23.setText('×')
                 self.label_23.setStyleSheet('color:red')
 
             if self.lineEdit_33.text() == self.lineEdit_34.text():
-                self.label_33.setText('答对')
+                self.label_33.setText('√')
                 self.label_33.setStyleSheet('color:green')
                 rightCount += 1
             else:
-                self.label_33.setText('答错')
+                self.label_33.setText('×')
                 self.label_33.setStyleSheet('color:red')
 
             if self.lineEdit_43.text() == self.lineEdit_44.text():
-                self.label_43.setText('答对')
+                self.label_43.setText('√')
                 self.label_43.setStyleSheet('color:green')
                 rightCount += 1
             else:
-                self.label_43.setText('答错')
+                self.label_43.setText('×')
                 self.label_43.setStyleSheet('color:red')
         if rightCount < 3:
             self.lineEdit_goal.setStyleSheet('color:red')
