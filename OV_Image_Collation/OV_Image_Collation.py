@@ -7,22 +7,13 @@
 from sys import argv, exit
 from os import listdir, makedirs, getcwd
 from os.path import isdir, join, exists, basename
-from shutil import copyfile
+from shutil import copy
 import OV_Image_Collation_UI
 from PyQt5.QtCore import  QThread, pyqtSignal
 from PyQt5.QtWidgets import QApplication, QMainWindow, QFileDialog, QErrorMessage
+from re import match
 
 barCount = 0
-
-transform = {
-    'CbMipi': 'CB',
-    'DarkDinu': 'DM_DINU',
-    'DarkOff': 'DM_OFF',
-    'DarkOn': 'DM_ON',
-    'LightOff': 'LM_OFF',
-    'LightOn': 'LM_ON',
-    'LightSmall': 'LM_SMALL'
-}
 
 
 def GetFileList(folder, postfix=None):
@@ -37,7 +28,7 @@ def GetFileList(folder, postfix=None):
         if postfix:
             targetFileList = []
             for fullname in fullNameList:
-                if fullname.endswith(postfix):
+                if fullname.endswith(postfix.upper()) or fullname.endswith(postfix.lower()):
                     targetFileList.append(fullname)
             return targetFileList
         else:
@@ -73,14 +64,7 @@ class Runthread(QThread):
         self.wait()
 
     def run(self):
-
         otpNames = listdir(self.openPath)
-
-        sourceFolderName = basename(self.openPath)
-        sourceFolderNameSplit = sourceFolderName.split('_')
-        lotno = sourceFolderNameSplit[2].strip()
-        for i in range(3, len(sourceFolderNameSplit) - 4):
-            lotno += ('_' + sourceFolderNameSplit[i])
 
         # collation folder path
         if argv.count('-c') == 0:
@@ -90,29 +74,23 @@ class Runthread(QThread):
 
         MkDir(collationFolder)
 
-        for key in transform:
-            MkDir(join(collationFolder, transform[key]))
-
         otpFolders = []
-        newLotFolder = []
         for otpName in otpNames:
             if isdir(join(self.openPath, otpName)):
                 otpFolders.append(join(self.openPath, otpName))
-            MkDir(join(collationFolder, otpName + '_' + lotno))
-            newLotFolder.append(otpName + '_' + lotno)
 
+        # classify raw files according to the image type in the file name
+        pattern = '(\S+)_(\S+)-(\S+)_(\d+)_(\S+)_(\d+)x(\d+).raw'
         for i in range(len(otpFolders)):
             # get files under the folder
             fileList = GetFileList(otpFolders[i], '.raw')
             for file in fileList:
                 fileName = basename(file)
-                siteNo = fileName.split('_')[1].split('Site')[1]
-                imageInfo = fileName.split('_')[2]
-                for key in transform:
-                    if key in fileName:
-                        newFileName = newLotFolder[i] + '_' + siteNo + '_' + transform[key] + '_' + imageInfo
-                        copyfile(file, join(collationFolder, newLotFolder[i] + '\\' + newFileName))
-                        copyfile(file, join(collationFolder, transform[key] + '\\' + newFileName))
+                res = match(pattern,fileName)
+                form = res[5]
+                targetFolder = join(collationFolder, form)
+                MkDir(targetFolder)
+                copy(file,targetFolder)
                 self.currentCount += 1
                 if self.currentCount != barCount:
                     self._signal.emit(str(self.currentCount * 100 // barCount))
