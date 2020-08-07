@@ -4,171 +4,295 @@
 # @File     :
 # @Function :
 
-from csv import reader
-from os import listdir, makedirs
+from csv import reader, field_size_limit
+from os import listdir, makedirs, getcwd
 from os.path import join, isdir, exists, basename, dirname
 import numpy as np
 import csv
 from datetime import datetime
-from sys import argv
+from sys import argv, maxsize, exit
+import RepeatabilityTest_UI
+from PyQt5.QtCore import QThread, pyqtSignal
+from PyQt5.QtWidgets import QApplication, QMainWindow, QErrorMessage, QFileDialog
+
+nowTime = 'Unknown'
+totalRowCount = 0
+currentRowCount = 0
 
 
-def search_string(data, target):
+def GetFileList(folder, postfix=None):
     """
-    查找字符串
-    :param data: 数据
-    :param target: 待查找字符串
-    :return: 行、列
+    find a list of files with a postfix
     """
-    for i in range(len(data)):
-        try:
-            col_num = data[i].index(target)
-            row_num = i
-            return row_num, col_num
-        except:
-            pass
-    print("没有找到 " + target + " ！")
-    return False
-
-
-def parse_file(file):
-    # 拼接文件名
-    print(file + ":解析文件开始>>>>>>>>>>>>")
-    data = []
-    with open(file) as f:
-        csv_reader = reader(f)
-        for row in csv_reader:
-            data.append(row)
-    SearchTriggerCount = search_string(data, 'Trigger count')
-    if not SearchTriggerCount:
-        exit()
-    else:
-        TriggerCountRowNum = SearchTriggerCount[0]
-    result = []
-    for row_num in range(TriggerCountRowNum + 1, len(data)):
-        if row_num == 0:
-            if data[row_num][2] == 'GO':
-                group_start_row_num = row_num
+    fullNameList = []
+    if isdir(folder):
+        files = listdir(folder)
+        for filename in files:
+            fullNameList.append(join(folder, filename))
+        if postfix:
+            targetFileList = []
+            for fullname in fullNameList:
+                if fullname.endswith(postfix.upper()) or fullname.endswith(postfix.lower()):
+                    targetFileList.append(fullname)
+            return targetFileList
         else:
-            if data[row_num - 1][2] != 'GO' and data[row_num][2] == 'GO':
-                group_start_row_num = row_num
-            if data[row_num - 1][2] == 'GO' and data[row_num][2] != 'GO':
-                group_end_row_num = row_num
-                result.append(cal_data(data, group_start_row_num, group_end_row_num))
-    if data[TriggerCountRowNum + 1][2] == 'GO':
-        del result[0]
-
-    max_list = []
-    for item in result:
-        max_list.append(item[1])
-    min = np.min(max_list)
-    max = np.max(max_list)
-    mean = np.mean(max_list)
-    std = np.std(max_list)
-    six_sigma = 6 * std
-    cp20 = 40 / six_sigma
-    cp15 = 30 / six_sigma
-    print(file + ":解析文件结束<<<<<<<<<<<")
-    return result, min, max, mean, six_sigma, cp20, cp15
+            return fullNameList
+    else:
+        print("Error：Not a folder!")
+        return False
 
 
-def cal_data(data, row_num1, row_num2):
-    max_value = float(data[row_num1][1])
-    trigger_count = data[row_num1][0]
-    for row_num in range(row_num1 + 1, row_num2):
-        if float(data[row_num][1]) > max_value:
-            max_value = float(data[row_num][1])
-            trigger_count = data[row_num][0]
-    return trigger_count, max_value * 1000
-
-
-def analysis_data(analysis_file, data):
-    with open(analysis_file, 'w', encoding='utf-8', newline='') as f:
-        writer = csv.writer(f)
-        writer.writerow(['trigger count', 'OUT(um)', '', 'min', 'max', 'average', '6 sigma', 'cp(20um)', 'cp(15um)'])
-        for i in range(len(data[0])):
-            line = [data[0][i][0], data[0][i][1]]
-            if i == 0:
-                line.extend(['', data[1], data[2], data[3], data[4], data[5], data[6]])
-            writer.writerow(line)
-    print(analysis_file + ":写文件结束<<<<<<<<<<<")
-
-
-def mkdir(dir):
-    dir = dir.strip()
-    dir = dir.rstrip("\\")
-    isExists = exists(dir)
+def MkDir(path):
+    """
+    create a folder
+    """
+    path = path.strip()
+    path = path.rstrip("\\")
+    isExists = exists(path)
     if not isExists:
-        makedirs(dir)
+        makedirs(path)
         return True
     else:
         return False
 
 
-def get_filelist(folder, postfix=None):
+def SearchString(data, target):
     """
-    获取某个后缀的文件列表
-    :param postfix: 后缀，默认为None
-    :param folder: 文件夹路径
-    :return: 文件列表
+    find out if target exists in data
     """
-    fullname_list = []
-    if isdir(folder):
-        files = listdir(folder)
-        for filename in files:
-            fullname_list.append(join(folder, filename))
-        if postfix:
-            target_file_list = []
-            for fullname in fullname_list:
-                if fullname.endswith(postfix):
-                    target_file_list.append(fullname)
-            return target_file_list
-        else:
-            return fullname_list
-    else:
-        print("Error：不是文件夹！")
-        return False
+    for i in range(len(data)):
+        try:
+            colNum = data[i].index(target)
+            rowNum = i
+            return rowNum, colNum
+        except:
+            pass
+    print("Can't find " + target + " !")
+    return False
 
 
-def main():
-    # Sourcefile folder path
-    if argv.count('-s') == 0 and argv.count('-f') == 0:
-        print(
-            "Error：Sourcefile folder path 或 single file path为必填项，格式：“-s D:\sourcefile” 或 “-f D:\sourcefile\ST5-440mm-out1.csv”。")
+def CalData(data, rowNum1, rowNum2):
+    """
+    get max data from rowNum1 to rowNum2
+    """
+    maxValue = float(data[rowNum1][1])
+    triggerCount = data[rowNum1][0]
+    for rowNum in range(rowNum1 + 1, rowNum2):
+        if float(data[rowNum][1]) > maxValue:
+            maxValue = float(data[rowNum][1])
+            triggerCount = data[rowNum][0]
+    return triggerCount, maxValue * 1000
+
+
+def DeleteContinuousDuplicateData(file, analysisFolder, _signal):
+    """
+    delete continuous duplicate data and save data to file
+    """
+    global currentRowCount
+    data = []
+    with open(file) as f:
+        csvReader = reader(f)
+        for row in csvReader:
+            data.append(row)
+    searchTriggerCount = SearchString(data, 'Trigger count')
+    if not searchTriggerCount:
         exit()
-
-    if argv.count('-s') != 0:
-        sourcefile_folder = argv[argv.index('-s') + 1]
-        file_list = get_filelist(sourcefile_folder, '.csv')
-        if not file_list:
-            exit()
-
-    if argv.count('-f') != 0:
-        single_file = argv[argv.index('-f') + 1]
-        sourcefile_folder = dirname(single_file)
-        file_list = [single_file]
-
-    # Analysis folder path
-    if argv.count('-a') == 0:
-        analysis_folder = sourcefile_folder + '\Analysis'
     else:
-        analysis_folder = argv[argv.index('-a') + 1]
+        triggerCountRowNum = searchTriggerCount[0]
+    result = []
+    for row in range(len(data)):
+        if row <= triggerCountRowNum:
+            result.append(data[row])
+        else:
+            if row == triggerCountRowNum + 1:
+                compareValue = data[row][1]
+                tempData = data[row]
+                continue
+            if data[row][1] == compareValue:
+                continue
+            else:
+                result.append(tempData)
+                compareValue = data[row][1]
+                tempData = data[row]
+        currentRowCount += 1
+        if currentRowCount != totalRowCount:
+            _signal.emit(str(currentRowCount * 100 // totalRowCount))
+    fileName = basename(file).split('.')[0]
+    analysisFile = join(analysisFolder, fileName + '_Analysis' + nowTime + '.csv')
+    with open(analysisFile, 'w', encoding='utf-8', newline='') as f:
+        writer = csv.writer(f)
+        for line in result:
+            writer.writerow(line)
 
-    mkdir(analysis_folder)
 
-    for file in file_list:
-        # parse file
-        data = parse_file(file)
+def ParseAndSaveFile(file, analysisFolder, _signal):
+    """
+    calculate max data of each group data
+    calculate min,max,mean,std,sixSigma,cp20,cp15 of all max data
+    save calculate data
+    """
+    global currentRowCount
+    data = []
+    with open(file) as f:
+        csvReader = reader(f)
+        for row in csvReader:
+            data.append(row)
+    searchTriggerCount = SearchString(data, 'Trigger count')
+    if not searchTriggerCount:
+        exit()
+    else:
+        triggerCountRowNum = searchTriggerCount[0]
+    result = []
+    currentRowCount += triggerCountRowNum
+    for rowNum in range(triggerCountRowNum + 1, len(data)):
+        if rowNum == 0:
+            if data[rowNum][2] == 'GO':
+                groupStartRowNum = rowNum
+        else:
+            if data[rowNum - 1][2] != 'GO' and data[rowNum][2] == 'GO':
+                groupStartRowNum = rowNum
+            if data[rowNum - 1][2] == 'GO' and data[rowNum][2] != 'GO':
+                GroupEndRowNum = rowNum
+                result.append(CalData(data, groupStartRowNum, GroupEndRowNum))
+        currentRowCount += 1
+        if currentRowCount != totalRowCount:
+            _signal.emit(str(currentRowCount * 100 // totalRowCount))
+    if data[triggerCountRowNum + 1][2] == 'GO':
+        del result[0]
+    maxList = []
+    for item in result:
+        maxList.append(item[1])
+    minValue = np.min(maxList)
+    maxValue = np.max(maxList)
+    meanValue = np.mean(maxList)
+    stdValue = np.std(maxList)
+    sixSigma = 6 * stdValue
+    cp20 = 40 / sixSigma
+    cp15 = 30 / sixSigma
 
-        # 生成csv文件名拼接
-        file_name = basename(file).split('.')[0]
-        date = datetime.now().strftime("%Y%m%d%H%M")
-        analysis_file = join(analysis_folder, file_name + '_Analysis' + date + '.csv')
-        print(analysis_file + ":写文件开始>>>>>>>>>>>>")
+    fileName = basename(file).split('.')[0]
+    analysisFile = join(analysisFolder, fileName + '_Analysis' + nowTime + '.csv')
+    with open(analysisFile, 'w', encoding='utf-8', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow(['trigger count', 'OUT(um)', '', 'min', 'max', 'average', '6 sigma', 'cp(20um)', 'cp(15um)'])
+        for i in range(len(result)):
+            line = [result[i][0], result[i][1]]
+            if i == 0:
+                line.extend(['', minValue, maxValue, meanValue, sixSigma, cp20, cp15])
+            writer.writerow(line)
 
-        # analysis data
-        analysis_data(analysis_file, data)
+
+class RunThread(QThread):
+    _signal = pyqtSignal(str)
+
+    def __init__(self, openPath, chooseRadio, deleteDuplicate):
+        super(RunThread, self).__init__()
+        self.openPath = openPath
+        self.chooseRadio = chooseRadio
+        self.deleteDuplicate = deleteDuplicate
+
+    def __del__(self):
+        self.wait()
+
+    def run(self):
+        if self.chooseRadio == 'SourceFolder':
+            sourcefileFolder = self.openPath
+            fileList = GetFileList(self.openPath, '.csv')
+            if not fileList:
+                return
+        else:
+            fileList = [self.openPath]
+            sourcefileFolder = dirname(self.openPath)
+
+        analysisFolder = sourcefileFolder + '\Analysis'
+        MkDir(analysisFolder)
+
+        for file in fileList:
+            if self.deleteDuplicate:
+                DeleteContinuousDuplicateData(file, analysisFolder, self._signal)
+            else:
+                ParseAndSaveFile(file, analysisFolder, self._signal)
+        self._signal.emit(str(100))
+
+
+class MainWindow(QMainWindow, RepeatabilityTest_UI.Ui_MainWindow):
+    def __init__(self):
+        super(MainWindow, self).__init__()
+        self.setupUi(self)
+        self.cwd = getcwd()
+        self.qe = QErrorMessage(self)
+        self.SourceFolder_radioButton.setChecked(True)
+        self.Open_pushButton.clicked.connect(self.Open)
+        self.Analysis_pushButton.clicked.connect(self.Analysis)
+
+    def Open(self):
+        if self.SingleFile_radioButton.isChecked():
+            fileNameChoose, fileType = QFileDialog.getOpenFileName(self, 'Select CSV File', self.cwd,
+                                                                   'CSV Files(*.csv);;All Files(*)')
+            if not fileNameChoose:
+                return
+            self.OpenPath_lineEdit.setText(fileNameChoose)
+        elif self.SourceFolder_radioButton.isChecked():
+            dirChoose = QFileDialog.getExistingDirectory(self, 'Select Directory', self.cwd)
+            if not dirChoose:
+                return
+            self.OpenPath_lineEdit.setText(dirChoose)
+        else:
+            self.qe.showMessage('Please choose SourceFolder or SingleFile.')
+            return
+
+    def CallBackLog(self, msg):
+        self.progressBar.setValue(int(msg))  # pass the thread's parameters to progressBar
+        if msg == '100':
+            self.Analysis_pushButton.setEnabled(True)
+
+    def Analysis(self):
+        if not self.OpenPath_lineEdit.text():
+            self.qe.showMessage('Path cannot be empty!')
+            return
+        else:
+            global totalRowCount
+            totalRowCount = 0
+            if self.SourceFolder_radioButton.isChecked():
+                fileList = GetFileList(self.OpenPath_lineEdit.text(), '.csv')
+                if not fileList:
+                    return
+            else:
+                fileList = [self.OpenPath_lineEdit.text()]
+            for file in fileList:
+                with open(file) as f:
+                    csvReader = reader(f)
+                    totalRowCount += (np.array(list(csvReader)).shape[0])
+            if totalRowCount == 0:
+                self.qe.showMessage('The test data in open path is illegal.')
+                return
+            global nowTime
+            nowTime = datetime.now().strftime("%Y%m%d%H%M%S")
+            global currentRowCount
+            currentRowCount = 0
+            if self.SourceFolder_radioButton.isChecked():
+                chooseRadio = self.SourceFolder_radioButton.text()
+            else:
+                chooseRadio = self.SingleFile_radioButton.text()
+            # create thread
+            self.Analysis_pushButton.setEnabled(False)
+            self.thread = RunThread(self.OpenPath_lineEdit.text(), chooseRadio,
+                                    self.DeleteDuplicate_radioButton.isChecked())
+            # connect signal
+            self.thread._signal.connect(self.CallBackLog)
+            self.thread.start()
 
 
 if __name__ == '__main__':
-    main()
+    # _csv.Error:field larger than field limit(131072)
+    maxInt = maxsize
+    while True:
+        try:
+            field_size_limit(maxInt)
+            break
+        except OverflowError:
+            maxInt = int(maxInt / 10)
+    app = QApplication(argv)
+    myMainWindow = MainWindow()
+    myMainWindow.show()
+    exit(app.exec_())
