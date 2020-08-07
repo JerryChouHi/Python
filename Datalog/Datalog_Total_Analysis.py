@@ -146,6 +146,14 @@ hwbinToSwbin = {
         5: {'SWBin': (5, 6, 7, 8, 9, 12, 89), 'isPassBin': False},
         6: {'SWBin': (13, 14, 15, 35, 46, 48, 53, 54, 60), 'isPassBin': False},
         8: {'SWBin': (94, 96, 97, 98, 99), 'isPassBin': False}
+    },
+    'JX832': {
+        3: {'SWBin': (1, 2, 3), 'isPassBin': True},
+        1: {'SWBin': (56, 57, 58, 66, 67, 68, 95, 96), 'isPassBin': True},
+        2: {'SWBin': (53, 54, 63, 64, 65, 73, 74, 89, 90, 94), 'isPassBin': True},
+        4: {'SWBin': (23, 24, 25, 26, 27, 29, 30, 31, 32, 33, 34, 36, 39, 40, 78), 'isPassBin': False},
+        5: {'SWBin': (5, 6, 7, 8, 9, 12, 93, 97, 98, 99), 'isPassBin': False},
+        6: {'SWBin': (13, 14, 15, 35, 46, 47, 48, 51, 60), 'isPassBin': False}
     }
 }
 
@@ -581,6 +589,7 @@ class MainWindow(QMainWindow, Datalog_Total_Analysis_UI.Ui_MainWindow):
         self.Project_comboBox.insertItem(0, self.tr('F28'))
         self.Project_comboBox.insertItem(1, self.tr('JX828'))
         self.Project_comboBox.insertItem(2, self.tr('JX825'))
+        self.Project_comboBox.insertItem(2, self.tr('JX832'))
         self.Analysis_pushButton.clicked.connect(self.Analysis)
 
     def Open(self):

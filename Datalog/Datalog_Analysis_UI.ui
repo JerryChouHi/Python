@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>680</width>
-    <height>539</height>
+    <width>752</width>
+    <height>591</height>
    </rect>
   </property>
   <property name="minimumSize">
@@ -75,6 +75,104 @@
        <property name="spacing">
         <number>20</number>
        </property>
+       <item row="2" column="3">
+        <widget class="QLineEdit" name="LoLimitRowNum_lineEdit"/>
+       </item>
+       <item row="2" column="2">
+        <widget class="QLabel" name="LoLimitRowNum_label">
+         <property name="text">
+          <string>LoLimitRowNum</string>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="0">
+        <widget class="QLabel" name="TestDataRowNum_label">
+         <property name="text">
+          <string>TestDataRowNum</string>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="3">
+        <widget class="QLineEdit" name="TestDataColLetter_lineEdit"/>
+       </item>
+       <item row="2" column="0">
+        <widget class="QLabel" name="HiLimitRowNum_label">
+         <property name="text">
+          <string>HiLimitRowNum</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="1">
+        <widget class="QLineEdit" name="HiLimitRowNum_lineEdit"/>
+       </item>
+       <item row="6" column="2">
+        <widget class="QLabel" name="EndColLetter">
+         <property name="text">
+          <string>EndColLetter</string>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="2">
+        <widget class="QLabel" name="TestDataColLetter_label">
+         <property name="text">
+          <string>TestDataColLetter</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0" colspan="3">
+        <widget class="QLineEdit" name="OpenPath_lineEdit">
+         <property name="readOnly">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="1">
+        <widget class="QLineEdit" name="TestDataRowNum_lineEdit"/>
+       </item>
+       <item row="6" column="3">
+        <widget class="QLineEdit" name="EndColLetter_lineEdit"/>
+       </item>
+       <item row="7" column="0">
+        <widget class="QPushButton" name="Analysis_pushButton">
+         <property name="text">
+          <string>Analysis</string>
+         </property>
+        </widget>
+       </item>
+       <item row="8" column="0" colspan="4">
+        <widget class="QProgressBar" name="progressBar">
+         <property name="value">
+          <number>0</number>
+         </property>
+        </widget>
+       </item>
+       <item row="6" column="0">
+        <widget class="QLabel" name="BeginColLetter">
+         <property name="text">
+          <string>BeginColLetter</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="3">
+        <widget class="QPushButton" name="Open_pushButton">
+         <property name="mouseTracking">
+          <bool>false</bool>
+         </property>
+         <property name="text">
+          <string>Open</string>
+         </property>
+        </widget>
+       </item>
+       <item row="6" column="1">
+        <widget class="QLineEdit" name="BeginColLetter_lineEdit"/>
+       </item>
+       <item row="7" column="3">
+        <widget class="QLabel" name="CostTime_label">
+         <property name="text">
+          <string/>
+         </property>
+        </widget>
+       </item>
        <item row="0" column="0" colspan="4">
         <widget class="QGroupBox" name="groupBox_2">
          <property name="minimumSize">
@@ -133,103 +231,22 @@
          </widget>
         </widget>
        </item>
-       <item row="1" column="3">
-        <widget class="QPushButton" name="Open_pushButton">
-         <property name="mouseTracking">
-          <bool>false</bool>
-         </property>
-         <property name="text">
-          <string>Open</string>
-         </property>
-        </widget>
-       </item>
-       <item row="2" column="0">
-        <widget class="QLabel" name="HiLimitRowNum_label">
-         <property name="text">
-          <string>HiLimitRowNum</string>
-         </property>
-        </widget>
-       </item>
-       <item row="2" column="1">
-        <widget class="QLineEdit" name="HiLimitRowNum_lineEdit"/>
-       </item>
-       <item row="2" column="2">
-        <widget class="QLabel" name="LoLimitRowNum_label">
-         <property name="text">
-          <string>LoLimitRowNum</string>
-         </property>
-        </widget>
-       </item>
-       <item row="2" column="3">
-        <widget class="QLineEdit" name="LoLimitRowNum_lineEdit"/>
-       </item>
-       <item row="3" column="0">
-        <widget class="QLabel" name="TestDataRowNum_label">
-         <property name="text">
-          <string>TestDataRowNum</string>
-         </property>
-        </widget>
-       </item>
-       <item row="3" column="1">
-        <widget class="QLineEdit" name="TestDataRowNum_lineEdit"/>
-       </item>
-       <item row="3" column="2">
-        <widget class="QLabel" name="TestDataColLetter_label">
-         <property name="text">
-          <string>TestDataColLetter</string>
-         </property>
-        </widget>
-       </item>
-       <item row="3" column="3">
-        <widget class="QLineEdit" name="TestDataColLetter_lineEdit"/>
-       </item>
-       <item row="4" column="0">
+       <item row="5" column="0">
         <widget class="QRadioButton" name="AllTestData_radioButton">
          <property name="text">
           <string>AllTestData</string>
          </property>
         </widget>
        </item>
-       <item row="5" column="0">
-        <widget class="QLabel" name="BeginColLetter">
+       <item row="4" column="0">
+        <widget class="QLabel" name="TestItemRowNum_label">
          <property name="text">
-          <string>BeginColLetter</string>
+          <string>TestItemRowNum</string>
          </property>
         </widget>
        </item>
-       <item row="5" column="1">
-        <widget class="QLineEdit" name="BeginColLetter_lineEdit"/>
-       </item>
-       <item row="5" column="2">
-        <widget class="QLabel" name="EndColLetter">
-         <property name="text">
-          <string>EndColLetter</string>
-         </property>
-        </widget>
-       </item>
-       <item row="5" column="3">
-        <widget class="QLineEdit" name="EndColLetter_lineEdit"/>
-       </item>
-       <item row="6" column="0">
-        <widget class="QPushButton" name="Analysis_pushButton">
-         <property name="text">
-          <string>Analysis</string>
-         </property>
-        </widget>
-       </item>
-       <item row="7" column="0" colspan="4">
-        <widget class="QProgressBar" name="progressBar">
-         <property name="value">
-          <number>0</number>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="0" colspan="3">
-        <widget class="QLineEdit" name="OpenPath_lineEdit">
-         <property name="readOnly">
-          <bool>true</bool>
-         </property>
-        </widget>
+       <item row="4" column="1">
+        <widget class="QLineEdit" name="TestItemRowNum_lineEdit"/>
        </item>
       </layout>
      </widget>

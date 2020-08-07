@@ -17,7 +17,7 @@ from os.path import join, isdir, exists, basename, dirname
 from math import isnan
 from openpyxl import Workbook
 from openpyxl.styles import PatternFill, Side, Border
-from openpyxl.styles.colors import BLACK, WHITE, RED, GREEN
+from openpyxl.styles.colors import BLACK, WHITE, RED, GREEN, YELLOW
 from openpyxl.utils import column_index_from_string, get_column_letter
 from datetime import datetime
 from numpy import array
@@ -28,6 +28,7 @@ border = Border(top=thin, left=thin, right=thin, bottom=thin)
 hiLimitRowNum = 0
 loLimitRowNum = 0
 testDataRowNum = 0
+testItemRowNum = 0
 testDataColLetter = 'A'
 allTestData = False
 beginColLetter = 'A'
@@ -35,6 +36,7 @@ endColLetter = 'A'
 totalRowCount = 0
 currentRowCount = 0
 nowTime = 'Unknown'
+startTime = 0
 
 
 def GetFileList(folder, postfix=None):
@@ -49,7 +51,7 @@ def GetFileList(folder, postfix=None):
         if postfix:
             targetFileList = []
             for fullname in fullNameList:
-                if fullname.endswith(postfix):
+                if fullname.endswith(postfix.upper()) or fullname.endswith(postfix.lower()):
                     targetFileList.append(fullname)
             return targetFileList
         else:
@@ -104,6 +106,15 @@ def ParseAndSave(file, _signal, analysisFolder):
     rowCount = len(data)
 
     dataCheckResult = []
+    if allTestData:
+        beginColNum = column_index_from_string(testDataColLetter)
+        endColNum = len(data[testDataRowNum])
+    else:
+        beginColNum = column_index_from_string(beginColLetter)
+        endColNum = column_index_from_string(endColLetter)
+    testItemFailCount = {}
+    for i in range(beginColNum - 1, endColNum):
+        testItemFailCount[i] = 0
     for rowNum in range(rowCount):
         rowData = []
         overLimitCount = 0
@@ -111,12 +122,6 @@ def ParseAndSave(file, _signal, analysisFolder):
             value = data[rowNum][colNum]
             highLimitData = data[hiLimitRowNum - 1][colNum]
             lowLimitData = data[loLimitRowNum - 1][colNum]
-            if allTestData:
-                beginColNum = column_index_from_string(testDataColLetter)
-                endColNum = len(data[rowNum])
-            else:
-                beginColNum = column_index_from_string(beginColLetter)
-                endColNum = column_index_from_string(endColLetter)
             if colNum in range(beginColNum - 1, endColNum) and rowNum in (hiLimitRowNum - 1, loLimitRowNum - 1):
                 # fill color of limit value is green
                 rowData.append([value, GREEN])
@@ -142,6 +147,7 @@ def ParseAndSave(file, _signal, analysisFolder):
                         # fill color of over limit is red
                         rowData.append([valueConvert, RED])
                         overLimitCount += 1
+                        testItemFailCount[colNum] += 1
                 except:
                     if not value.strip():
                         # fill color of '' is purple
@@ -163,6 +169,10 @@ def ParseAndSave(file, _signal, analysisFolder):
         if currentRowCount != totalRowCount:
             _signal.emit(str(currentRowCount * 100 // totalRowCount))
 
+    for key in testItemFailCount.keys():
+        if testItemFailCount[key] > 0:
+            dataCheckResult[testItemRowNum - 1][key][0] += ('(' + str(testItemFailCount[key]) + ')')
+            dataCheckResult[testItemRowNum - 1][key][1] = YELLOW
     fileName = basename(file).split('.')[0]
     dataCheckFile = join(analysisFolder, fileName + '_DataCheck_Analysis' + nowTime + '.xlsx')
     dataCheckWb = Workbook()  # create file object
@@ -307,7 +317,9 @@ class MainWindow(QMainWindow, Datalog_Analysis_UI.Ui_MainWindow):
             for row in csvReader:
                 data.append(row)
         for i in range(len(data)):
-            if data[i][0] == 'MAX':
+            if data[i][0] == 'ChipNo':
+                self.TestItemRowNum_lineEdit.setText(str(i + 1))
+            elif data[i][0] == 'MAX':
                 self.HiLimitRowNum_lineEdit.setText(str(i + 1))
             elif data[i][0] == 'MIN':
                 self.LoLimitRowNum_lineEdit.setText(str(i + 1))
@@ -326,24 +338,31 @@ class MainWindow(QMainWindow, Datalog_Analysis_UI.Ui_MainWindow):
         self.progressBar.setValue(int(msg))  # pass the thread's parameters to progressBar
         if msg == '100':
             self.Analysis_pushButton.setEnabled(True)
+            costTime = str(datetime.now() - startTime)[:10]
+            self.CostTime_label.setText('CostTime : ' + costTime)
 
     def Analysis(self):
         if not self.OpenPath_lineEdit.text():
             self.qe.showMessage('Path cannot be empty!')
             return
         elif not self.HiLimitRowNum_lineEdit.text():
-            self.qe.showMessage('hiLimitRowNum cannot be empty!Input limit:Integer only.')
+            self.qe.showMessage('HiLimitRowNum cannot be empty!Input limit:Integer only.')
             return
         elif not self.LoLimitRowNum_lineEdit.text():
-            self.qe.showMessage('loLimitRowNum cannot be empty!Input limit:Integer only.')
+            self.qe.showMessage('LoLimitRowNum cannot be empty!Input limit:Integer only.')
             return
         elif not self.TestDataRowNum_lineEdit.text():
-            self.qe.showMessage('testDataRowNum cannot be empty!Input limit:Integer only.')
+            self.qe.showMessage('TestDataRowNum cannot be empty!Input limit:Integer only.')
             return
         elif not self.TestDataColLetter_lineEdit.text():
-            self.qe.showMessage('testDataColLetter cannot be empty!Input limit:Uppercase only.')
+            self.qe.showMessage('TestDataColLetter cannot be empty!Input limit:Uppercase only.')
+            return
+        elif not self.TestItemRowNum_lineEdit.text():
+            self.qe.showMessage('TestItemRowNum cannot be empty!Input limit:Uppercase only.')
             return
         else:
+            global startTime
+            startTime = datetime.now()
             if totalRowCount == 0:
                 self.qe.showMessage('The test data in open path is illegal.')
                 return
@@ -359,10 +378,13 @@ class MainWindow(QMainWindow, Datalog_Analysis_UI.Ui_MainWindow):
             testDataRowNum = int(self.TestDataRowNum_lineEdit.text())
             global testDataColLetter
             testDataColLetter = self.TestDataColLetter_lineEdit.text()
+            global testItemRowNum
+            testItemRowNum = int(self.TestItemRowNum_lineEdit.text())
             global allTestData
             if self.AllTestData_radioButton.isChecked():
                 allTestData = True
             else:
+                allTestData = False
                 global beginColLetter
                 global endColLetter
                 beginColLetter = self.BeginColLetter_lineEdit.text()
