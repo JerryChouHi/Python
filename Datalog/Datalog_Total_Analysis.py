@@ -76,7 +76,7 @@ def GetFileList(folder, postfix=None):
         if postfix:
             targetFileList = []
             for fullname in fullNameList:
-                if fullname.endswith(postfix):
+                if fullname.endswith(postfix.upper()) or fullname.endswith(postfix.lower()):
                     targetFileList.append(fullname)
             return targetFileList
         else:
@@ -126,9 +126,10 @@ nowTime = 'Unknown'
 
 hwbinToSwbin = {
     'F28': {
-        1: {'SWBin': (1, 2), 'isPassBin': True},
-        2: {'SWBin': (41, 42, 43, 44, 45, 53, 54, 55), 'isPassBin': True},
-        4: {'SWBin': (23, 24, 25, 26, 27, 29, 30, 31, 32, 33, 34, 36, 39, 40, 70, 71, 72), 'isPassBin': False},
+        3: {'SWBin': (1, 2), 'isPassBin': True},
+        1: {'SWBin': (37, 38, 61, 62, 64, 65, 66, 90, 91, 92, 94), 'isPassBin': False},
+        2: {'SWBin': (41, 42, 43, 44, 45, 53, 54, 55), 'isPassBin': False},
+        4: {'SWBin': (23, 24, 25, 26, 27, 29, 30, 31, 32, 33, 34, 36, 39, 40), 'isPassBin': False},
         5: {'SWBin': (5, 6, 7, 8, 9, 12, 96, 97, 98, 99), 'isPassBin': False},
         6: {'SWBin': (13, 14, 15, 35), 'isPassBin': False}
     },
@@ -583,7 +584,7 @@ class MainWindow(QMainWindow, Datalog_Total_Analysis_UI.Ui_MainWindow):
         self.cwd = getcwd()
         self.qe = QErrorMessage(self)
         self.pale = QPalette()
-        self.pale.setBrush(self.backgroundRole(), QBrush(QPixmap('./images/kobe3.jpg')))
+        # self.pale.setBrush(self.backgroundRole(), QBrush(QPixmap('./images/kobe3.jpg')))
         self.setPalette(self.pale)
         self.Open_pushButton.clicked.connect(self.Open)
         self.Project_comboBox.insertItem(0, self.tr('F28'))
