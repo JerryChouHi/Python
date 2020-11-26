@@ -61,7 +61,7 @@ def GetFileList(folder, postfix=None):
         return False
 
 
-def MkDir(path):
+def create_directory(path):
     """
     create a folder
     """
@@ -73,21 +73,6 @@ def MkDir(path):
         return True
     else:
         return False
-
-
-def SearchString(data, target):
-    """
-    find out if target exists in data
-    """
-    for i in range(len(data)):
-        try:
-            colNum = data[i].index(target)
-            rowNum = i
-            return rowNum, colNum
-        except:
-            pass
-    print("Can't find " + target + " !")
-    return False
 
 
 def ParseAndSave(file, _signal, analysisFolder):
@@ -192,13 +177,14 @@ def ParseAndSave(file, _signal, analysisFolder):
         if currentRowCount != totalRowCount:
             _signal.emit(str(currentRowCount * 100 // totalRowCount))
     dataCheckWb.save(dataCheckFile)
+    dataCheckWb.close()
 
 
-class Runthread(QThread):
+class RunThread(QThread):
     _signal = pyqtSignal(str)
 
     def __init__(self, openPath, chooseRadio):
-        super(Runthread, self).__init__()
+        super(RunThread, self).__init__()
         self.openPath = openPath
         self.chooseRadio = chooseRadio
 
@@ -216,7 +202,7 @@ class Runthread(QThread):
 
                     # create analysis folder
                     analysisFolder = folder + '\Analysis'
-                    MkDir(analysisFolder)
+                    create_directory(analysisFolder)
 
                     for file in fileList:
                         ParseAndSave(file, self._signal, analysisFolder)
@@ -226,14 +212,14 @@ class Runthread(QThread):
 
             # create analysis folder
             analysisFolder = self.openPath + '\Analysis'
-            MkDir(analysisFolder)
+            create_directory(analysisFolder)
 
             for file in fileList:
                 ParseAndSave(file, self._signal, analysisFolder)
         else:
             # create analysis folder
             analysisFolder = dirname(self.openPath) + '\Analysis'
-            MkDir(analysisFolder)
+            create_directory(analysisFolder)
             ParseAndSave(self.openPath, self._signal, analysisFolder)
         self._signal.emit(str(100))
 
@@ -397,7 +383,7 @@ class MainWindow(QMainWindow, Datalog_Analysis_UI.Ui_MainWindow):
                 chooseRadio = self.SingleFile_radioButton.text()
             # create thread
             self.Analysis_pushButton.setEnabled(False)
-            self.thread = Runthread(self.OpenPath_lineEdit.text(), chooseRadio)
+            self.thread = RunThread(self.OpenPath_lineEdit.text(), chooseRadio)
             # connect signal
             self.thread._signal.connect(self.CallBackLog)
             self.thread.start()

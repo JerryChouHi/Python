@@ -124,7 +124,7 @@ project = 'Unknown'
 totalLotCount = 0
 nowTime = 'Unknown'
 
-hwbinToSwbin = {
+HWBIN_TO_SWBIN = {
     'F28': {
         3: {'SWBin': (1, 2), 'isPassBin': True},
         1: {'SWBin': (37, 38, 61, 62, 64, 65, 66, 90, 91, 92, 94), 'isPassBin': False},
@@ -135,11 +135,11 @@ hwbinToSwbin = {
     },
     'JX828': {
         3: {'SWBin': (1, 2, 3), 'isPassBin': True},
-        1: {'SWBin': (63, 64, 65, 89, 90, 94), 'isPassBin': True},
+        1: {'SWBin': (17, 63, 64, 65, 66, 71, 72, 89, 90, 91, 94), 'isPassBin': True},
         2: {'SWBin': (53, 54, 73, 74), 'isPassBin': True},
-        4: {'SWBin': (23, 24, 25, 26, 27, 29, 30, 31, 32, 33, 34, 36, 39, 40, 56, 57, 58, 75), 'isPassBin': False},
-        5: {'SWBin': (5, 6, 7, 8, 9, 12, 93, 96, 98, 99), 'isPassBin': False},
-        6: {'SWBin': (13, 14, 15, 35, 46, 47, 48, 51, 60), 'isPassBin': False}
+        4: {'SWBin': (23, 24, 25, 26, 27, 29, 30, 31, 32, 33, 34, 35, 36, 39, 40, 56, 57, 58, 75), 'isPassBin': False},
+        5: {'SWBin': (5, 6, 7, 8, 9, 12, 93, 96, 97, 98, 99), 'isPassBin': False},
+        6: {'SWBin': (13, 14, 15, 35, 46, 47, 48, 49, 50, 51, 60), 'isPassBin': False}
     },
     'JX825': {
         3: {'SWBin': (2, 255), 'isPassBin': True},
@@ -155,6 +155,15 @@ hwbinToSwbin = {
         4: {'SWBin': (23, 24, 25, 26, 27, 29, 30, 31, 32, 33, 34, 36, 39, 40, 78), 'isPassBin': False},
         5: {'SWBin': (5, 6, 7, 8, 9, 12, 93, 97, 98, 99), 'isPassBin': False},
         6: {'SWBin': (13, 14, 15, 35, 46, 47, 48, 51, 60), 'isPassBin': False}
+    },
+    'JX829': {
+        3: {'SWBin': (1, 2, 3), 'isPassBin': True},
+        2: {'SWBin': (53, 54), 'isPassBin': False},
+        4: {'SWBin': (23, 24, 25, 26, 27, 31, 32, 37, 39, 40, 73), 'isPassBin': False},
+        5: {'SWBin': (5, 6, 7, 8, 9, 12, 89, 90, 94, 97, 98), 'isPassBin': False},
+        6: {'SWBin': (13, 14, 15, 17, 18, 19, 20, 49, 50, 51, 66, 67, 68, 69, 70), 'isPassBin': False},
+        7: {'SWBin': (29, 30, 33, 34), 'isPassBin': False},
+        8: {'SWBin': (35, 60), 'isPassBin': False}
     }
 }
 
@@ -228,16 +237,17 @@ def SaveData(analysisFile, parseData):
 
     okHwbinCount = 0
     beginFailSwbin = 0
-    for hwBinKey in hwbinToSwbin[project].keys():
-        if hwbinToSwbin[project][hwBinKey]['isPassBin']:
+    hwbin_to_swbin = HWBIN_TO_SWBIN[project]
+    for hwBinKey in hwbin_to_swbin.keys():
+        if hwbin_to_swbin[hwBinKey]['isPassBin']:
             okHwbinCount += 1
-            beginFailSwbin += len(hwbinToSwbin[project][hwBinKey]['SWBin'])
+            beginFailSwbin += len(hwbin_to_swbin[hwBinKey]['SWBin'])
 
     colorList = ['99FFFF', '33FF00', 'FFFFCC', 'FFFF33', 'FF9900', 'FF0099', 'FF0000']
     swbinList = []
     keyIndex = 0
-    for hwbinKey in hwbinToSwbin[project].keys():
-        for swbin in hwbinToSwbin[project][hwbinKey]['SWBin']:
+    for hwbinKey in hwbin_to_swbin.keys():
+        for swbin in hwbin_to_swbin[hwbinKey]['SWBin']:
             swbinList.append([swbin, colorList[keyIndex]])
         keyIndex += 1
 
@@ -588,9 +598,10 @@ class MainWindow(QMainWindow, Datalog_Total_Analysis_UI.Ui_MainWindow):
         self.setPalette(self.pale)
         self.Open_pushButton.clicked.connect(self.Open)
         self.Project_comboBox.insertItem(0, self.tr('F28'))
-        self.Project_comboBox.insertItem(1, self.tr('JX828'))
-        self.Project_comboBox.insertItem(2, self.tr('JX825'))
-        self.Project_comboBox.insertItem(2, self.tr('JX832'))
+        self.Project_comboBox.insertItem(1, self.tr('JX825'))
+        self.Project_comboBox.insertItem(2, self.tr('JX828'))
+        self.Project_comboBox.insertItem(3, self.tr('JX829'))
+        self.Project_comboBox.insertItem(4, self.tr('JX832'))
         self.Analysis_pushButton.clicked.connect(self.Analysis)
 
     def Open(self):
